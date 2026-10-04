@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.db
+*.log
+uploads/
+uvicorn.log
+.pytest_cache/
+.vscode/

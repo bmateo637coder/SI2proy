@@ -1,0 +1,96 @@
+<div class="roles-container">
+    <div class="header-section">
+        <div>
+            <h2>Gestión de Roles</h2>
+            <p>Administra los permisos de acceso al sistema</p>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <!-- Formulario para agregar nuevo rol -->
+        <div class="card add-role-card">
+            <div class="card-header">
+                <h3>Crear Nuevo Rol</h3>
+            </div>
+            <div class="card-body">
+                <div *ngIf="mensaje" class="alert" [ngClass]="{'alert-success': !error, 'alert-danger': error}">
+                    {{ mensaje }}
+                </div>
+                
+                <form [formGroup]="rolForm" (ngSubmit)="agregarRol()">
+                    <div class="form-group">
+                        <label for="nombre">Nombre del Rol</label>
+                        <input type="text" id="nombre" formControlName="nombre" class="form-control" placeholder="Ej: Administrador, Asistente...">
+                        <small *ngIf="rolForm.get('nombre')?.invalid && rolForm.get('nombre')?.touched" class="text-danger">
+                            El nombre debe tener al menos 3 letras.
+                        </small>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary" [disabled]="rolForm.invalid">
+                        + Agregar Rol
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla de roles existentes -->
+        <div class="card roles-list-card">
+            <div class="card-header">
+                <h3>Roles Activos</h3>
+            </div>
+            <div class="card-body p-0">
+                <ng-container *ngFor="let company of groupedKeys">
+                    <div style="background-color: var(--secondary-color); color: white; padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem;">
+                        🏢 {{ company }}
+                    </div>
+                    <table class="data-table mb-4">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre del Rol</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let rol of groupedRoles[company]" (click)="seleccionarRol(rol)" [class.active-row]="selectedRole?.id_rol === rol.id_rol" style="cursor: pointer;">
+                                <td>#{{ rol.id_rol }}</td>
+                                <td class="fw-bold">{{ rol.nombre }}</td>
+                                <td><span class="badge badge-success">Activo</span></td>
+                            </tr>
+                            <tr *ngIf="groupedRoles[company].length === 0">
+                                <td colspan="3" class="text-center empty-state">No hay roles en este grupo.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ng-container>
+                <div *ngIf="roles.length === 0" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                    Cargando roles...
+                </div>
+            </div>
+        </div>
+        
+        <!-- Asignación de Permisos (Solo visible si hay rol seleccionado) -->
+        <div class="card permissions-card" *ngIf="selectedRole">
+            <div class="card-header">
+                <h3>Permisos de: {{ selectedRole.nombre }}</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">Seleccione los accesos que tendrá este rol dentro de su empresa.</p>
+                <div class="permissions-list">
+                    <div class="permission-item" *ngFor="let permiso of permisos">
+                        <label class="checkbox-container">
+                            <input type="checkbox" 
+                                   [checked]="selectedRole.permisos?.includes(permiso.id_permiso)"
+                                   (change)="togglePermiso(permiso.id_permiso, $event)">
+                            <span class="checkmark"></span>
+                            <div class="permission-text">
+                                <span class="fw-bold">{{ permiso.codigo }}</span>
+                                <small class="text-muted d-block">{{ permiso.descripcion }}</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

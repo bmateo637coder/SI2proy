@@ -1,0 +1,39 @@
+<div class="animate-fade-in p-8">
+  <h2 class="text-3xl font-bold text-gray-800 mb-6" style="color: var(--secondary-color);">Bitácora Segura del Sistema</h2>
+  
+  <div class="luxury-card mb-8">
+    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 300px;">
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Llave de Desarrollador</label>
+        <input type="password" [(ngModel)]="devKey" class="modern-input" placeholder="Ingrese la llave secreta para desencriptar">
+      </div>
+      <button (click)="cargarBitacora()" class="btn-primary" [disabled]="loading" style="height: 48px; padding: 0 2rem;">
+        {{ loading ? 'Cargando...' : 'Desencriptar y Ver' }}
+      </button>
+    </div>
+    <p *ngIf="error" style="color: red; margin-top: 1rem; font-weight: 600;">{{error}}</p>
+  </div>
+
+  <div class="luxury-card" *ngIf="registros.length > 0" style="padding: 0;">
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-light);">
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Fecha</th>
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Usuario (CI)</th>
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Acción</th>
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let reg of registros" style="border-bottom: 1px solid var(--border-light); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='transparent'">
+            <td style="padding: 1rem 1.5rem;">{{reg.fecha_hora}}</td>
+            <td style="padding: 1rem 1.5rem; font-weight: 500; color: var(--secondary-color);">{{reg.usuario}}</td>
+            <td style="padding: 1rem 1.5rem; font-family: monospace; font-size: 0.9rem; color: var(--primary-color);">{{reg.accion}}</td>
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted);">{{reg.ip}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

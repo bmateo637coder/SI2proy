@@ -1,0 +1,46 @@
+<div class="animate-fade-in p-6">
+  <h2 class="text-3xl font-bold mb-6">Gestión de Clientes</h2>
+  
+  <div class="luxury-card mb-8">
+    <h3 class="text-xl mb-4">Registrar Nuevo Cliente</h3>
+    
+    <div *ngIf="mensajeError" class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" style="background-color: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+      {{ mensajeError }}
+    </div>
+    <div *ngIf="mensajeExito" class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" style="background-color: #f0fdf4; color: #166534; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+      {{ mensajeExito }}
+    </div>
+
+    <form [formGroup]="clienteForm" (ngSubmit)="onSubmit()" class="flex gap-4 items-end mb-8">
+      <div class="flex-1">
+        <label class="block text-sm mb-2 text-muted">CI del Usuario</label>
+        <input type="text" formControlName="ci_usuario" class="modern-input" placeholder="Ingrese el CI del usuario existente">
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="!clienteForm.valid">Asignar Rol de Cliente</button>
+    </form>
+    
+    <div style="margin-top: 2rem; padding: 1rem; border-radius: 0.5rem; background-color: #f8fafc; border: 1px solid #e2e8f0; text-align: center;">
+      <p style="font-size: 0.875rem; color: #475569; margin-bottom: 0.5rem;">¿La persona no está registrada en el sistema?</p>
+      <a routerLink="/dashboard/usuarios" class="btn-secondary inline-block" style="text-decoration: none;">Registrar Nueva Persona</a>
+    </div>
+  </div>
+
+  <div class="luxury-card">
+    <h3 class="text-xl mb-4">Lista de Clientes</h3>
+    <div *ngIf="clientes.length === 0" style="text-align: center; padding: 2rem; color: #94a3b8;">
+      <p>No hay clientes registrados aún.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+      <div *ngFor="let cliente of clientes" class="luxury-card" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <p class="font-bold">{{cliente.nombre}}</p>
+          <p class="text-muted text-sm">CI: {{cliente.ci_usuario}}</p>
+          <p class="text-muted text-sm">{{cliente.correo}}</p>
+        </div>
+        <button (click)="deleteCliente(cliente.id_cliente)" class="btn-secondary" style="border-color: #ef4444; color: #ef4444;">
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

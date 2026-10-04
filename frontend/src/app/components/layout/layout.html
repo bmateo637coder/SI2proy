@@ -1,0 +1,111 @@
+<div class="luxury-dashboard">
+    <!-- Menú Lateral -->
+    <aside class="luxury-sidebar">
+        <div class="sidebar-brand">
+            <h2 class="brand-text">Raíces</h2>
+            <p class="brand-subtext">{{ rolNombre }}</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <p class="nav-section-title">Principal</p>
+            <a routerLink="/dashboard/profile" class="luxury-nav-link" routerLinkActive="active">
+                Mi Perfil
+            </a>
+            
+            <a routerLink="/dashboard/catalogo" class="luxury-nav-link text-gold" routerLinkActive="active">
+                Catálogo
+            </a>
+            
+        <!-- Super Admin: SaaS -->
+        <div class="nav-section" *appHasPermission="'UI:MENU_EMPRESAS'">
+            <div class="nav-section-title">☁️ SaaS (Admin Global)</div>
+            <a routerLink="/dashboard/empresas" class="luxury-nav-link" routerLinkActive="active">
+                Gestión de Empresas (Inmobiliarias)
+            </a>
+            <a routerLink="/dashboard/backup" class="luxury-nav-link text-danger" routerLinkActive="active" style="color: #ef4444;">
+                💾 Copias de Seguridad
+            </a>
+        </div>
+            
+        <!-- Solo Admin: Gestión -->
+        <div class="mb-4" *appHasPermission="'UI:MENU_USUARIOS'">
+            <h4 class="text-xs uppercase text-gray-500 mb-2 px-4 tracking-wider">Gestión</h4>
+            <a *appHasPermission="'UI:MENU_USUARIOS'" routerLink="/dashboard/usuarios" class="luxury-nav-link" routerLinkActive="active">
+                Gestión de Usuarios
+            </a>
+            <a *appHasPermission="'UI:MENU_ROLES'" routerLink="/dashboard/roles" class="luxury-nav-link" routerLinkActive="active">
+                Gestión de Roles
+            </a>
+            <a routerLink="/dashboard/reportes" class="luxury-nav-link text-gold" routerLinkActive="active" style="color: var(--primary-color);">
+                📊 Reportes Dinámicos
+            </a>
+            <a *appHasPermission="'UI:MENU_BITACORA'" routerLink="/dashboard/bitacora" class="luxury-nav-link" routerLinkActive="active">
+                Bitácora de Sistema
+            </a>
+        </div>
+        
+        <!-- Admin y Agente: Inmuebles -->
+        <div class="mb-4" *appHasPermission="'UI:MENU_CATALOGO'">
+            <h4 class="text-xs uppercase text-gray-500 mb-2 px-4 tracking-wider">Inmuebles</h4>
+            <a *appHasPermission="'UI:MENU_CLIENTES'" routerLink="/dashboard/clientes" class="luxury-nav-link" routerLinkActive="active">
+                Clientes
+            </a>
+            <a *appHasPermission="'UI:MENU_PROPIETARIOS'" routerLink="/dashboard/propietarios" class="luxury-nav-link" routerLinkActive="active">
+                Propietarios
+            </a>
+            <a *appHasPermission="'UI:MENU_AGENTES'" routerLink="/dashboard/agentes" class="luxury-nav-link" routerLinkActive="active">
+                Agentes
+            </a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/propiedades" class="luxury-nav-link" routerLinkActive="active">
+                Propiedades
+            </a>
+        </div>
+            
+            <div class="spacer"></div>
+            
+            <button class="btn-logout-luxury" (click)="logout()">
+                Cerrar Sesión
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="luxury-main">
+        <header class="luxury-topbar">
+            <div class="topbar-left">
+                <h3 class="topbar-title">Bienvenido al Panel de Control</h3>
+            </div>
+            <div class="topbar-right">
+                <div class="tenant-badge">
+                    <span class="tenant-label">Inmobiliaria:</span>
+                    <span class="tenant-name">{{ tenantNombre || 'Premium' }}</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="luxury-content-area animate-fade-in">
+            <router-outlet></router-outlet>
+        </div>
+    </main>
+
+    <!-- Botón Flotante de Ayuda -->
+    <button class="help-fab" (click)="toggleHelp()" title="Asistencia en Línea">?</button>
+
+    <!-- Panel lateral de Asistencia en Línea -->
+    <div class="help-sidebar" [class.open]="showHelp">
+        <div class="help-header">
+            <h4>Centro de Ayuda</h4>
+            <button (click)="toggleHelp()" class="close-btn">&times;</button>
+        </div>
+        <div class="help-content">
+            <h5>Gestión de Roles y Permisos</h5>
+            <p>Ve a "Gestión de Roles", selecciona un rol en la tabla y marca o desmarca las casillas para asignar accesos.</p>
+            
+            <h5>Creación de Usuarios</h5>
+            <p>En "Gestión de Usuarios", llena el formulario. Si un campo está en rojo, corrígelo antes de guardar.</p>
+            
+            <h5>Catálogo de Inmuebles</h5>
+            <p>Aquí verás todas las propiedades activas. Utiliza los filtros para encontrar lo que necesitas más rápido.</p>
+        </div>
+    </div>
+</div>

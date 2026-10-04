@@ -1,0 +1,192 @@
+<div class="animate-fade-in" style="padding: 2rem;">
+
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2 style="color: var(--secondary-color); margin: 0; font-size: 1.8rem; font-weight: 700;">
+      Gestión de Propietarios
+    </h2>
+    <button *ngIf="userRole !== 1" class="btn-primary" (click)="abrirModalCrear()"
+      style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      Nuevo Propietario
+    </button>
+  </div>
+
+  <!-- Mensajes globales -->
+  <div *ngIf="mensajeExito" style="background:#d1fae5;color:#065f46;padding:1rem;border-radius:8px;margin-bottom:1.5rem;font-weight:600;">
+    ✅ {{ mensajeExito }}
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- SUPER ADMIN: selector de empresa              -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div *ngIf="userRole === 1" class="luxury-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fefce8, #fef9c3); border: 1px solid #fde68a;">
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+      <div style="flex-shrink: 0;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+        </svg>
+      </div>
+      <div style="flex: 1;">
+        <p style="font-weight: 700; color: #92400e; margin: 0 0 0.25rem 0;">Seleccione una empresa para ver sus propietarios</p>
+        <p style="font-size: 0.85rem; color: #b45309; margin: 0;">Como Super Administrador, debe elegir una empresa primero.</p>
+      </div>
+      <select [(ngModel)]="empresaSeleccionada" (ngModelChange)="onEmpresaChange()"
+        style="padding: 0.6rem 1rem; border-radius: 8px; border: 2px solid #fcd34d; background: white; font-size: 0.9rem; min-width: 220px; color: var(--secondary-color); font-weight: 600; cursor: pointer;">
+        <option [ngValue]="null" disabled>-- Seleccionar empresa --</option>
+        <option *ngFor="let emp of empresas" [ngValue]="emp.id_tenant">{{ emp.nombre }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Estado vacío super admin sin empresa -->
+  <div *ngIf="userRole === 1 && !empresaSeleccionada" style="text-align:center; padding: 4rem 2rem; color: #94a3b8;">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin-bottom:1rem;">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+    <p style="font-size: 1.1rem; font-weight: 600;">Seleccione una empresa para ver sus propietarios</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TABLA DE PROPIETARIOS                         -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div *ngIf="userRole !== 1 || empresaSeleccionada" class="luxury-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1.5rem 1.5rem 0; display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: var(--secondary-color); font-weight: 700; margin: 0;">
+        Propietarios
+        <span style="background: var(--primary-color); color: white; padding: 0.15rem 0.6rem; border-radius: 20px; font-size: 0.75rem; margin-left: 0.5rem;">
+          {{ propietarios.length }}
+        </span>
+      </h3>
+      <!-- Botón crear para admin de empresa (dentro de la tarjeta cuando hay empresa seleccionada en superadmin) -->
+      <button *ngIf="userRole === 2" class="btn-primary" (click)="abrirModalCrear()"
+        style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem; font-size: 0.875rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Nuevo Propietario
+      </button>
+    </div>
+
+    <div *ngIf="propietarios.length === 0" style="text-align: center; padding: 3rem; color: #94a3b8;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin-bottom:1rem; display:block; margin-left:auto; margin-right:auto;">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+      <p style="font-weight: 600; margin: 0;">No hay propietarios registrados.</p>
+      <p *ngIf="userRole === 2" style="font-size:0.875rem; margin-top:0.5rem;">
+        Haga clic en <strong>Nuevo Propietario</strong> para agregar uno.
+      </p>
+    </div>
+
+    <div *ngIf="propietarios.length > 0" style="overflow-x: auto; padding: 1rem 0 0;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-light); background: #fafafa;">
+            <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">ID</th>
+            <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Nombre</th>
+            <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">CI</th>
+            <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Correo</th>
+            <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Teléfono</th>
+            <th *ngIf="userRole === 2" style="padding: 1rem 1.5rem; text-align: right; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let prop of propietarios"
+            style="border-bottom: 1px solid var(--border-light); transition: background 0.15s;"
+            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">#{{ prop.id_propietario }}</td>
+            <td style="padding: 1rem 1.5rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), #6366f1); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">
+                  {{ (prop.nombre || '?').charAt(0).toUpperCase() }}
+                </div>
+                <span style="font-weight: 600; color: var(--secondary-color);">{{ prop.nombre || 'Sin nombre' }}</span>
+              </div>
+            </td>
+            <td style="padding: 1rem 1.5rem; font-family: monospace; color: var(--text-muted); font-size: 0.875rem;">{{ prop.ci_usuario }}</td>
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.875rem;">{{ prop.correo || '—' }}</td>
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.875rem;">{{ prop.telefono || '—' }}</td>
+            <td *ngIf="userRole === 2" style="padding: 1rem 1.5rem; text-align: right;">
+              <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button (click)="abrirEditar(prop)" class="btn-secondary" title="Editar"
+                  style="padding: 0.4rem 0.8rem; font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Editar
+                </button>
+                <button (click)="deletePropietario(prop.id_propietario)" title="Eliminar"
+                  style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border: 1.5px solid #ef4444; color: #ef4444; background: white; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-weight: 600; transition: all 0.2s;"
+                  onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='white'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Nota para el admin de empresa: link para registrar usuarios -->
+    <div *ngIf="userRole === 2" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-light); background: #f8fafc; border-radius: 0 0 12px 12px;">
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
+        💡 ¿El propietario no aparece? Primero debe registrarlo como usuario en
+        <a routerLink="/dashboard/usuarios" style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Gestión de Usuarios</a>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- MODAL CREAR PROPIETARIO                           -->
+<!-- ══════════════════════════════════════════════════ -->
+<div *ngIf="mostrarModalCrear" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:white;border-radius:16px;width:100%;max-width:480px;box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+    <div style="padding:1.5rem 2rem;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;background:#fafafa;border-radius:16px 16px 0 0;">
+      <h3 style="margin:0;font-size:1.2rem;font-weight:700;color:var(--secondary-color);">➕ Registrar Propietario</h3>
+      <button (click)="mostrarModalCrear=false" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);">&times;</button>
+    </div>
+    <form [formGroup]="propietarioForm" (ngSubmit)="onSubmit()" style="padding:2rem;">
+      <div *ngIf="mensajeError" style="background:#fef2f2;color:#991b1b;padding:0.75rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:600;margin-bottom:1.25rem;">
+        ⚠️ {{ mensajeError }}
+      </div>
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--secondary-color);margin-bottom:0.5rem;">CI del Usuario *</label>
+        <input type="text" formControlName="ci_usuario" class="modern-input" placeholder="Ej. 12345678">
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;">Ingrese el CI de un usuario ya registrado en el sistema.</p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:1rem;padding-top:1rem;border-top:1px solid var(--border-light);">
+        <button type="button" class="btn-secondary" (click)="mostrarModalCrear=false">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="!propietarioForm.valid">Registrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- MODAL EDITAR PROPIETARIO                          -->
+<!-- ══════════════════════════════════════════════════ -->
+<div *ngIf="mostrarModalEditar" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:white;border-radius:16px;width:100%;max-width:480px;box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+    <div style="padding:1.5rem 2rem;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;background:#fafafa;border-radius:16px 16px 0 0;">
+      <h3 style="margin:0;font-size:1.2rem;font-weight:700;color:var(--secondary-color);">✏️ Editar Propietario #{{ propietarioEditando?.id_propietario }}</h3>
+      <button (click)="mostrarModalEditar=false" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--text-muted);">&times;</button>
+    </div>
+    <form [formGroup]="editForm" (ngSubmit)="onEditSubmit()" style="padding:2rem;">
+      <div *ngIf="mensajeError" style="background:#fef2f2;color:#991b1b;padding:0.75rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:600;margin-bottom:1.25rem;">
+        ⚠️ {{ mensajeError }}
+      </div>
+      <!-- Info actual -->
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.25rem;">
+        <p style="font-size:0.8rem;color:#0369a1;margin:0 0 0.25rem;font-weight:600;">Propietario actual:</p>
+        <p style="font-size:0.9rem;color:#0c4a6e;margin:0;font-weight:700;">{{ propietarioEditando?.nombre }} — CI: {{ propietarioEditando?.ci_usuario }}</p>
+      </div>
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--secondary-color);margin-bottom:0.5rem;">Nuevo CI del Usuario *</label>
+        <input type="text" formControlName="ci_usuario" class="modern-input" placeholder="Ingrese el nuevo CI">
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-top:0.4rem;">El CI debe pertenecer a un usuario registrado en el sistema.</p>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:1rem;padding-top:1rem;border-top:1px solid var(--border-light);">
+        <button type="button" class="btn-secondary" (click)="mostrarModalEditar=false">Cancelar</button>
+        <button type="submit" class="btn-primary" [disabled]="!editForm.valid">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>

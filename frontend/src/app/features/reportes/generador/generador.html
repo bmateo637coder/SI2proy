@@ -1,0 +1,153 @@
+<div class="reportes-container">
+  <div class="header-section mb-6" style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+          <h2 class="text-3xl font-bold">Generador de Reportes Dinámicos</h2>
+          <p class="text-muted">Construya sus propios reportes personalizados, filtre información y expórtelos.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: flex-end;">
+          <button (click)="grabarVoz()" [disabled]="grabandoVoz" class="btn-primary" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; display: flex; align-items: center; gap: 8px;">
+              <svg *ngIf="!grabandoVoz" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line></svg>
+              <svg *ngIf="grabandoVoz" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: pulse 1.5s infinite;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              {{ grabandoVoz ? 'ESCUCHANDO...' : '✨ Asistente de Voz IA' }}
+          </button>
+          <div *ngIf="grabandoVoz || (textoEscuchado && textoEscuchado !== 'Escuchando...')" [ngStyle]="{'background': errorIA ? '#fef2f2' : '#f3e8ff', 'border-color': errorIA ? '#fca5a5' : '#d8b4fe', 'color': errorIA ? '#991b1b' : '#6b21a8'}" style="margin-top: 0.75rem; max-width: 300px; padding: 0.75rem 1rem; background: #f3e8ff; border: 1px solid #d8b4fe; border-radius: 8px; font-size: 0.9rem; font-style: italic; text-align: right; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+              <span>"{{ textoEscuchado }}"</span>
+              <svg *ngIf="errorIA" [title]="errorIA" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="cursor: help; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+      </div>
+  </div>
+
+  <div class="content-grid" style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem;">
+      <!-- Panel Principal -->
+      <div class="main-panel">
+          <div *ngIf="mensaje" style="background: #eff6ff; color: #1d4ed8; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-weight: 600; border-left: 4px solid #3b82f6;">
+              {{ mensaje }}
+          </div>
+          
+          <!-- Configuración -->
+          <div class="luxury-card mb-6">
+              <h3 class="card-title">1. Configuración de Datos</h3>
+              
+              <div class="form-group mb-4">
+                  <label class="label-muted">Fuente de Datos</label>
+                  <select class="modern-input" [(ngModel)]="entidadSeleccionada" (change)="onEntidadChange()">
+                      <option *ngFor="let ent of entidades" [value]="ent.value">{{ent.label}}</option>
+                  </select>
+              </div>
+
+              <div class="form-group mb-4" *ngIf="userRole === 1">
+                  <label class="label-muted text-primary" style="color: var(--primary-color);">Filtro Global (SuperAdmin)</label>
+                  <select class="modern-input" [(ngModel)]="empresaFiltro">
+                      <option value="">Todas las Empresas (SaaS)</option>
+                      <option *ngFor="let emp of empresas" [value]="emp.id_tenant">{{emp.nombre}}</option>
+                  </select>
+              </div>
+
+              <div class="form-group mb-4">
+                  <label class="label-muted">Seleccionar Columnas a Mostrar</label>
+                  <div class="checkbox-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                      <label class="checkbox-container" *ngFor="let col of columnasDisponibles[entidadSeleccionada]">
+                          <input type="checkbox" 
+                                 [checked]="columnasSeleccionadas.includes(col.id)"
+                                 (change)="toggleColumna(col.id, $event)">
+                          <span class="checkmark"></span>
+                          {{col.label}}
+                      </label>
+                  </div>
+              </div>
+
+              <hr class="divider">
+
+              <h3 class="card-title mt-4">2. Filtros Personalizados</h3>
+              <div *ngFor="let filtro of filtros; let i = index" class="filtro-row mb-2" style="display: flex; gap: 10px; align-items: center;">
+                  <select [(ngModel)]="filtro.columna" class="modern-input" style="flex: 1;">
+                      <option value="">-- Campo --</option>
+                      <option *ngFor="let col of columnasDisponibles[entidadSeleccionada]" [value]="col.id">{{col.label}}</option>
+                  </select>
+                  
+                  <select [(ngModel)]="filtro.operador" class="modern-input" style="flex: 1;">
+                      <option value="eq">Igual a (=)</option>
+                      <option value="like">Contiene</option>
+                      <option value="gt">Mayor que (>)</option>
+                      <option value="lt">Menor que (<)</option>
+                      <option value="gte">Mayor o igual (>=)</option>
+                      <option value="lte">Menor o igual (<=)</option>
+                  </select>
+
+                  <input type="text" [(ngModel)]="filtro.valor" class="modern-input" style="flex: 1;" placeholder="Valor...">
+                  
+                  <button class="btn-danger-icon" (click)="removerFiltro(i)">X</button>
+              </div>
+              <button class="btn-secondary mt-2" (click)="agregarFiltro()">+ Agregar Filtro</button>
+
+              <hr class="divider mt-4">
+
+              <h3 class="card-title mt-4">3. Ordenamiento</h3>
+              <div class="order-section" style="display: flex; gap: 10px; align-items: center; margin-top: 1rem;">
+                <label class="label-muted mb-0">Ordenar por:</label>
+                <select [(ngModel)]="ordenColumna" class="modern-input" style="width: 200px;">
+                  <option *ngFor="let col of columnasDisponibles[entidadSeleccionada]" [value]="col.id">{{col.label}}</option>
+                </select>
+                <select [(ngModel)]="ordenDireccion" class="modern-input" style="width: 150px;">
+                  <option value="asc">Ascendente</option>
+                  <option value="desc">Descendente</option>
+                </select>
+              </div>
+              
+              <div class="mt-6 pt-6" style="text-align: right; border-top: 1px solid var(--border-light);">
+                <button class="btn-primary" (click)="generarReporte()">🔄 Generar Previsualización</button>
+              </div>
+          </div>
+
+          <!-- Tabla de Resultados -->
+          <div class="luxury-card" *ngIf="resultados.length > 0">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 class="card-title mb-0">Previsualización ({{resultados.length}} registros)</h3>
+                <div class="export-actions">
+                  <button class="btn-export csv" (click)="exportarCSV()">📊 Exportar CSV</button>
+                  <button class="btn-export excel" (click)="exportarExcel()" style="background: #217346; color: white;">📗 Exportar Excel</button>
+                  <button class="btn-export html" (click)="exportarHTML()">🌐 Exportar HTML</button>
+                  <button class="btn-export pdf" (click)="exportarPDF()" style="background: #F40F02; color: white;">📕 Exportar PDF</button>
+                </div>
+              </div>
+              
+              <div style="overflow-x: auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th *ngFor="let col of columnasResultados">{{col | uppercase}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of resultados">
+                      <td *ngFor="let col of columnasResultados">{{row[col]}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+          </div>
+      </div>
+
+      <!-- Panel Lateral (Guardados) -->
+      <div class="sidebar-panel">
+          <div class="luxury-card mb-4" style="background-color: var(--surface-hover);">
+            <h4 style="margin-top:0;">Guardar Estructura</h4>
+            <p class="text-xs text-muted mb-3">Guarde estos filtros para no tener que volver a armarlos la próxima vez.</p>
+            <input type="text" [(ngModel)]="nombreNuevoReporte" class="modern-input mb-2" placeholder="Nombre de este reporte">
+            <button class="btn-primary" style="width: 100%" (click)="guardarConfiguracion()">💾 Guardar Configuración</button>
+            <div *ngIf="mensaje" class="text-xs text-green-600 mt-2">{{mensaje}}</div>
+          </div>
+
+          <div class="luxury-card">
+            <h4 style="margin-top:0;">Mis Reportes Guardados</h4>
+            <div *ngIf="reportesGuardados.length === 0" class="text-sm text-muted">No tienes reportes guardados.</div>
+            <ul style="list-style: none; padding: 0;">
+              <li *ngFor="let rep of reportesGuardados" class="saved-report-item" (click)="cargarConfiguracion(rep)">
+                <span style="font-weight: 500; display: block;">{{rep.nombre}}</span>
+                <small class="text-muted" style="display: block;">{{rep.fecha_creacion | date}}</small>
+              </li>
+            </ul>
+          </div>
+      </div>
+  </div>
+</div>

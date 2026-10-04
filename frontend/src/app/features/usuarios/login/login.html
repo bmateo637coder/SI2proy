@@ -1,0 +1,40 @@
+<div class="luxury-login-wrapper">
+    <div class="luxury-login-card animate-fade-in">
+        <div class="brand-section">
+            <h1 class="brand-title">Raíces</h1>
+            <p class="brand-subtitle">Portal Inmobiliario Exclusivo</p>
+            <div class="gold-divider"></div>
+        </div>
+        
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+            
+            <div *ngIf="errorMessage" class="alert-error">
+                <i class="icon-error">!</i> {{ errorMessage }}
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="luxury-label">Correo Electrónico</label>
+                <input type="email" id="email" formControlName="correo" class="modern-input" placeholder="ejecutivo@raices.com">
+                <small *ngIf="loginForm.get('correo')?.invalid && loginForm.get('correo')?.touched" class="text-danger">
+                    Ingresa un correo válido.
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="luxury-label">Contraseña</label>
+                <input type="password" id="password" formControlName="password" class="modern-input" placeholder="••••••••">
+                <small *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="text-danger">
+                    La contraseña es obligatoria.
+                </small>
+            </div>
+            
+            <button type="submit" class="btn-primary btn-block" [disabled]="loginForm.invalid">
+                Ingresar al Portal
+            </button>
+            
+            <div class="extra-links">
+                <a routerLink="/forgot-password" class="luxury-link">¿Olvidaste tu contraseña?</a>
+            </div>
+        </form>
+    </div>
+</div>

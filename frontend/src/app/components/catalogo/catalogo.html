@@ -1,0 +1,198 @@
+<div class="animate-fade-in p-8 max-w-7xl mx-auto" style="max-width: 1200px; margin: 0 auto; padding: 3rem 1.5rem;">
+  
+  <!-- Header Minimalista Lujo -->
+  <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem; border-bottom: 1px solid var(--border-light); padding-bottom: 2rem;">
+    <div>
+        <h1 style="font-size: 2.5rem; color: var(--secondary-color); margin: 0; line-height: 1.1;">Raíces</h1>
+        <p style="color: var(--primary-color); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; margin: 0; font-weight: 600;">Exclusividad & Elegancia</p>
+    </div>
+  </header>
+
+  <div class="text-center mb-12" style="text-align: center; margin-bottom: 4rem;">
+    <h2 style="font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--secondary-color); letter-spacing: -1px;">
+      Descubre tu Próximo Hogar
+    </h2>
+    <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+      Una colección selecta de propiedades de lujo diseñadas para superar tus expectativas.
+    </p>
+  </div>
+
+  <!-- Buscador y Filtros -->
+  <div class="luxury-card" style="margin-bottom: 4rem;">
+    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;">
+      <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-end; flex: 1;">
+        <div style="flex: 1; min-width: 200px;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Operación</label>
+          <select [(ngModel)]="filtroOperacion" class="modern-select">
+            <option value="">Cualquiera</option>
+            <option value="Venta">Venta</option>
+            <option value="Alquiler">Alquiler</option>
+            <option value="Anticretico">Anticrético</option>
+          </select>
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Presupuesto Mínimo</label>
+          <input type="number" [(ngModel)]="filtroPrecioMin" class="modern-input" placeholder="$ 0">
+        </div>
+        <div style="flex: 1; min-width: 150px;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Presupuesto Máximo</label>
+          <input type="number" [(ngModel)]="filtroPrecioMax" class="modern-input" placeholder="Sin límite">
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 1rem;">
+        <button (click)="toggleFiltrosAvanzados()" class="btn-secondary" style="height: 48px; padding: 0 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          Filtros Avanzados
+          <svg *ngIf="!mostrarFiltrosAvanzados" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          <svg *ngIf="mostrarFiltrosAvanzados" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+        </button>
+        <button (click)="aplicarFiltros()" class="btn-primary" style="height: 48px; padding: 0 2.5rem;">
+          Explorar
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros Avanzados -->
+    <div *ngIf="mostrarFiltrosAvanzados" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-light); display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; animation: fadeIn 0.3s ease;">
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Cuartos (Mínimo)</label>
+        <input type="number" [(ngModel)]="filtroCuartos" class="modern-input" placeholder="Ej. 2">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Baños (Mínimo)</label>
+        <input type="number" [(ngModel)]="filtroBanos" class="modern-input" placeholder="Ej. 1">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Salas (Mínimo)</label>
+        <input type="number" [(ngModel)]="filtroSalas" class="modern-input" placeholder="Ej. 1">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">M² (Mínimo)</label>
+        <input type="number" [(ngModel)]="filtroMetrosMin" class="modern-input" placeholder="0">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">M² (Máximo)</label>
+        <input type="number" [(ngModel)]="filtroMetrosMax" class="modern-input" placeholder="Sin límite">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Zona</label>
+        <select [(ngModel)]="filtroZona" class="modern-select">
+          <option value="">Cualquiera</option>
+          <option value="Norte">Norte</option>
+          <option value="Sur">Sur</option>
+          <option value="Este">Este</option>
+          <option value="Oeste">Oeste</option>
+          <option value="Centro">Centro</option>
+          <option value="Urubo">Urubó</option>
+        </select>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 1rem; justify-content: center; padding-top: 0.5rem;">
+        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+          <input type="checkbox" [(ngModel)]="filtroAmueblado" style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary-color);">
+          <span style="font-size: 0.95rem; color: var(--secondary-color); font-weight: 500;">Amueblado</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+          <input type="checkbox" [(ngModel)]="filtroServicios" style="width: 1.25rem; height: 1.25rem; accent-color: var(--primary-color);">
+          <span style="font-size: 0.95rem; color: var(--secondary-color); font-weight: 500;">Servicios Básicos Incluidos</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div class="grid-catalogo">
+    <div *ngFor="let prop of propiedades" class="luxury-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+      
+      <!-- Contenedor de Imagen -->
+      <div style="height: 260px; background: var(--border-light); position: relative; overflow: hidden;">
+        
+        <div *ngIf="!prop.imagenes || prop.imagenes.length === 0" style="display: flex; height: 100%; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.9rem;">
+          Imagen No Disponible
+        </div>
+        
+        <!-- Zoom effect on hover is added via inline style transition -->
+        <img *ngIf="prop.imagenes && prop.imagenes.length > 0" 
+             [src]="'http://localhost:8000' + prop.imagenes[0].url" 
+             style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease;"
+             onmouseover="this.style.transform='scale(1.05)'"
+             onmouseout="this.style.transform='scale(1)'">
+             
+        <!-- Badge -->
+        <div class="badge-dark" style="position: absolute; top: 15px; right: 15px; box-shadow: var(--shadow-md);">
+          {{prop.tipo_operacion}}
+        </div>
+      </div>
+      
+      <!-- Información -->
+      <div style="padding: 2rem; flex: 1; display: flex; flex-direction: column;">
+        <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--secondary-color); line-height: 1.3;">
+            {{prop.titulo}}
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; flex: 1;">
+            {{prop.direccion}}
+        </p>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 1.5rem; margin-top: auto;">
+            <p style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color); margin: 0;">
+                ${{prop.precio}}
+            </p>
+            <button class="btn-secondary" style="padding: 0.6rem 1.2rem; font-size: 0.75rem;" (click)="abrirDetalles(prop)">
+                Detalles
+            </button>
+        </div>
+      </div>
+    </div>
+    
+    <div *ngIf="propiedades.length === 0" style="grid-column: 1 / -1; text-align: center; padding: 4rem;" class="luxury-card">
+      <p style="color: var(--text-muted); font-size: 1.1rem;">No se encontraron propiedades que coincidan con sus criterios de búsqueda.</p>
+    </div>
+  </div>
+  
+  <!-- Modal de Detalles -->
+  <div *ngIf="mostrarModalDetalle" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75 animate-fade-in" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" style="background: white; border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto;">
+      
+      <div style="position: relative; height: 400px; background: #f0f0f0;">
+        <img *ngIf="propiedadSeleccionada.imagenes && propiedadSeleccionada.imagenes.length > 0" 
+             [src]="'http://localhost:8000' + propiedadSeleccionada.imagenes[0].url" 
+             style="width: 100%; height: 100%; object-fit: cover;">
+             
+        <button (click)="cerrarDetalles()" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.3s;" onmouseover="this.style.background='rgba(0,0,0,0.8)'" onmouseout="this.style.background='rgba(0,0,0,0.5)'">
+          &times;
+        </button>
+        
+        <div class="badge-dark" style="position: absolute; bottom: 20px; left: 20px; font-size: 1.2rem; padding: 0.5rem 1.5rem; background: rgba(0,0,0,0.8); color: white;">
+          {{propiedadSeleccionada.tipo_operacion}}
+        </div>
+      </div>
+      
+      <div style="padding: 2.5rem;">
+        <h2 style="font-size: 2.5rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 0.5rem;">{{propiedadSeleccionada.titulo}}</h2>
+        <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: text-bottom; margin-right: 5px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          {{propiedadSeleccionada.direccion}}
+        </p>
+        
+        <div style="display: flex; gap: 2rem; margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid var(--border-light);">
+          <div>
+            <p style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0.5rem;">Precio</p>
+            <p style="font-size: 2rem; font-weight: 700; color: var(--primary-color); margin: 0;">${{propiedadSeleccionada.precio}}</p>
+          </div>
+        </div>
+        
+        <h3 style="font-size: 1.3rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 1px;">Características Principales</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
+          <div *ngFor="let car of propiedadSeleccionada.caracteristicas" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px;">
+            <div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 0.2rem 0; text-transform: uppercase; letter-spacing: 1px;">{{car.nombre}}</p>
+              <p style="font-size: 1.1rem; font-weight: 600; color: var(--secondary-color); margin: 0;">{{car.valor}}</p>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+</div>

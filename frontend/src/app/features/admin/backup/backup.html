@@ -1,0 +1,59 @@
+<div class="backup-container">
+  <div class="header-section mb-6">
+      <h2 class="text-3xl font-bold">Copias de Seguridad (Backup & Restore)</h2>
+      <p class="text-muted">Gestione la seguridad de los datos de todo el sistema SaaS.</p>
+  </div>
+
+  <div class="alert alert-warning mb-6">
+      <strong>⚠️ Módulo Crítico:</strong> Estas acciones afectan directamente la base de datos principal de producción. Proceda con máxima precaución.
+  </div>
+
+  <div class="content-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+      <!-- Panel de Descarga (Backup) -->
+      <div class="luxury-card">
+          <h3 class="card-title text-success">Descargar Copia de Seguridad</h3>
+          <p class="text-sm text-muted mb-4">
+              Genera un archivo `.sql` con el volcado completo de la base de datos (estructura y datos). 
+              Es recomendable hacer esto periódicamente o antes de restaurar un estado anterior.
+          </p>
+          
+          <div class="action-box text-center py-6">
+              <i class="icon-download large-icon mb-4" style="font-size: 3rem; color: #10b981; display: block;">⬇️</i>
+              <button class="btn-success" (click)="descargarBackup()" [disabled]="isDownloading">
+                  <span *ngIf="!isDownloading">Generar y Descargar Backup</span>
+                  <span *ngIf="isDownloading">Generando... Por favor espere</span>
+              </button>
+          </div>
+      </div>
+
+      <!-- Panel de Restauración (Restore) -->
+      <div class="luxury-card danger-zone">
+          <h3 class="card-title text-danger">Restaurar Sistema</h3>
+          <p class="text-sm text-muted mb-4">
+              Restaura la base de datos a partir de un archivo `.sql`. 
+              <strong>Nota:</strong> Los datos actuales serán eliminados y sobreescritos por los del archivo.
+          </p>
+          
+          <div class="action-box py-4">
+              <div class="form-group mb-4">
+                  <label class="label-muted">Seleccionar archivo SQL</label>
+                  <input type="file" accept=".sql" class="modern-input file-input" (change)="onFileSelected($event)" [disabled]="isUploading">
+              </div>
+
+              <div class="text-right">
+                  <button class="btn-danger" (click)="restaurarBackup()" [disabled]="isUploading || !archivoSeleccionado">
+                      <span *ngIf="!isUploading">⚠️ Sobreescribir Sistema</span>
+                      <span *ngIf="isUploading">Restaurando... No cierre esta ventana</span>
+                  </button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <div *ngIf="mensaje" class="alert alert-success mt-6">
+      ✅ {{ mensaje }}
+  </div>
+  <div *ngIf="error" class="alert alert-danger mt-6">
+      ❌ {{ error }}
+  </div>
+</div>

@@ -1,0 +1,100 @@
+<div class="animate-fade-in p-6">
+  <h2 class="text-3xl font-bold mb-6">Gestión de Usuarios</h2>
+  
+  <div class="luxury-card mb-8">
+    <h3 class="text-xl mb-4">Registrar Nueva Persona</h3>
+    
+    <div *ngIf="mensajeError" class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" style="background-color: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+      {{ mensajeError }}
+    </div>
+    <div *ngIf="mensajeExito" class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50" style="background-color: #f0fdf4; color: #166534; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+      {{ mensajeExito }}
+    </div>
+
+    <form [formGroup]="usuarioForm" (ngSubmit)="onSubmit()" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div>
+        <label class="block text-sm mb-2 text-muted">CI del Usuario <span class="tooltip-icon" data-tooltip="Carnet de Identidad sin extensión. Ej. 1234567">?</span></label>
+        <input type="text" formControlName="ci" class="modern-input" placeholder="Ej: 999999" [ngClass]="{'border-red-500': usuarioForm.get('ci')?.invalid && (usuarioForm.get('ci')?.dirty || usuarioForm.get('ci')?.touched)}">
+        <div *ngIf="usuarioForm.get('ci')?.invalid && (usuarioForm.get('ci')?.dirty || usuarioForm.get('ci')?.touched)" class="text-xs text-red-500 mt-1">
+          El CI es obligatorio.
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-muted">Nombre Completo</label>
+        <input type="text" formControlName="nombre" class="modern-input" placeholder="Nombre de la persona" [ngClass]="{'border-red-500': usuarioForm.get('nombre')?.invalid && (usuarioForm.get('nombre')?.dirty || usuarioForm.get('nombre')?.touched)}">
+        <div *ngIf="usuarioForm.get('nombre')?.invalid && (usuarioForm.get('nombre')?.dirty || usuarioForm.get('nombre')?.touched)" class="text-xs text-red-500 mt-1">
+          El nombre es obligatorio.
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-muted">Correo Electrónico <span class="tooltip-icon" data-tooltip="Se usará para enviar notificaciones">?</span></label>
+        <input type="email" formControlName="correo" class="modern-input" placeholder="correo@ejemplo.com" [ngClass]="{'border-red-500': usuarioForm.get('correo')?.invalid && (usuarioForm.get('correo')?.dirty || usuarioForm.get('correo')?.touched)}">
+        <div *ngIf="usuarioForm.get('correo')?.invalid && (usuarioForm.get('correo')?.dirty || usuarioForm.get('correo')?.touched)" class="text-xs text-red-500 mt-1">
+          <span *ngIf="usuarioForm.get('correo')?.errors?.['required']">El correo es obligatorio.</span>
+          <span *ngIf="usuarioForm.get('correo')?.errors?.['email']">Ingrese un correo válido.</span>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-muted">Teléfono</label>
+        <input type="text" formControlName="telefono" class="modern-input" placeholder="Teléfono">
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-muted">Rol en el Sistema <span class="tooltip-icon" data-tooltip="Determina a qué menús tendrá acceso">?</span></label>
+        <select formControlName="id_rol" class="modern-input" [ngClass]="{'border-red-500': usuarioForm.get('id_rol')?.invalid && (usuarioForm.get('id_rol')?.dirty || usuarioForm.get('id_rol')?.touched)}">
+          <option value="" disabled selected>Seleccione un Rol</option>
+          <option *ngFor="let rol of roles" [value]="rol.id_rol">{{rol.nombre}}</option>
+        </select>
+        <div *ngIf="usuarioForm.get('id_rol')?.invalid && (usuarioForm.get('id_rol')?.dirty || usuarioForm.get('id_rol')?.touched)" class="text-xs text-red-500 mt-1">
+          Debe seleccionar un rol.
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm mb-2 text-muted">Contraseña Temporal <span class="tooltip-icon" data-tooltip="El usuario debe cambiarla al ingresar por primera vez">?</span></label>
+        <input type="password" formControlName="password" class="modern-input" placeholder="Contraseña de acceso" [ngClass]="{'border-red-500': usuarioForm.get('password')?.invalid && (usuarioForm.get('password')?.dirty || usuarioForm.get('password')?.touched)}">
+        <div *ngIf="usuarioForm.get('password')?.invalid && (usuarioForm.get('password')?.dirty || usuarioForm.get('password')?.touched)" class="text-xs text-red-500 mt-1">
+          La contraseña temporal es obligatoria.
+        </div>
+      </div>
+      <div style="grid-column: span 2;">
+        <button type="submit" class="btn-primary" style="width: 100%;" [disabled]="!usuarioForm.valid">Guardar Usuario</button>
+      </div>
+    </form>
+  </div>
+
+  <h3 class="text-xl mb-4">Lista de Personas Registradas</h3>
+  
+  <!-- Tabla de Usuarios Agrupados por Empresa -->
+  <div *ngFor="let company of groupedKeys" class="luxury-card mb-6" style="padding: 0;">
+    <div style="background-color: var(--secondary-color); color: white; padding: 1rem 1.5rem; font-weight: 600; font-size: 1.1rem; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+        🏢 {{ company }}
+    </div>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; text-align: left; border-collapse: collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-light); background-color: #fafafa;">
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">CI</th>
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Nombre</th>
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Rol</th>
+            <th style="padding: 1.25rem 1.5rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px;">Contacto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of groupedUsuarios[company]" style="border-bottom: 1px solid var(--border-light); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='transparent'">
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-family: monospace;">{{user.ci}}</td>
+            <td style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary-color);">{{user.nombre}}</td>
+            <td style="padding: 1rem 1.5rem;">
+                <span style="padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background-color: rgba(22, 163, 74, 0.1); color: var(--primary-color);">{{getRoleName(user.id_rol)}}</span>
+            </td>
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted);">
+              <div style="font-size: 0.85rem;">{{user.correo}}</div>
+              <div style="font-size: 0.8rem;">{{user.telefono}}</div>
+            </td>
+          </tr>
+          <tr *ngIf="groupedUsuarios[company].length === 0">
+              <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-muted);">No hay usuarios registrados en este grupo.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
