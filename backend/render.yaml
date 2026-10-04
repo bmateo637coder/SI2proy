@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: raices-backend
+    rootDir: backend
+    runtime: python
+    pythonVersion: 3.12.2
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /docs
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: BITACORA_FERNET_KEY
+        sync: false
+      - key: DEFAULT_ADMIN_PASSWORD
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false

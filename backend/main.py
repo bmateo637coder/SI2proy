@@ -30,12 +30,16 @@ import ia_router
 app = FastAPI(title="Raíces - Inmobiliaria API", version="1.0.0")
 
 app.include_router(ia_router.router)
+os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # CORS setup for Angular frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=[
+        "http://localhost:4200",
+        "https://bmateo637coder.github.io",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

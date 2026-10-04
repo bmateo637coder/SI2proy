@@ -1,0 +1,43 @@
+name: Build APK Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.4
+
+      - name: Validar versión de Flutter
+        working-directory: mobile
+        run: flutter --version
+
+      - name: Obtener dependencias
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build APK release
+        working-directory: mobile
+        env:
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+        run: |
+          if [ -z "$PROD_API_URL" ]; then
+            echo "::error::Variable PROD_API_URL no definida (Settings > Variables). Se usa la URL por defecto."
+            flutter build apk --release
+          else
+            flutter build apk --release --dart-define=API_BASE_URL=$PROD_API_URL
+          fi
+
+      - name: Publicar APK como GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: mobile/build/app/outputs/flutter-apk/app-release.apk
+          generate_release_notes: true
