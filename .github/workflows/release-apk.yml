@@ -2,6 +2,11 @@ name: Build APK Release
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Etiqueta (tag) del Release (vacío = apk_demo_<run_número>)'
+        required: false
+        default: ''
   push:
     tags: ['v*']
 
@@ -36,8 +41,21 @@ jobs:
             flutter build apk --release --dart-define=API_BASE_URL=$PROD_API_URL
           fi
 
+      - name: Obtener etiqueta del Release
+        id: tag
+        env:
+          INPUT_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
+          RUN_NO: ${{ github.run_number }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=apk_demo_${RUN_NO}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publicar APK como GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: mobile/build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
+          tag_name: ${{ steps.tag.outputs.tag }}
