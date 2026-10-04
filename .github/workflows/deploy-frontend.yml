@@ -54,6 +54,9 @@ jobs:
         id: out
         run: echo "dir=$(find dist -type f -name index.html | head -1 | xargs dirname)" >> "$GITHUB_OUTPUT"
 
+      - name: Fallback SPA (404.html = index.html para refrescos en rutas)
+        run: cp "${{ steps.out.outputs.dir }}/index.html" "${{ steps.out.outputs.dir }}/404.html"
+
       - name: Deploy a GitHub Pages (rama gh-pages)
         uses: peaceiris/actions-gh-pages@v4
         with:
