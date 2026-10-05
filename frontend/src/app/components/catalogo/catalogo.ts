@@ -12,6 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class Catalogo implements OnInit, OnDestroy {
   propiedades: any[] = [];
+  private apiBase = 'http://localhost:8000';
   private ws: WebSocket | null = null;
   
   filtroOperacion: string = '';
@@ -45,6 +46,12 @@ export class Catalogo implements OnInit, OnDestroy {
   cerrarDetalles() {
     this.mostrarModalDetalle = false;
     this.propiedadSeleccionada = null;
+  }
+
+  imageUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return this.apiBase + url;
   }
 
   constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) {}

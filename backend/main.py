@@ -632,7 +632,7 @@ async def upload_image(file: UploadFile = File(...)):
         filepath = os.path.join("uploads", filename)
         with open(filepath, "wb") as f:
             f.write(await file.read())
-        return {"url": f"http://localhost:8000/uploads/{filename}"}
+        return {"url": f"/uploads/{filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
