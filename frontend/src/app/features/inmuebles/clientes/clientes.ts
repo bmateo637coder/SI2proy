@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 
 import { RouterModule } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -33,7 +34,7 @@ export class Clientes implements OnInit {
   }
 
   loadClientes() {
-    this.http.get('http://localhost:8000/modulo_inmuebles/clientes', { headers: this.getHeaders() })
+    this.http.get(`${environment.apiUrl}/modulo_inmuebles/clientes`, { headers: this.getHeaders() })
       .subscribe((res: any) => {
         this.clientes = res;
         this.cdr.detectChanges();
@@ -44,7 +45,7 @@ export class Clientes implements OnInit {
     if (this.clienteForm.valid) {
       this.mensajeError = '';
       this.mensajeExito = '';
-      this.http.post('http://localhost:8000/modulo_inmuebles/clientes', this.clienteForm.value, { headers: this.getHeaders() })
+      this.http.post(`${environment.apiUrl}/modulo_inmuebles/clientes`, this.clienteForm.value, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadClientes();
@@ -63,7 +64,7 @@ export class Clientes implements OnInit {
   }
 
   deleteCliente(id: number) {
-      this.http.delete(`http://localhost:8000/modulo_inmuebles/clientes/${id}`, { headers: this.getHeaders() })
+      this.http.delete(`${environment.apiUrl}/modulo_inmuebles/clientes/${id}`, { headers: this.getHeaders() })
         .subscribe(() => this.loadClientes());
   }
 }

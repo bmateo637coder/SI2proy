@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -13,7 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 export class Catalogo implements OnInit, OnDestroy {
   propiedades: any[] = [];
   recomendados: any[] = [];
-  private apiBase = 'http://localhost:8000';
+  private apiBase = environment.apiUrl;
   private ws: WebSocket | null = null;
   
   filtroOperacion: string = '';
@@ -69,7 +70,7 @@ export class Catalogo implements OnInit, OnDestroy {
     if (user && user.id_tenant) {
         headers = headers.set('X-Tenant-ID', user.id_tenant.toString());
     }
-    this.http.post<any>('http://localhost:8000/api/ia/recomendar', { limite: 4 }, { headers })
+    this.http.post<any>(`${environment.apiUrl}/api/ia/recomendar`, { limite: 4 }, { headers })
       .subscribe({
         next: (res: any) => {
           const recs = res?.recomendaciones || res?.data || [];
@@ -85,7 +86,7 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   connectWebSocket() {
-    this.ws = new WebSocket('ws://localhost:8000/ws/propiedades');
+    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades`);
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -141,7 +142,7 @@ export class Catalogo implements OnInit, OnDestroy {
         headers = headers.set('X-Tenant-ID', user.id_tenant.toString());
     }
 
-    this.http.get<any[]>('http://localhost:8000/modulo_inmuebles/propiedades/catalogo', { params, headers })
+    this.http.get<any[]>(`${environment.apiUrl}/modulo_inmuebles/propiedades/catalogo`, { params, headers })
       .subscribe({
         next: (res: any[]) => {
           this.propiedades = [...res];

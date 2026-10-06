@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -50,7 +51,7 @@ export class Usuarios implements OnInit {
   }
   
   loadEmpresas() {
-      this.http.get('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+      this.http.get(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe((res: any) => {
           this.empresas = res;
           this.loadUsuarios();
@@ -58,7 +59,7 @@ export class Usuarios implements OnInit {
   }
 
   loadUsuarios() {
-    this.http.get('http://localhost:8000/gestion_usuarios/usuarios', { headers: this.getHeaders() })
+    this.http.get(`${environment.apiUrl}/gestion_usuarios/usuarios`, { headers: this.getHeaders() })
       .subscribe((res: any) => {
         this.usuarios = res;
         this.groupUsuarios();
@@ -89,7 +90,7 @@ export class Usuarios implements OnInit {
   }
 
   loadRoles() {
-    this.http.get('http://localhost:8000/gestion_usuarios/roles', { headers: this.getHeaders() })
+    this.http.get(`${environment.apiUrl}/gestion_usuarios/roles`, { headers: this.getHeaders() })
       .subscribe((res: any) => {
         this.roles = res;
         this.cdr.detectChanges();
@@ -111,7 +112,7 @@ export class Usuarios implements OnInit {
         id_rol: parseInt(this.usuarioForm.value.id_rol, 10)
       };
       
-      this.http.post('http://localhost:8000/gestion_usuarios/usuarios', formData, { headers: this.getHeaders() })
+      this.http.post(`${environment.apiUrl}/gestion_usuarios/usuarios`, formData, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadUsuarios();

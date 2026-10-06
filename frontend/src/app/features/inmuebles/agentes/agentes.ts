@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 import { RouterModule } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -44,7 +45,7 @@ export class Agentes implements OnInit {
   }
 
   loadEmpresas() {
-    this.http.get<any[]>('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+    this.http.get<any[]>(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe({ next: (res) => { this.empresas = [...res]; this.cdr.detectChanges(); } });
   }
 
@@ -58,7 +59,7 @@ export class Agentes implements OnInit {
   }
 
   loadAgentes() {
-    let url = 'http://localhost:8000/modulo_inmuebles/agentes';
+    let url = `${environment.apiUrl}/modulo_inmuebles/agentes`;
     if (this.userRole === 1 && this.empresaSeleccionada) {
       url += `?id_tenant=${this.empresaSeleccionada}`;
     }
@@ -79,7 +80,7 @@ export class Agentes implements OnInit {
         payload = { ...payload, id_tenant: this.empresaSeleccionada };
       }
 
-      this.http.post('http://localhost:8000/modulo_inmuebles/agentes', payload, { headers: this.getHeaders() })
+      this.http.post(`${environment.apiUrl}/modulo_inmuebles/agentes`, payload, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadAgentes();
@@ -98,7 +99,7 @@ export class Agentes implements OnInit {
   }
 
   deleteAgente(id: number) {
-      this.http.delete(`http://localhost:8000/modulo_inmuebles/agentes/${id}`, { headers: this.getHeaders() })
+      this.http.delete(`${environment.apiUrl}/modulo_inmuebles/agentes/${id}`, { headers: this.getHeaders() })
         .subscribe(() => this.loadAgentes());
   }
 }

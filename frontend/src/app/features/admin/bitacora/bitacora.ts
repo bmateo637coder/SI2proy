@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -32,7 +33,7 @@ export class Bitacora implements OnInit {
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     
-    this.http.get(`http://localhost:8000/admin/bitacora?dev_key=${this.devKey}`, { headers })
+    this.http.get(`${environment.apiUrl}/admin/bitacora?dev_key=${this.devKey}`, { headers })
       .subscribe({
         next: (res: any) => {
           this.registros = res;

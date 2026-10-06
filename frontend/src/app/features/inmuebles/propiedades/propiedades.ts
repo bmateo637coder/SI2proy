@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -67,7 +68,7 @@ export class Propiedades implements OnInit {
 
   // ── Super Admin: cargar empresas para selector ──
   loadEmpresas() {
-    this.http.get<any[]>('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+    this.http.get<any[]>(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe({ next: (res) => { this.empresas = [...res]; this.cdr.detectChanges(); } });
   }
 
@@ -84,7 +85,7 @@ export class Propiedades implements OnInit {
 
   // ── Cargar datos ──
   loadPropiedades() {
-    let url = 'http://localhost:8000/modulo_inmuebles/propiedades';
+    let url = `${environment.apiUrl}/modulo_inmuebles/propiedades`;
     if (this.userRole === 1 && this.empresaSeleccionada) {
       url += `?id_tenant=${this.empresaSeleccionada}`;
     }
@@ -96,7 +97,7 @@ export class Propiedades implements OnInit {
   }
 
   loadPropietarios() {
-    let url = 'http://localhost:8000/modulo_inmuebles/propietarios';
+    let url = `${environment.apiUrl}/modulo_inmuebles/propietarios`;
     if (this.userRole === 1 && this.empresaSeleccionada) {
       url += `?id_tenant=${this.empresaSeleccionada}`;
     }
@@ -105,7 +106,7 @@ export class Propiedades implements OnInit {
   }
 
   loadAgentes() {
-    let url = 'http://localhost:8000/modulo_inmuebles/agentes';
+    let url = `${environment.apiUrl}/modulo_inmuebles/agentes`;
     if (this.userRole === 1 && this.empresaSeleccionada) {
       url += `?id_tenant=${this.empresaSeleccionada}`;
     }
@@ -130,7 +131,7 @@ export class Propiedades implements OnInit {
         precio: parseFloat(this.propiedadForm.value.precio),
         imagenes: this.propiedadForm.value.imagen_url ? [this.propiedadForm.value.imagen_url] : []
       };
-      this.http.post('http://localhost:8000/modulo_inmuebles/propiedades', formData, { headers: this.getHeaders() })
+      this.http.post(`${environment.apiUrl}/modulo_inmuebles/propiedades`, formData, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadPropiedades();
@@ -155,7 +156,7 @@ export class Propiedades implements OnInit {
       this.cdr.detectChanges();
       const fd = new FormData();
       fd.append('file', file);
-      this.http.post('http://localhost:8000/upload', fd).subscribe({
+      this.http.post(`${environment.apiUrl}/upload`, fd).subscribe({
         next: (res: any) => {
           this.propiedadForm.patchValue({ imagen_url: res.url });
           this.subiendoImagen = false;
@@ -190,7 +191,7 @@ export class Propiedades implements OnInit {
       tipo_operacion: f.tipo_operacion
     };
 
-    this.http.post('http://localhost:8000/api/ia/generar-descripcion', payload, { headers: this.getHeaders() })
+    this.http.post(`${environment.apiUrl}/api/ia/generar-descripcion`, payload, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => {
           this.generandoDescripcion = false;
@@ -232,7 +233,7 @@ export class Propiedades implements OnInit {
         id_agente: parseInt(this.editForm.value.id_agente, 10),
         precio: parseFloat(this.editForm.value.precio)
       };
-      this.http.put(`http://localhost:8000/modulo_inmuebles/propiedades/${this.propiedadEditando.id_propiedad}`, formData, { headers: this.getHeaders() })
+      this.http.put(`${environment.apiUrl}/modulo_inmuebles/propiedades/${this.propiedadEditando.id_propiedad}`, formData, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadPropiedades();
@@ -251,14 +252,14 @@ export class Propiedades implements OnInit {
 
   // ── Cambiar estado ──
   updateEstado(id: number, estado: string) {
-    this.http.put(`http://localhost:8000/modulo_inmuebles/propiedades/${id}/estado`, { estado }, { headers: this.getHeaders() })
+    this.http.put(`${environment.apiUrl}/modulo_inmuebles/propiedades/${id}/estado`, { estado }, { headers: this.getHeaders() })
       .subscribe({ next: () => this.loadPropiedades() });
   }
 
   // ── Eliminar propiedad ──
   deletePropied(id: number) {
     if (confirm('¿Desea eliminar esta propiedad? Esta acción no se puede deshacer.')) {
-      this.http.delete(`http://localhost:8000/modulo_inmuebles/propiedades/${id}`, { headers: this.getHeaders() })
+      this.http.delete(`${environment.apiUrl}/modulo_inmuebles/propiedades/${id}`, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadPropiedades();

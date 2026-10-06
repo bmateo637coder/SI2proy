@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -116,7 +117,7 @@ export class GeneradorReportes implements OnInit {
   procesarComandoIA(texto: string) {
     this.mensaje = 'Procesando comando con IA...';
     this.errorIA = null;
-    this.http.post('http://localhost:8000/api/ia/reporte-voz', { texto }, { headers: this.getHeaders() })
+    this.http.post(`${environment.apiUrl}/api/ia/reporte-voz`, { texto }, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => {
           if (res.success && res.config) {
@@ -167,7 +168,7 @@ export class GeneradorReportes implements OnInit {
   }
 
   cargarEmpresas() {
-    this.http.get('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+    this.http.get(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => this.empresas = res,
         error: err => console.error(err)
@@ -216,7 +217,7 @@ export class GeneradorReportes implements OnInit {
       orden: { columna: this.ordenColumna, direccion: this.ordenDireccion }
     };
 
-    this.http.post('http://localhost:8000/reportes/generar', payload, { headers: this.getHeaders() })
+    this.http.post(`${environment.apiUrl}/reportes/generar`, payload, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => {
           this.resultados = res.data;
@@ -244,7 +245,7 @@ export class GeneradorReportes implements OnInit {
       configuracion: JSON.stringify(config)
     };
 
-    this.http.post('http://localhost:8000/reportes/guardados', payload, { headers: this.getHeaders() })
+    this.http.post(`${environment.apiUrl}/reportes/guardados`, payload, { headers: this.getHeaders() })
       .subscribe({
         next: () => {
           this.mensaje = "Reporte guardado exitosamente";
@@ -257,7 +258,7 @@ export class GeneradorReportes implements OnInit {
   }
 
   cargarReportesGuardados() {
-    this.http.get('http://localhost:8000/reportes/guardados', { headers: this.getHeaders() })
+    this.http.get(`${environment.apiUrl}/reportes/guardados`, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => this.reportesGuardados = res,
         error: err => console.error(err)

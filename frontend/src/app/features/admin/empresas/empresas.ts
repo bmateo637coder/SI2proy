@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -37,7 +38,7 @@ export class Empresas implements OnInit {
   }
 
   loadEmpresas() {
-    this.http.get<any[]>('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+    this.http.get<any[]>(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any[]) => {
           this.empresas = [...res];
@@ -54,7 +55,7 @@ export class Empresas implements OnInit {
 
   onSubmit() {
     if (this.empresaForm.valid) {
-      this.http.post('http://localhost:8000/admin/empresas', this.empresaForm.value, { headers: this.getHeaders() })
+      this.http.post(`${environment.apiUrl}/admin/empresas`, this.empresaForm.value, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadEmpresas();
@@ -72,7 +73,7 @@ export class Empresas implements OnInit {
   
   resetPassword(idEmpresa: number) {
       if (confirm('¿Está seguro de que desea restablecer la contraseña del administrador a "12345"?')) {
-          this.http.put(`http://localhost:8000/admin/empresas/${idEmpresa}/reset-admin-password`, {}, { headers: this.getHeaders() })
+          this.http.put(`${environment.apiUrl}/admin/empresas/${idEmpresa}/reset-admin-password`, {}, { headers: this.getHeaders() })
             .subscribe({
                 next: (res: any) => {
                     alert(res.message);

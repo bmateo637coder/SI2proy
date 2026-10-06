@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -29,7 +30,7 @@ export class Backup {
     this.mensaje = '';
     this.error = '';
 
-    this.http.get('http://localhost:8000/admin/backup', {
+    this.http.get(`${environment.apiUrl}/admin/backup`, {
       headers: this.getHeaders(),
       responseType: 'blob'
     }).subscribe({
@@ -77,7 +78,7 @@ export class Backup {
     const formData = new FormData();
     formData.append('file', this.archivoSeleccionado);
 
-    this.http.post('http://localhost:8000/admin/restore', formData, {
+    this.http.post(`${environment.apiUrl}/admin/restore`, formData, {
       headers: this.getHeaders() // El HttpClient detectará automáticamente multipart/form-data
     }).subscribe({
       next: (res: any) => {

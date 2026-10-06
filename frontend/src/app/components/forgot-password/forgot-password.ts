@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -24,7 +25,7 @@ export class ForgotPassword {
 
   onSubmit() {
     if (this.forgotForm.valid) {
-      this.http.post('http://localhost:8000/gestion_usuarios/auth/forgot-password', this.forgotForm.value).subscribe({
+      this.http.post(`${environment.apiUrl}/gestion_usuarios/auth/forgot-password`, this.forgotForm.value).subscribe({
         next: (res: any) => {
           this.mensaje = res.message;
           this.enviado = true;

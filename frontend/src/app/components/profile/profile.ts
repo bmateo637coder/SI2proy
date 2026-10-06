@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -30,7 +31,7 @@ export class Profile {
       const token = localStorage.getItem('token');
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
       
-      this.http.put('http://localhost:8000/gestion_usuarios/users/me/password', this.passwordForm.value, { headers }).subscribe({
+      this.http.put(`${environment.apiUrl}/gestion_usuarios/users/me/password`, this.passwordForm.value, { headers }).subscribe({
         next: (res: any) => {
           this.mensaje = '¡Contraseña actualizada con éxito!';
           this.error = false;

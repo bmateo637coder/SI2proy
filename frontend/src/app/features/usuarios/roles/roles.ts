@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -47,7 +48,7 @@ export class Roles implements OnInit {
   }
 
   loadEmpresas() {
-      this.http.get('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+      this.http.get(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe((res: any) => {
           this.empresas = res;
           this.cargarRoles();
@@ -55,7 +56,7 @@ export class Roles implements OnInit {
   }
 
   cargarPermisos() {
-    this.http.get('http://localhost:8000/permisos', { headers: this.getHeaders() }).subscribe({
+    this.http.get(`${environment.apiUrl}/permisos`, { headers: this.getHeaders() }).subscribe({
       next: (data: any) => {
         this.permisos = data;
         this.cdr.detectChanges();
@@ -65,7 +66,7 @@ export class Roles implements OnInit {
   }
 
   cargarRoles() {
-    this.http.get('http://localhost:8000/roles', { headers: this.getHeaders() }).subscribe({
+    this.http.get(`${environment.apiUrl}/roles`, { headers: this.getHeaders() }).subscribe({
       next: (data: any) => {
         this.roles = data;
         this.groupRoles();
@@ -124,7 +125,7 @@ export class Roles implements OnInit {
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
     
-    this.http.put(`http://localhost:8000/roles/${this.selectedRole.id_rol}/permisos`, permisosIds, { headers }).subscribe({
+    this.http.put(`${environment.apiUrl}/roles/${this.selectedRole.id_rol}/permisos`, permisosIds, { headers }).subscribe({
       next: (res) => {
         this.selectedRole.permisos = permisosIds; // Optimistic update
         this.cdr.detectChanges();
@@ -138,7 +139,7 @@ export class Roles implements OnInit {
       const token = localStorage.getItem('token');
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
       
-      this.http.post('http://localhost:8000/roles', this.rolForm.value, { headers }).subscribe({
+      this.http.post(`${environment.apiUrl}/roles`, this.rolForm.value, { headers }).subscribe({
         next: (nuevoRol: any) => {
           this.roles.push(nuevoRol);
           this.rolForm.reset();

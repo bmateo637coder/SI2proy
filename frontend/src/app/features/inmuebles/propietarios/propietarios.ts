@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -57,7 +58,7 @@ export class Propietarios implements OnInit {
 
   // ── SuperAdmin: cargar empresas ──
   loadEmpresas() {
-    this.http.get<any[]>('http://localhost:8000/admin/empresas', { headers: this.getHeaders() })
+    this.http.get<any[]>(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe({ next: (res) => { this.empresas = [...res]; this.cdr.detectChanges(); } });
   }
 
@@ -72,7 +73,7 @@ export class Propietarios implements OnInit {
 
   // ── Cargar propietarios ──
   loadPropietarios() {
-    let url = 'http://localhost:8000/modulo_inmuebles/propietarios';
+    let url = `${environment.apiUrl}/modulo_inmuebles/propietarios`;
     if (this.userRole === 1 && this.empresaSeleccionada) {
       url += `?id_tenant=${this.empresaSeleccionada}`;
     }
@@ -93,7 +94,7 @@ export class Propietarios implements OnInit {
   onSubmit() {
     if (this.propietarioForm.valid) {
       this.mensajeError = '';
-      this.http.post('http://localhost:8000/modulo_inmuebles/propietarios', this.propietarioForm.value, { headers: this.getHeaders() })
+      this.http.post(`${environment.apiUrl}/modulo_inmuebles/propietarios`, this.propietarioForm.value, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadPropietarios();
@@ -124,7 +125,7 @@ export class Propietarios implements OnInit {
     if (this.editForm.valid && this.propietarioEditando) {
       this.mensajeError = '';
       this.http.put(
-        `http://localhost:8000/modulo_inmuebles/propietarios/${this.propietarioEditando.id_propietario}`,
+        `${environment.apiUrl}/modulo_inmuebles/propietarios/${this.propietarioEditando.id_propietario}`,
         this.editForm.value,
         { headers: this.getHeaders() }
       ).subscribe({
@@ -146,7 +147,7 @@ export class Propietarios implements OnInit {
   // ── Eliminar ──
   deletePropietario(id: number) {
     if (confirm('¿Desea eliminar este propietario? Esta acción no se puede deshacer.')) {
-      this.http.delete(`http://localhost:8000/modulo_inmuebles/propietarios/${id}`, { headers: this.getHeaders() })
+      this.http.delete(`${environment.apiUrl}/modulo_inmuebles/propietarios/${id}`, { headers: this.getHeaders() })
         .subscribe({
           next: () => {
             this.loadPropietarios();

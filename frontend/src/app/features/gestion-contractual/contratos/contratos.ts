@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -11,7 +12,7 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './contratos.html',
 })
 export class Contratos implements OnInit {
-  private apiBase = 'http://localhost:8000';
+  private apiBase = environment.apiUrl;
 
   contratos: any[] = [];
   clientes: any[] = [];
