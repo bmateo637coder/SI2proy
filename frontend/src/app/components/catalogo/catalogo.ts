@@ -12,6 +12,7 @@ import { AuthService } from '../../core/services/auth.service';
 })
 export class Catalogo implements OnInit, OnDestroy {
   propiedades: any[] = [];
+  recomendados: any[] = [];
   private apiBase = 'http://localhost:8000';
   private ws: WebSocket | null = null;
   
@@ -58,7 +59,29 @@ export class Catalogo implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.aplicarFiltros();
+    this.cargarRecomendados();
     this.connectWebSocket();
+  }
+
+  cargarRecomendados() {
+    let headers = new HttpHeaders();
+    const user = this.authService.currentUser();
+    if (user && user.id_tenant) {
+        headers = headers.set('X-Tenant-ID', user.id_tenant.toString());
+    }
+    this.http.post<any>('http://localhost:8000/api/ia/recomendar', { limite: 4 }, { headers })
+      .subscribe({
+        next: (res: any) => {
+          const recs = res?.recomendaciones || res?.data || [];
+          this.recomendados = recs.map((r: any) => ({
+            ...r,
+            imagenes: r.imagen ? [{ url: r.imagen }] : [],
+            caracteristicas: [],
+          }));
+          this.cdr.detectChanges();
+        },
+        error: () => {},
+      });
   }
 
   connectWebSocket() {

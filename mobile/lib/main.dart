@@ -7,13 +7,16 @@ import 'core/config/api_constants.dart';
 import 'data/network/auth_interceptor.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/clientes_repository.dart';
+import 'data/repositories/contratos_repository.dart';
 import 'data/repositories/propiedades_repository.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/clientes_service.dart';
+import 'data/services/contratos_service.dart';
 import 'data/services/propiedades_service.dart';
 import 'data/services/secure_storage_service.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/clientes_provider.dart';
+import 'presentation/providers/contratos_provider.dart';
 import 'presentation/providers/propiedades_provider.dart';
 
 Future<void> main() async {
@@ -29,15 +32,18 @@ Future<void> main() async {
   final authService = AuthService(dio);
   final propiedadesService = PropiedadesService(dio);
   final clientesService = ClientesService(dio);
+  final contratosService = ContratosService(dio);
   auth = AuthProvider(AuthRepository(authService), storage);
   final propiedadesProvider = PropiedadesProvider(PropiedadesRepository(propiedadesService));
   final clientesProvider = ClientesProvider(ClientesRepository(clientesService));
+  final contratosProvider = ContratosProvider(ContratosRepository(contratosService));
   dio.interceptors.add(AuthInterceptor(storage, auth.signOut));
   await auth.restoreSession();
   runApp(InmobiliariaApp(
     auth: auth,
     propiedadesProvider: propiedadesProvider,
     clientesProvider: clientesProvider,
+    contratosProvider: contratosProvider,
   ));
 }
 
@@ -46,12 +52,14 @@ class InmobiliariaApp extends StatelessWidget {
     required this.auth,
     required this.propiedadesProvider,
     required this.clientesProvider,
+    required this.contratosProvider,
     super.key,
   });
 
   final AuthProvider auth;
   final PropiedadesProvider propiedadesProvider;
   final ClientesProvider clientesProvider;
+  final ContratosProvider contratosProvider;
 
   @override
   Widget build(BuildContext context) => MultiProvider(
@@ -59,6 +67,7 @@ class InmobiliariaApp extends StatelessWidget {
           ChangeNotifierProvider.value(value: auth),
           ChangeNotifierProvider.value(value: propiedadesProvider),
           ChangeNotifierProvider.value(value: clientesProvider),
+          ChangeNotifierProvider.value(value: contratosProvider),
         ],
         child: MaterialApp.router(
           title: 'Inmobiliaria',

@@ -183,6 +183,19 @@ class Contrato(Base):
     propiedad = relationship("Propiedad", back_populates="contratos")
     agente = relationship("Agente", back_populates="contratos")
     pagos = relationship("Pago", back_populates="contrato")
+    cuotas = relationship("Cuota", back_populates="contrato", cascade="all, delete-orphan")
+
+class Cuota(Base):
+    __tablename__ = "cuota"
+    id_cuota = Column(Integer, primary_key=True, index=True)
+    id_contrato = Column(Integer, ForeignKey("contrato.id_contrato", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
+    numero_cuota = Column(Integer, nullable=False)
+    monto = Column(Numeric(12, 2), nullable=False)
+    fecha_vencimiento = Column(Date, nullable=False)
+    estado = Column(String(20), default='Pendiente')  # 'Pendiente', 'Pagada', 'Vencida'
+    fecha_pago = Column(TIMESTAMP)
+
+    contrato = relationship("Contrato", back_populates="cuotas")
 
 class Pago(Base):
     __tablename__ = "pago"

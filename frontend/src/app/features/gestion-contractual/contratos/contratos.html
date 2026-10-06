@@ -1,0 +1,256 @@
+<div class="animate-fade-in p-8" style="max-width: 1200px; margin: 0 auto; padding: 3rem 1.5rem;">
+  <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1.5rem;">
+    <div>
+      <h1 style="font-size: 2rem; color: var(--secondary-color); margin: 0;">Contratos y Pagos</h1>
+      <p style="color: var(--primary-color); text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; margin: 0; font-weight: 600;">Gestión Contractual</p>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button (click)="toggleChat()" class="btn-secondary">
+        {{ chatAbierto ? 'Cerrar Asistente IA' : 'Asistente IA' }}
+      </button>
+      <button (click)="abrirFormulario()" class="btn-primary">+ Nuevo Contrato</button>
+    </div>
+  </header>
+
+  <div *ngIf="mensajeExito" style="background: #ecfdf5; color: #15803d; border: 1px solid #a7f3d0; padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
+    ✅ {{ mensajeExito }}
+  </div>
+  <div *ngIf="mensajeError" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 1rem 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
+    ⚠️ {{ mensajeError }}
+  </div>
+
+  <!-- Formulario Nuevo Contrato -->
+  <div *ngIf="mostrarFormulario" class="luxury-card" style="margin-bottom: 2rem; animation: fadeIn 0.3s ease;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h3 style="margin: 0; color: var(--secondary-color);">Formalizar Contrato</h3>
+      <button (click)="cerrarFormulario()" class="close-btn">&times;</button>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Cliente *</label>
+        <select formControlName="id_cliente" class="modern-select">
+          <option [ngValue]="null" disabled>Seleccione un cliente</option>
+          <option *ngFor="let c of clientes" [ngValue]="c.id_cliente">{{ c.nombre || c.ci_usuario }} ({{ c.ci_usuario }})</option>
+        </select>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Propiedad *</label>
+        <select formControlName="id_propiedad" class="modern-select" (change)="onPropiedadSeleccionada(contratoForm.value.id_propiedad)">
+          <option [ngValue]="null" disabled>Seleccione una propiedad</option>
+          <option *ngFor="let p of propiedades" [ngValue]="p.id_propiedad">#{{ p.id_propiedad }} — {{ p.titulo }} ({{ p.tipo_operacion }})</option>
+        </select>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Tipo de Contrato *</label>
+        <select formControlName="tipo_contrato" class="modern-select">
+          <option value="Venta">Venta</option>
+          <option value="Alquiler">Alquiler</option>
+          <option value="Anticretico">Anticrético</option>
+        </select>
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Monto Total ($us) *</label>
+        <input formControlName="monto_total" type="number" class="modern-input" placeholder="Ej. 120000">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Fecha de Inicio *</label>
+        <input formControlName="fecha_inicio" type="date" class="modern-input">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Fecha de Fin (Alquiler)</label>
+        <input formControlName="fecha_fin" type="date" class="modern-input">
+      </div>
+      <div>
+        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">N° Cuotas</label>
+        <input formControlName="num_cuotas" type="number" class="modern-input" placeholder="Automático (mensual)" min="1">
+      </div>
+    </div>
+    <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+      <button (click)="cerrarFormulario()" class="btn-secondary">Cancelar</button>
+      <button (click)="crearContrato()" class="btn-primary" [disabled]="subiendoContrato">
+        {{ subiendoContrato ? 'Creando…' : 'Crear Contrato' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtro y tabla -->
+  <div class="luxury-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+      <h3 style="margin: 0; color: var(--secondary-color);">Contratos de la Empresa</h3>
+      <select [(ngModel)]="filtroEstado" class="modern-select" style="max-width: 220px;">
+        <option value="">Todos los estados</option>
+        <option value="Activo">Activo</option>
+        <option value="En Mora">En Mora</option>
+        <option value="Pagado">Pagado</option>
+      </select>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+        <thead>
+          <tr style="text-align: left; color: var(--secondary-color); border-bottom: 2px solid var(--border-light);">
+            <th style="padding: 0.75rem;">#</th>
+            <th style="padding: 0.75rem;">Cliente</th>
+            <th style="padding: 0.75rem;">Propiedad</th>
+            <th style="padding: 0.75rem;">Tipo</th>
+            <th style="padding: 0.75rem;">Monto</th>
+            <th style="padding: 0.75rem;">Saldo</th>
+            <th style="padding: 0.75rem;">Cuotas</th>
+            <th style="padding: 0.75rem;">Estado</th>
+            <th style="padding: 0.75rem;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of filtrarContratos()" style="border-bottom: 1px solid var(--border-light);">
+            <td style="padding: 0.75rem;">{{ c.id_contrato }}</td>
+            <td style="padding: 0.75rem;">{{ c.cliente }}</td>
+            <td style="padding: 0.75rem;">{{ c.propiedad }}</td>
+            <td style="padding: 0.75rem;">{{ c.tipo_contrato }}</td>
+            <td style="padding: 0.75rem;">$us {{ c.monto_total | number: '1.2-2' }}</td>
+            <td style="padding: 0.75rem;">$us {{ c.saldo_pendiente | number: '1.2-2' }}</td>
+            <td style="padding: 0.75rem;">{{ c.cuotas_pagadas }}/{{ c.cuotas_totales }}</td>
+            <td style="padding: 0.75rem;">
+              <span [style.background]="c.estado === 'Pagado' ? '#ecfdf5' : c.estado === 'En Mora' ? '#fef2f2' : '#f1f5fd'"
+                    [style.color]="c.estado === 'Pagado' ? '#15803d' : c.estado === 'En Mora' ? '#b91c1c' : '#0e7490'"
+                    style="padding: 0.25rem 0.75rem; border-radius: 999px; font-weight: 600; font-size: 0.8rem;">
+                {{ c.estado }}
+              </span>
+            </td>
+            <td style="padding: 0.75rem;">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button (click)="verDetalle(c)" class="btn-secondary" style="padding: 0.35rem 0.9rem; font-size: 0.8rem;">Detalle / Pagar</button>
+                <button *ngIf="esSuperAdmin() && c.pagos.length === 0" (click)="eliminarContrato(c)" class="btn-danger" style="padding: 0.35rem 0.9rem; font-size: 0.8rem;">Eliminar</button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filtrarContratos().length === 0">
+            <td colspan="9" style="padding: 2rem; text-align: center; color: var(--text-muted);">No hay contratos registrados.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Detalle / Pago -->
+  <div *ngIf="mostrarDetalle && contratoDetalle" style="position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100; display: flex; justify-content: center; align-items: center; padding: 1rem;">
+    <div class="luxury-card" style="max-width: 760px; width: 100%; max-height: 90vh; overflow-y: auto; animation: fadeIn 0.3s ease;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0; color: var(--secondary-color);">Contrato #{{ contratoDetalle.id_contrato }} — {{ contratoDetalle.tipo_contrato }}</h3>
+        <button (click)="cerrarDetalle()" class="close-btn">&times;</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem; margin-bottom: 1.5rem; font-size: 0.92rem;">
+        <p style="margin: 0;"><b>Cliente:</b> {{ contratoDetalle.cliente }}</p>
+        <p style="margin: 0;"><b>Propiedad:</b> {{ contratoDetalle.propiedad }}</p>
+        <p style="margin: 0;"><b>Agente:</b> {{ contratoDetalle.agente }}</p>
+        <p style="margin: 0;"><b>Inicio:</b> {{ contratoDetalle.fecha_inicio }}</p>
+        <p style="margin: 0;"><b>Monto total:</b> $us {{ contratoDetalle.monto_total | number: '1.2-2' }}</p>
+        <p style="margin: 0;"><b>Saldo pendiente:</b> $us {{ contratoDetalle.saldo_pendiente | number: '1.2-2' }}</p>
+        <p style="margin: 0;"><b>Cuotas pagadas:</b> {{ contratoDetalle.cuotas_pagadas }}/{{ contratoDetalle.cuotas_totales }}</p>
+        <p style="margin: 0;"><b>Estado:</b> <b>{{ contratoDetalle.estado }}</b></p>
+      </div>
+
+      <!-- Registrar pago -->
+      <div class="luxury-card" style="background: var(--surface-light); margin-bottom: 1.5rem; padding: 1.25rem;">
+        <h4 style="margin: 0 0 0.75rem; color: var(--secondary-color);">Registrar Pago</h4>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.4rem;">Monto ($us) *</label>
+            <input formControlName="monto" type="number" class="modern-input" style="width: 180px;" [placeholder]="'Máx: ' + (contratoDetalle.saldo_pendiente || 0)">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.4rem;">Método *</label>
+            <select formControlName="metodo_pago" class="modern-select" style="width: 180px;">
+              <option value="Transferencia">Transferencia</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="QR">QR</option>
+            </select>
+          </div>
+          <button (click)="registrarPago()" class="btn-primary" [disabled]="enviandoPago || contratoDetalle.saldo_pendiente <= 0">
+            {{ enviandoPago ? 'Procesando…' : 'Confirmar Pago' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Historial de pagos -->
+      <h4 style="margin: 0 0 0.75rem; color: var(--secondary-color);">Historial de Pagos</h4>
+      <div style="overflow-x: auto; margin-bottom: 1.5rem;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="text-align: left; border-bottom: 2px solid var(--border-light); color: var(--secondary-color);">
+              <th style="padding: 0.5rem;">Recibo</th>
+              <th style="padding: 0.5rem;">Fecha</th>
+              <th style="padding: 0.5rem;">Método</th>
+              <th style="padding: 0.5rem;">Monto</th>
+              <th style="padding: 0.5rem;">Comprobante</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of contratoDetalle.pagos" style="border-bottom: 1px solid var(--border-light);">
+              <td style="padding: 0.5rem;">{{ p.numero_recibo }}</td>
+              <td style="padding: 0.5rem;">{{ p.fecha_pago }}</td>
+              <td style="padding: 0.5rem;">{{ p.metodo_pago }}</td>
+              <td style="padding: 0.5rem;">$us {{ p.monto | number: '1.2-2' }}</td>
+              <td style="padding: 0.5rem;">
+                <button (click)="verComprobante(p.id_pago)" class="btn-secondary" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">PDF</button>
+              </td>
+            </tr>
+            <tr *ngIf="contratoDetalle.pagos.length === 0">
+              <td colspan="5" style="padding: 1rem; text-align: center; color: var(--text-muted);">Aún no hay pagos registrados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cuotas -->
+      <h4 style="margin: 0 0 0.75rem; color: var(--secondary-color);">Plan de Cuotas</h4>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="text-align: left; border-bottom: 2px solid var(--border-light); color: var(--secondary-color);">
+              <th style="padding: 0.5rem;">N°</th>
+              <th style="padding: 0.5rem;">Vencimiento</th>
+              <th style="padding: 0.5rem;">Monto</th>
+              <th style="padding: 0.5rem;">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let q of contratoDetalle.cuotas" style="border-bottom: 1px solid var(--border-light);">
+              <td style="padding: 0.5rem;">{{ q.numero_cuota }}</td>
+              <td style="padding: 0.5rem;">{{ q.fecha_vencimiento }}</td>
+              <td style="padding: 0.5rem;">$us {{ q.monto | number: '1.2-2' }}</td>
+              <td style="padding: 0.5rem;">
+                <span [style.background]="q.estado === 'Pagada' ? '#ecfdf5' : q.estado === 'Vencida' ? '#fef2f2' : '#f1f5fd'"
+                      [style.color]="q.estado === 'Pagada' ? '#15803d' : q.estado === 'Vencida' ? '#b91c1c' : '#0e7490'"
+                      style="padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.75rem;">
+                  {{ q.estado }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Asistente IA -->
+  <div *ngIf="chatAbierto" style="position: fixed; bottom: 90px; right: 24px; z-index: 90; width: 360px; max-width: calc(100vw - 48px); background: var(--surface-light); border: 1px solid var(--border-light); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden;">
+    <div style="padding: 1rem 1.25rem; background: var(--primary-color); color: white; display: flex; justify-content: space-between; align-items: center;">
+      <b>Asistente IA — Rai</b>
+      <button (click)="toggleChat()" class="close-btn" style="color: white;">&times;</button>
+    </div>
+    <div style="height: 300px; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.88rem;">
+      <div *ngFor="let m of chatMensajes"
+           [style.align-self]="m.autor === 'usuario' ? 'flex-end' : 'flex-start'"
+           [style.background]="m.autor === 'usuario' ? '#0e7490' : '#ffffff'"
+           [style.color]="m.autor === 'usuario' ? 'white' : 'var(--secondary-color)'"
+           style="max-width: 85%; padding: 0.6rem 0.9rem; border-radius: 12px; border: 1px solid var(--border-light);">
+        {{ m.texto }}
+      </div>
+    </div>
+    <div style="padding: 0.75rem; border-top: 1px solid var(--border-light); display: flex; gap: 0.5rem;">
+      <input [(ngModel)]="chatInput" (keyup.enter)="enviarChat()" class="modern-input" placeholder="Escribe tu consulta…">
+      <button (click)="enviarChat()" class="btn-primary" [disabled]="enviandoChat">Enviar</button>
+    </div>
+  </div>
+</div>

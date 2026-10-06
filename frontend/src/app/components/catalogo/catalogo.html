@@ -17,6 +17,36 @@
     </p>
   </div>
 
+  <!-- Recomendados por IA -->
+  <div *ngIf="recomendados.length > 0" class="luxury-card" style="margin-bottom: 3rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <div>
+        <h3 style="margin: 0; color: var(--secondary-color); font-size: 1.3rem;">Recomendados para ti</h3>
+        <p style="margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--text-muted);">
+          Selección sugerida por nuestro asistente IA
+        </p>
+      </div>
+      <span style="background: linear-gradient(135deg, var(--primary-color), #f59e0b); color: white; padding: 0.35rem 0.9rem; border-radius: 999px; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+        IA
+      </span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+      <div *ngFor="let r of recomendados"
+           style="border: 1px solid var(--border-light); border-radius: 14px; overflow: hidden; cursor: pointer; background: var(--surface-light); transition: transform 0.2s;"
+           (click)="abrirDetalles(r)" (mouseenter)="$any($event.target).style.transform = 'translateY(-3px)'" (mouseleave)="$any($event.target).style.transform = 'translateY(0)'">
+        <div style="height: 150px; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+          <img *ngIf="imageUrl(r.imagen)" [src]="imageUrl(r.imagen)" alt="{{ r.titulo }}" style="width: 100%; height: 100%; object-fit: cover;">
+          <span *ngIf="!imageUrl(r.imagen)" style="color: var(--text-muted); font-size: 0.85rem;">Sin imagen</span>
+        </div>
+        <div style="padding: 1rem;">
+          <h4 style="margin: 0 0 0.3rem; color: var(--secondary-color); font-size: 1rem;">{{ r.titulo }}</h4>
+          <p style="margin: 0 0 0.6rem; font-size: 0.8rem; color: var(--text-muted);">$us {{ r.precio | number: '1.2-2' }} · {{ r.tipo_operacion }}</p>
+          <span style="background: #ecfdf5; color: #15803d; padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.75rem;">{{ r.estado }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Buscador y Filtros -->
   <div class="luxury-card" style="margin-bottom: 4rem;">
     <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;">

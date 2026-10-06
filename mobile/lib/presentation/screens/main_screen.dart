@@ -13,16 +13,28 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showClientes = context.watch<AuthProvider>().user?.canSeeClientes ?? false;
-    final branchIndex = navigationShell.currentIndex;
-    final destinationIndex = showClientes ? branchIndex : (branchIndex > 0 ? branchIndex - 1 : 0);
+    final user = context.watch<AuthProvider>().user;
+    final showContratos = user?.canSeeContratos ?? false;
+    final showClientes = user?.canSeeClientes ?? false;
+
+    // Router branch order (main_screen must mirror router.dart branches):
+    // 0 catálogo, 1 contratos (condicional), 2 clientes (condicional), 3 perfil
+    final destinationBranches = <int>[
+      0,
+      if (showContratos) 1,
+      if (showClientes) 2,
+      3,
+    ];
+
+    final currentBranch = navigationShell.currentIndex;
+    final destinationIndex = destinationBranches.indexOf(currentBranch);
 
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: destinationIndex,
+        selectedIndex: destinationIndex >= 0 ? destinationIndex : 0,
         onDestinationSelected: (index) {
-          final branch = showClientes ? index : (index >= 1 ? index + 1 : 0);
+          final branch = destinationBranches[index];
           navigationShell.goBranch(
             branch,
             initialLocation: branch == navigationShell.currentIndex,
@@ -34,6 +46,12 @@ class MainScreen extends StatelessWidget {
             selectedIcon: Icon(Icons.home),
             label: 'Catálogo',
           ),
+          if (showContratos)
+            const NavigationDestination(
+              icon: Icon(Icons.assignment_outlined),
+              selectedIcon: Icon(Icons.assignment),
+              label: 'Contratos',
+            ),
           if (showClientes)
             const NavigationDestination(
               icon: Icon(Icons.people_outline),

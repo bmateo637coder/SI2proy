@@ -56,6 +56,9 @@ class UserModel {
   bool get canSeeClientes =>
       isAdministrator || permisos.contains('UI:MENU_CLIENTES');
 
+  bool get canSeeContratos =>
+      isAdministrator || permisos.contains('UI:MENU_PROPIEDADES');
+
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final roles = (json['roles'] as List<dynamic>? ?? [])
         .whereType<Map<String, dynamic>>()

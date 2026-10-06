@@ -222,3 +222,22 @@ class ReporteGuardadoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ============================================================
+# SCHEMAS MÓDULO CONTRATOS Y PAGOS (CU-18 / CU-19)
+# ============================================================
+
+class ContratoCreate(BaseModel):
+    id_cliente: int
+    id_propiedad: int
+    tipo_contrato: str  # 'Venta', 'Alquiler', 'Anticretico'
+    monto_total: float
+    fecha_inicio: date
+    fecha_fin: Optional[date] = None
+    num_cuotas: Optional[int] = None
+    observacion: Optional[str] = None
+
+class PagoCreate(BaseModel):
+    monto: float
+    metodo_pago: str  # 'Transferencia', 'Efectivo', 'QR'
+    observacion: Optional[str] = None

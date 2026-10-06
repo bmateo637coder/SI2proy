@@ -26,10 +26,22 @@ def get_default_admin_password() -> str:
     return password
 
 import ia_router
+import contratos_router
+import scheduler
 
-app = FastAPI(title="Raíces - Inmobiliaria API", version="1.0.0")
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    scheduler.iniciar_scheduler()
+    yield
+
+
+app = FastAPI(title="Raíces - Inmobiliaria API", version="1.0.0", lifespan=lifespan)
 
 app.include_router(ia_router.router)
+app.include_router(contratos_router.router)
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
@@ -512,51 +524,43 @@ def get_postgres_password() -> str:
         )
     return DB_PASSWORD
 
+from backup_service import generar_backup_sql, uri_conexion, pg_bin_tool
+
 @app.get("/admin/backup")
 def descargar_backup(current_user: models.Usuario = Depends(get_current_user)):
     """Genera un backup de la base de datos PostgreSQL y lo devuelve como archivo .sql"""
     if current_user.id_rol != 1:
         raise HTTPException(status_code=403, detail="Solo Super Admin puede hacer backups")
-    
+
     tmp_path = None
     try:
-        # Crear archivo temporal para el dump
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".sql", prefix="backup_raices_")
-        tmp_path = tmp.name
-        tmp.close()
-        
-        env = os.environ.copy()
-        env["PGPASSWORD"] = get_postgres_password()
-        
-        pg_dump_exe = os.path.join(PG_BIN_PATH, "pg_dump.exe")
-        result = subprocess.run(
-            [pg_dump_exe, "-h", DB_HOST, "-p", DB_PORT, "-U", DB_USER, "-d", DB_NAME, "-f", tmp_path, "--no-password"],
-            capture_output=True, text=True, env=env, timeout=60
-        )
-        
-        if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Error al generar backup: {result.stderr}")
-        
-        from datetime import datetime
-        filename = f"backup_raices_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
-        
-        # Leer el contenido en memoria y devolver como Response directa
-        # Usar FileResponse en Windows con uvicorn puede causar cuelgues
+        tmp_path = generar_backup_sql()
         with open(tmp_path, "rb") as f:
             content = f.read()
-        
+        filename = os.path.basename(tmp_path)
         return Response(
             content=content,
             media_type="application/octet-stream",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Timeout al generar el backup")
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="pg_dump no encontrado. Verifique la instalación de PostgreSQL.")
     finally:
         if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+@app.get("/admin/backup/estado")
+def estado_backup(current_user: models.Usuario = Depends(get_current_user)):
+    """Información del esquema de backup automático (procesos periódicos)."""
+    if current_user.id_rol != 1:
+        raise HTTPException(status_code=403, detail="Solo Super Admin puede consultar backups")
+    from backup_service import listar_backups_dir
+    return {
+        "backup_automatico": True,
+        "horario_utc": os.getenv("BACKUP_HORA_UTC", "02:00"),
+        "publicacion_github": bool(os.getenv("BACKUP_GITHUB_REPO") and os.getenv("BACKUP_GITHUB_TOKEN")),
+        "backups": listar_backups_dir(),
+    }
 
 @app.post("/admin/restore")
 async def restaurar_backup(
@@ -566,30 +570,28 @@ async def restaurar_backup(
     """Restaura la base de datos desde un archivo .sql subido"""
     if current_user.id_rol != 1:
         raise HTTPException(status_code=403, detail="Solo Super Admin puede restaurar backups")
-    
+
     if not file.filename.endswith(".sql"):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos .sql")
-    
-    # Guardar el archivo subido en un temporal
+
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".sql", prefix="restore_")
     try:
         content = await file.read()
         tmp.write(content)
         tmp.close()
-        
+
         env = os.environ.copy()
         env["PGPASSWORD"] = get_postgres_password()
-        
-        # Ejecutar psql para restaurar
-        psql_exe = os.path.join(PG_BIN_PATH, "psql.exe")
+
+        psql_exe = pg_bin_tool("psql")
         result = subprocess.run(
-            [psql_exe, "-h", DB_HOST, "-p", DB_PORT, "-U", DB_USER, "-d", DB_NAME, "-f", tmp.name, "--no-password"],
+            [psql_exe, uri_conexion(), "-f", tmp.name, "--no-password"],
             capture_output=True, text=True, env=env, timeout=120
         )
-        
+
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Error al restaurar: {result.stderr[:500]}")
-        
+
         return {"mensaje": "Base de datos restaurada exitosamente"}
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=504, detail="Timeout al restaurar la base de datos")
@@ -1140,93 +1142,3 @@ def get_reportes_guardados(
 ):
     """Obtiene los reportes guardados por el usuario."""
     return db.query(models.ReporteGuardado).filter(models.ReporteGuardado.ci_usuario == current_user.ci).all()
-
-# ==========================================
-# ENDPOINTS BACKUP / RESTORE (PUNTO 6)
-# ==========================================
-import subprocess
-import os
-import time
-from fastapi.responses import FileResponse
-from fastapi import UploadFile, File
-
-# Reutiliza la configuración PostgreSQL declarada arriba.
-DB_PASS = DB_PASSWORD
-
-@app.get("/admin/backup")
-def generar_backup(current_user: models.Usuario = Depends(get_current_user)):
-    if current_user.id_rol != 1:
-        raise HTTPException(status_code=403, detail="Permiso denegado")
-        
-    filename = f"backup_raices_{int(time.time())}.sql"
-    filepath = os.path.join(os.getcwd(), filename)
-    
-    env = os.environ.copy()
-    env["PGPASSWORD"] = get_postgres_password()
-    
-    # Exporta en formato de texto plano con comandos DROP para limpiar antes de restaurar
-    command = [
-        "pg_dump",
-        "-h", DB_HOST,
-        "-p", "5432",
-        "-U", DB_USER,
-        "-w", # Nunca pedir contraseña interactivamente
-        "-d", DB_NAME,
-        "-F", "p", 
-        "-f", filepath,
-        "--clean", 
-        "--if-exists"
-    ]
-    
-    try:
-        subprocess.run(command, env=env, check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Error al ejecutar pg_dump: {e.stderr}")
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="La herramienta pg_dump no está instalada o no está en el PATH del sistema.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error inesperado al generar backup: {str(e)}")
-        
-    return FileResponse(path=filepath, filename=filename, media_type='application/sql')
-
-@app.post("/admin/restore")
-async def restaurar_backup(
-    file: UploadFile = File(...),
-    current_user: models.Usuario = Depends(get_current_user)
-):
-    if current_user.id_rol != 1:
-        raise HTTPException(status_code=403, detail="Permiso denegado")
-        
-    if not file.filename.endswith('.sql'):
-        raise HTTPException(status_code=400, detail="Formato inválido. Debe ser un archivo .sql")
-        
-    temp_path = os.path.join(os.getcwd(), f"temp_restore_{int(time.time())}.sql")
-    with open(temp_path, "wb") as buffer:
-        buffer.write(await file.read())
-        
-    env = os.environ.copy()
-    env["PGPASSWORD"] = get_postgres_password()
-    
-    command = [
-        "psql",
-        "-h", DB_HOST,
-        "-p", "5432",
-        "-U", DB_USER,
-        "-w",
-        "-d", DB_NAME,
-        "-f", temp_path
-    ]
-    
-    try:
-        result = subprocess.run(command, env=env, capture_output=True, text=True)
-        if result.returncode != 0 and "FATAL" in result.stderr:
-             raise Exception(result.stderr)
-    except Exception as e:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-        raise HTTPException(status_code=500, detail=f"Error al restaurar backup: {str(e)}")
-        
-    if os.path.exists(temp_path):
-        os.remove(temp_path)
-        
-    return {"mensaje": "Base de datos restaurada correctamente"}

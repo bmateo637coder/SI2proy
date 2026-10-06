@@ -9,9 +9,12 @@ import '../presentation/screens/recuperar_password_screen.dart';
 import '../presentation/screens/cambiar_password_screen.dart';
 import '../presentation/screens/clientes_screen.dart';
 import '../presentation/screens/registrar_cliente_screen.dart';
+import '../presentation/screens/contratos_screen.dart';
+import '../presentation/screens/nuevo_contrato_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorCatKey = GlobalKey<NavigatorState>(debugLabel: 'catalogo');
+final _shellNavigatorContratosKey = GlobalKey<NavigatorState>(debugLabel: 'contratos');
 final _shellNavigatorClientesKey = GlobalKey<NavigatorState>(debugLabel: 'clientes');
 final _shellNavigatorProfKey = GlobalKey<NavigatorState>(debugLabel: 'perfil');
 
@@ -27,6 +30,7 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
         final user = auth.user;
         if (auth.isAuthenticated && user != null) {
           if (location.startsWith('/clientes') && !user.canSeeClientes) return '/perfil';
+          if (location.startsWith('/contratos') && !user.canSeeContratos) return '/perfil';
           if (location == '/registrar-cliente' && !user.isAdministrator) return '/perfil';
         }
         return null;
@@ -51,6 +55,15 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
                 GoRoute(
                   path: '/catalogo',
                   builder: (context, state) => const CatalogoScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorContratosKey,
+              routes: [
+                GoRoute(
+                  path: '/contratos',
+                  builder: (context, state) => const ContratosScreen(),
                 ),
               ],
             ),
@@ -82,6 +95,11 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
           path: '/registrar-cliente',
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const RegistrarClienteScreen(),
+        ),
+        GoRoute(
+          path: '/contratos/nuevo',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const NuevoContratoScreen(),
         ),
       ],
     );

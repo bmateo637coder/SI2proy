@@ -14,6 +14,7 @@ import { Bitacora } from './features/admin/bitacora/bitacora';
 import { Empresas } from './features/admin/empresas/empresas';
 import { GeneradorReportes } from './features/reportes/generador/generador';
 import { Backup } from './features/admin/backup/backup';
+import { Contratos } from './features/gestion-contractual/contratos/contratos';
 
 import { permissionGuard } from './core/guards/permission.guard';
 
@@ -36,7 +37,8 @@ export const routes: Routes = [
       { path: 'clientes', component: Clientes, canActivate: [permissionGuard('UI:MENU_CLIENTES')] },
       { path: 'propietarios', component: Propietarios, canActivate: [permissionGuard('UI:MENU_PROPIETARIOS')] },
       { path: 'agentes', component: Agentes, canActivate: [permissionGuard('UI:MENU_AGENTES')] },
-      { path: 'propiedades', component: Propiedades, canActivate: [permissionGuard('UI:MENU_PROPIEDADES')] }
+      { path: 'propiedades', component: Propiedades, canActivate: [permissionGuard('UI:MENU_PROPIEDADES')] },
+      { path: 'contratos', component: Contratos, canActivate: [permissionGuard('UI:MENU_PROPIEDADES')] }
     ]
   }
 ];

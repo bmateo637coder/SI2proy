@@ -11,7 +11,7 @@ services:
     pythonVersion: 3.12.2
     plan: free
     autoDeploy: true
-    buildCommand: pip install -r requirements.txt
+    buildCommand: apt-get update -y && apt-get install -y --no-install-recommends postgresql-client && pip install -r requirements.txt
     startCommand: python init_db.py && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /docs
     envVars:
