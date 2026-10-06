@@ -284,6 +284,8 @@ def _generar_pdf_comprobante(contrato: models.Contrato, pago: models.Pago) -> by
     subtitulo = ParagraphStyle("Subtitulo", parent=estilos["Normal"], fontSize=12, alignment=1,
                                textColor=colors.HexColor("#444444"), spaceAfter=18)
     encabezado = ParagraphStyle("Encabezado", parent=estilos["Normal"], fontSize=10, leading=14)
+    texto_pequeno = ParagraphStyle("TextoPequeno", parent=estilos["BodyText"], fontSize=8,
+                                   textColor=colors.HexColor("#666666"), spaceBefore=2)
 
     nombre_empresa = contrato.tenant.nombre if contrato.tenant else "Raíces Inmobiliaria"
     cliente_nombre = _nombre_usuario(contrato.cliente) or f"Cliente #{contrato.id_cliente}"
@@ -359,7 +361,7 @@ def _generar_pdf_comprobante(contrato: models.Contrato, pago: models.Pago) -> by
         tabla_cuotas,
         Spacer(1, 10 * mm),
         Paragraph("Este documento es un comprobante digital de pago, válido como respaldo del contrato.",
-                  estilos["Small"]),
+                  texto_pequeno),
     ])
 
     doc.build(elementos)
