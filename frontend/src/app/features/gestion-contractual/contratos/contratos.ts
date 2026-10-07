@@ -110,9 +110,12 @@ export class Contratos implements OnInit {
       .subscribe({
         next: (res: any) => {
           this.clientes = res || [];
+          if (this.clientes.length === 0) {
+            this.alerta('No se encontraron clientes. Verifica tu cuenta o los datos del tenant.', false);
+          }
           this.cdr.detectChanges();
         },
-        error: () => {},
+        error: (err) => this.alerta(err.error?.detail || 'Error al cargar clientes.', false),
       });
   }
 
@@ -121,9 +124,12 @@ export class Contratos implements OnInit {
       .subscribe({
         next: (res: any) => {
           this.propiedades = (res || []).filter((p: any) => ['Disponible', 'Reservada'].includes(p.estado));
+          if (this.propiedades.length === 0) {
+            this.alerta('No se encontraron propiedades disponibles para contratar.', false);
+          }
           this.cdr.detectChanges();
         },
-        error: () => {},
+        error: (err) => this.alerta(err.error?.detail || 'Error al cargar propiedades.', false),
       });
   }
 
