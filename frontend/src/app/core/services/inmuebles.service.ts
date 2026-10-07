@@ -38,10 +38,10 @@ export class InmueblesService {
     this.cargando = true;
 
     forkJoin({
-      clientes: this.http.get(`${this.apiBase}/modulo_inmuebles/clientes`, { headers: this.getHeaders() }),
-      propiedades: this.http.get(`${this.apiBase}/modulo_inmuebles/propiedades`, { headers: this.getHeaders() }),
+      clientes: this.http.get<any[]>(`${this.apiBase}/modulo_inmuebles/clientes`, { headers: this.getHeaders() }),
+      propiedades: this.http.get<any[]>(`${this.apiBase}/modulo_inmuebles/propiedades`, { headers: this.getHeaders() }),
     }).subscribe({
-      next: ({ clientes, propiedades }) => {
+      next: ({ clientes, propiedades }: { clientes: any[]; propiedades: any[] }) => {
         this.clientes$.next(clientes || []);
         this.propiedades$.next((propiedades || []).filter((p: any) => ['Disponible', 'Reservada'].includes(p.estado)));
         this.ultimaCarga = Date.now();
