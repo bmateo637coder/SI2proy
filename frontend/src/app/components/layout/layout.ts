@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { HasPermissionDirective } from '../../core/directives/has-permission.directive';
 import { AuthService } from '../../core/services/auth.service';
+import { InmueblesService } from '../../core/services/inmuebles.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -19,10 +20,11 @@ export class Layout {
   showHelp: boolean = false;
   buildVersion: string = environment.version;
 
-  constructor(private router: Router, private authService: AuthService) {
+  constructor(private router: Router, private authService: AuthService, private inmuebles: InmueblesService) {
     const userRole = localStorage.getItem('user_role');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     this.userRole = userRole ? parseInt(userRole, 10) : 0;
+    this.inmuebles.cargar();
     
     switch (this.userRole) {
       case 1: 

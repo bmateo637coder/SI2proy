@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { InmueblesService } from '../../../core/services/inmuebles.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -40,6 +41,7 @@ export class Contratos implements OnInit {
     private http: HttpClient,
     private fb: FormBuilder,
     private authService: AuthService,
+    private inmuebles: InmueblesService,
     private cdr: ChangeDetectorRef,
   ) {
     this.contratoForm = this.fb.group({
@@ -58,9 +60,16 @@ export class Contratos implements OnInit {
   }
 
   ngOnInit() {
+    this.inmuebles.clientes$.subscribe((c) => {
+      this.clientes = c;
+      this.cdr.detectChanges();
+    });
+    this.inmuebles.propiedades$.subscribe((p) => {
+      this.propiedades = p;
+      this.cdr.detectChanges();
+    });
     this.loadContratos();
-    this.loadClientes();
-    this.loadPropiedades();
+    this.inmuebles.cargar();
   }
 
   getHeaders() {
@@ -105,38 +114,11 @@ export class Contratos implements OnInit {
     return this.contratos.filter((c) => c.estado === this.filtroEstado);
   }
 
-  loadClientes() {
-    this.http.get(`${this.apiBase}/modulo_inmuebles/clientes`, { headers: this.getHeaders() })
-      .subscribe({
-        next: (res: any) => {
-          this.clientes = res || [];
-          if (this.clientes.length === 0) {
-            this.alerta('No se encontraron clientes. Verifica tu cuenta o los datos del tenant.', false);
-          }
-          this.cdr.detectChanges();
-        },
-        error: (err) => this.alerta(err.error?.detail || 'Error al cargar clientes.', false),
-      });
-  }
-
-  loadPropiedades() {
-    this.http.get(`${this.apiBase}/modulo_inmuebles/propiedades`, { headers: this.getHeaders() })
-      .subscribe({
-        next: (res: any) => {
-          this.propiedades = (res || []).filter((p: any) => ['Disponible', 'Reservada'].includes(p.estado));
-          if (this.propiedades.length === 0) {
-            this.alerta('No se encontraron propiedades disponibles para contratar.', false);
-          }
-          this.cdr.detectChanges();
-        },
-        error: (err) => this.alerta(err.error?.detail || 'Error al cargar propiedades.', false),
-      });
-  }
-
   abrirFormulario() {
     this.mostrarFormulario = true;
     this.mensajeError = '';
     this.mensajeExito = '';
+    this.inmuebles.cargar();
   }
 
   cerrarFormulario() {
@@ -182,7 +164,8 @@ export class Contratos implements OnInit {
           this.cerrarFormulario();
           this.alerta(`Contrato #${res.id_contrato} creado con ${res.cuotas_totales} cuota(s).`, true);
           this.loadContratos();
-          this.loadPropiedades();
+          this.inmuebles.invalidar();
+          this.inmuebles.cargar(true);
         },
         error: (err) => {
           this.subiendoContrato = false;
@@ -222,7 +205,8 @@ export class Contratos implements OnInit {
         this.alerta(`Pago registrado. Recibo ${res.numero_recibo}.`, true);
         this.verDetalle(this.contratoDetalle);
         this.loadContratos();
-        this.loadPropiedades();
+        this.inmuebles.invalidar();
+        this.inmuebles.cargar(true);
       },
       error: (err) => {
         this.enviandoPago = false;
