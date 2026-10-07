@@ -17,6 +17,10 @@ class AuthInterceptor extends Interceptor {
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+    final tenant = await _storage.readTenantId();
+    if (tenant != null && tenant.isNotEmpty) {
+      options.headers['X-Tenant-ID'] = tenant;
+    }
     handler.next(options);
   }
 

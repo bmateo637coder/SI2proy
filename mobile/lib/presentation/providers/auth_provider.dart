@@ -24,6 +24,9 @@ class AuthProvider extends ChangeNotifier {
     if (token == null || token.isEmpty) return;
     try {
       _user = await _repository.getMe();
+      if (_user != null && _user!.idTenant > 0) {
+        await _storage.saveTenantId(_user!.idTenant.toString());
+      }
       notifyListeners();
     } on DioException {
       await signOut(notify: false);
@@ -42,9 +45,15 @@ class AuthProvider extends ChangeNotifier {
       UserModel? profile;
       try {
         profile = await _repository.getMe();
+        if (profile != null && profile.idTenant > 0) {
+          await _storage.saveTenantId(profile.idTenant.toString());
+        }
       } on DioException {
         // El login fue exitoso pero el perfil no pudo cargarse.
         profile = tokens.user;
+        if (profile != null && profile.idTenant > 0) {
+          await _storage.saveTenantId(profile.idTenant.toString());
+        }
       }
       _user = profile;
       return _user != null;
