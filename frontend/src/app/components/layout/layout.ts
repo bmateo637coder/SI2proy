@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { CommonModule } from '@angular/common';
 import { HasPermissionDirective } from '../../core/directives/has-permission.directive';
 import { AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   standalone: true,
@@ -16,6 +17,7 @@ export class Layout {
   rolNombre: string = 'Inmobiliaria';
   tenantNombre: string = '';
   showHelp: boolean = false;
+  buildVersion: string = environment.version;
 
   constructor(private router: Router, private authService: AuthService) {
     const userRole = localStorage.getItem('user_role');
