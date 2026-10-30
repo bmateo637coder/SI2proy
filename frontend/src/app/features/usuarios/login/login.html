@@ -8,8 +8,8 @@
 
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
 
-            <div *ngIf="errorMessage" class="alert-error">
-                <i class="icon-error">!</i> {{ errorMessage }}
+            <div *ngIf="errorMessage()" class="alert-error" role="alert">
+                <i class="icon-error">!</i> {{ errorMessage() }}
             </div>
 
             <div class="form-group">

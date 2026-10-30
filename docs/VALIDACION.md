@@ -41,6 +41,18 @@ Las capturas usan datos controlados de las pruebas de navegador; los reportes de
 
 ## Límites de la validación
 
-Estas pruebas no modificaron la base configurada por el usuario ni utilizaron una cuenta externa de IA. La actualización del repositorio se prepara en `feat/parcial2-saas-offline-analitica`; el procedimiento de publicación está en [DESPLIEGUE.md](DESPLIEGUE.md). Quedan por comprobar con la configuración elegida: aplicación de la migración a esa base, Gemini con una clave válida, dictado con micrófono real, instalación PWA en dispositivos y compilación/instalación APK. Los archivos PlantUML son editables; no se generaron renders UML en este entorno.
+Las pruebas automáticas usan bases aisladas y no utilizaron una cuenta externa de IA. El repositorio está actualizado en `feat/parcial2-saas-offline-analitica`; el procedimiento de publicación está en [DESPLIEGUE.md](DESPLIEGUE.md). Quedan por comprobar Gemini con una clave válida, dictado con micrófono real, instalación PWA en dispositivos y compilación/instalación APK. Los archivos PlantUML son editables; no se generaron renders UML en este entorno.
 
-La migración y las semillas se ejecutaron únicamente en PostgreSQL temporal local. El cluster de prueba se alojó dentro de `.venv/` y se detuvo al terminar; no comparte configuración ni puerto con la base del usuario.
+Las semillas de demostración se ejecutaron únicamente en PostgreSQL temporal local. El cluster de prueba se alojó dentro de `.venv/` y se detuvo al terminar; no comparte configuración ni puerto con la base del usuario.
+
+## Actualización del servicio existente en Render
+
+El 30 de octubre de 2026 se ejecutó la migración aditiva en el arranque de producción, conservando la configuración de la base existente. Render confirmó el despliegue `dep-dbietukipgvc73btqos0` como `live`, con el commit de API `94e38fcc080b`, Python 3.12.10 y `python start_render.py`.
+
+- [Despliegue de backend y Pages](https://github.com/bmateo637coder/SI2proy/actions/runs/41115014274): ambos jobs aprobados.
+- [Inspección posterior de Render](https://github.com/bmateo637coder/SI2proy/actions/runs/41115713346): rama del parcial 2, mismo servicio, mismo dominio y despliegue activo.
+- [CI con controles del despliegue](https://github.com/bmateo637coder/SI2proy/actions/runs/41115376277): 39 pruebas backend, además de las suites web y móvil.
+- `GET /api/health`: versión `2.0.0`, commit esperado y funciones `saas`, `offline`, `analitica`.
+- `GET /openapi.json`: 55 rutas, incluidas `/api/offline/sincronizar` y `/api/saas/suscripcion`.
+
+Las verificaciones públicas no registraron ventas, reservas ni usuarios de prueba en producción. La clave de Render permanece en GitHub Actions; no se incorpora al frontend. Render no tiene `GEMINI_API_KEY`, por lo que los reportes usan el intérprete local indicado en cada resultado.
