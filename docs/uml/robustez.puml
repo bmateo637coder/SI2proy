@@ -1,0 +1,27 @@
+@startuml
+actor "Agente" as Agent
+boundary "Pantalla Offline\nAngular/Flutter" as UI
+control "OfflineService\ncola y reintentos" as Client
+entity "IndexedDB / SQLite" as Local
+boundary "POST /api/offline/sincronizar" as API
+control "get_current_user / require_staff" as Auth
+control "synchronize\nreglas y transacción" as Sync
+entity "Tenant / Suscripcion" as Tenant
+entity "Sucursal / UsuarioSucursal" as Branch
+entity "Propiedad / Cliente" as Catalog
+entity "OperacionOffline" as Op
+entity "Contrato / Pago / Cuota" as Sale
+Agent --> UI
+UI --> Client
+Client --> Local
+Client --> API
+API --> Auth
+Auth --> Tenant
+API --> Sync
+Sync --> Tenant
+Sync --> Branch
+Sync --> Catalog
+Sync --> Op
+Sync --> Sale
+note bottom of Sync : Control concentra reglas;\nla UI no decide la aceptación comercial.
+@enduml

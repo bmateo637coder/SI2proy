@@ -17,12 +17,13 @@ export class Login {
   errorMessage: string = '';
 
   constructor(
-    private fb: FormBuilder, 
-    private authService: AuthService, 
+    private fb: FormBuilder,
+    private authService: AuthService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
       correo: ['', [Validators.required, Validators.email]],
+      id_tenant: [null],
       password: ['', Validators.required]
     });
   }
@@ -42,7 +43,7 @@ export class Login {
           });
         },
         error: (err) => {
-          this.errorMessage = 'Credenciales inválidas. Por favor intenta de nuevo.';
+          this.errorMessage = err.error?.detail || 'Credenciales inválidas. Por favor intenta de nuevo.';
         }
       });
     } else {

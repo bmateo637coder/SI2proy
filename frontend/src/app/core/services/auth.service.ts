@@ -9,7 +9,7 @@ import { environment } from '../../../environments/environment';
 })
 export class AuthService {
   private apiUrl = environment.apiUrl;
-  
+
   // Usamos signals para estado reactivo
   public userPermissions = signal<string[]>([]);
   public currentUser = signal<any>(null);
@@ -40,7 +40,7 @@ export class AuthService {
   loadUserProfile(): Observable<any> {
     const token = localStorage.getItem('token');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-    
+
     return this.http.get(`${this.apiUrl}/users/me`, { headers }).pipe(
       tap((user: any) => {
         // Guardamos permisos y datos de usuario en localStorage y signals
@@ -59,6 +59,7 @@ export class AuthService {
     localStorage.removeItem('user_role');
     localStorage.removeItem('permissions');
     localStorage.removeItem('user');
+    localStorage.removeItem('id_tenant');
     this.userPermissions.set([]);
     this.currentUser.set(null);
     this.router.navigate(['/login']);

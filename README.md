@@ -1,5 +1,11 @@
 # SI2proy
 
+## Evolución del segundo parcial
+
+Se incorporaron planes y sucursales SaaS, operación offline web (PWA + IndexedDB) y móvil (SQLite), sincronización idempotente, reportes por lenguaje natural y dashboard ML. La revisión, instalación, migración aditiva, pruebas y modelos ICONIX/UML están en [docs/PARCIAL2.md](docs/PARCIAL2.md). Los resultados de las verificaciones están en [docs/VALIDACION.md](docs/VALIDACION.md).
+
+Antes de usar las nuevas funciones, ejecutar `backend/migrate_parcial2.py` con la base elegida. Para desarrollo web con backend local: `npm run start:local`; para probar la PWA local: `npm run build:local` y `npm run preview`.
+
 Sistema Inmobiliario "Raíces" — monorepo con las tres partes del proyecto.
 
 ## Estructura
@@ -36,9 +42,9 @@ python -m venv .venv
 .venv/Scripts/python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-> Requiere una base PostgreSQL existente. `requirements.txt` incluye
-> `google-generativeai` (módulo IA, exigido al arrancar) y el servidor crea la
-> carpeta `uploads/` automáticamente.
+> Requiere una base PostgreSQL existente. La IA usa el cliente REST de Gemini;
+> configurar `GEMINI_API_KEY` para activar el proveedor. El servidor crea
+> la carpeta `uploads/` automáticamente.
 
 ### Endpoints principales
 

@@ -10,18 +10,18 @@ class RoleModel {
   final List<String> permissions;
 
   factory RoleModel.fromJson(Map<String, dynamic> json) => RoleModel(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        name: json['name'] as String? ?? '',
-        permissions: (json['permissions'] as List<dynamic>? ?? [])
-            .whereType<String>()
-            .toList(),
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: json['name'] as String? ?? '',
+    permissions: (json['permissions'] as List<dynamic>? ?? [])
+        .whereType<String>()
+        .toList(),
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'permissions': permissions,
-      };
+    'id': id,
+    'name': name,
+    'permissions': permissions,
+  };
 }
 
 class UserModel {
@@ -36,6 +36,7 @@ class UserModel {
     required this.isActive,
     required this.permisos,
     required this.roles,
+    this.esAgente = false,
   });
 
   final int id;
@@ -48,6 +49,10 @@ class UserModel {
   final bool isActive;
   final List<String> permisos;
   final List<RoleModel> roles;
+  final bool esAgente;
+  bool get canOperateOffline =>
+      idTenant > 0 &&
+      (idRol == 2 || esAgente || permisos.contains('API:OPERACIONES'));
 
   bool hasPermission(String codigo) => permisos.contains(codigo);
 
@@ -58,6 +63,28 @@ class UserModel {
 
   bool get canSeeContratos =>
       isAdministrator || permisos.contains('UI:MENU_PROPIEDADES');
+
+  bool get canSeeUsuarios =>
+      isAdministrator || permisos.contains('UI:MENU_USUARIOS');
+
+  bool get canSeeRoles => isAdministrator || permisos.contains('UI:MENU_ROLES');
+
+  bool get canSeeBitacora =>
+      isAdministrator || permisos.contains('UI:MENU_BITACORA');
+
+  bool get canSeeEmpresas =>
+      isAdministrator || permisos.contains('UI:MENU_EMPRESAS');
+
+  bool get canSeeAgentes =>
+      isAdministrator || permisos.contains('UI:MENU_AGENTES');
+
+  bool get canSeePropietarios =>
+      isAdministrator || permisos.contains('UI:MENU_PROPIETARIOS');
+
+  bool get canSeePropiedades =>
+      isAdministrator || permisos.contains('UI:MENU_PROPIEDADES');
+
+  bool get canSeeReportes => true;
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final roles = (json['roles'] as List<dynamic>? ?? [])
@@ -79,19 +106,21 @@ class UserModel {
           .whereType<String>()
           .toList(),
       roles: roles,
+      esAgente: json['es_agente'] == true,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'ci': ci,
-        'email': email,
-        'full_name': fullName,
-        'telefono': telefono,
-        'id_tenant': idTenant,
-        'id_rol': idRol,
-        'is_active': isActive,
-        'permisos': permisos,
-        'roles': roles.map((role) => role.toJson()).toList(),
-      };
+    'id': id,
+    'ci': ci,
+    'email': email,
+    'full_name': fullName,
+    'telefono': telefono,
+    'id_tenant': idTenant,
+    'id_rol': idRol,
+    'is_active': isActive,
+    'permisos': permisos,
+    'roles': roles.map((role) => role.toJson()).toList(),
+    'es_agente': esAgente,
+  };
 }

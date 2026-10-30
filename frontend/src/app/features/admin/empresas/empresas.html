@@ -27,7 +27,7 @@
           <tr *ngFor="let emp of empresas" style="border-bottom: 1px solid var(--border-light); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='transparent'">
             <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-family: monospace;">{{emp.id_tenant}}</td>
             <td style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary-color);">{{emp.nombre}}</td>
-            <td style="padding: 1rem 1.5rem; color: var(--text-muted);">{{emp.dominio || '-'}}</td>
+            <td style="padding: 1rem 1.5rem; color: var(--text-muted);">{{emp.slug || '-'}}</td>
             <td style="padding: 1rem 1.5rem;">
                 <span style="padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background-color: #d1fae5; color: #065f46;">{{emp.estado}}</span>
             </td>
@@ -48,16 +48,16 @@
   <!-- Modal Crear Empresa -->
   <div *ngIf="mostrarModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden" style="background: white; border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
-        
+
         <div style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
             <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--secondary-color);">Crear Nueva Empresa</h3>
             <button (click)="mostrarModal = false" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</button>
         </div>
 
         <form [formGroup]="empresaForm" (ngSubmit)="onSubmit()" style="padding: 2rem;">
-            
+
             <h4 style="margin: 0 0 1rem 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-color);">Datos de la Empresa</h4>
-            
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
                 <div>
                     <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem;">Nombre Empresa *</label>
@@ -65,7 +65,7 @@
                 </div>
                 <div>
                     <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem;">Dominio (Opcional)</label>
-                    <input type="text" formControlName="dominio" class="modern-input" placeholder="ej. miempresa.com">
+                    <input type="text" formControlName="slug" class="modern-input" placeholder="ej. mi-empresa">
                 </div>
             </div>
 
@@ -90,7 +90,7 @@
                     <input type="text" formControlName="admin_telefono" class="modern-input">
                 </div>
             </div>
-            
+
             <div *ngIf="mensajeError" style="color: red; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;">{{ mensajeError }}</div>
 
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid var(--border-light); padding-top: 1.5rem;">

@@ -10,8 +10,9 @@ class SecureStorageService {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _tenantIdKey = 'tenant_id';
+  static const _profileKey = 'offline_profile';
   final FlutterSecureStorage _storage;
-  
+
   // In-memory fallback for web over HTTP where WebCrypto is not available
   final Map<String, String> _webFallback = {};
 
@@ -57,5 +58,14 @@ class SecureStorageService {
     } else {
       await _storage.write(key: _tenantIdKey, value: tenantId);
     }
+  }
+
+  Future<void> saveProfile(String profile) async {
+    if (kIsWeb) { _webFallback[_profileKey] = profile; }
+    else { await _storage.write(key: _profileKey, value: profile); }
+  }
+
+  Future<String?> readProfile() async {
+    return kIsWeb ? _webFallback[_profileKey] : _storage.read(key: _profileKey);
   }
 }

@@ -1,0 +1,71 @@
+@startuml
+title CU-P2-02 · Sincronizar una venta
+actor Agente
+boundary "Pantalla Offline" as UI
+control OfflineService as Client
+database "IndexedDB / SQLite" as Local
+control "API / auth" as API
+control "offline.synchronize" as Sync
+database PostgreSQL as DB
+Agente -> UI : guardar venta de contado
+UI -> Client : queue(propiedad, cliente)
+Client -> Local : guardar UUID + payload, estado=local
+Local --> Client : transacción local completada
+Client --> UI : guardada, pendiente de confirmación
+Agente -> UI : sincronizar / recuperar conexión
+UI -> Client : synchronize()
+Client -> Local : estado=enviando
+Client -> API : POST /api/offline/sincronizar
+API -> API : validar JWT tenant + CI y perfil
+API -> Sync : operación + usuario
+Sync -> DB : bloquear Tenant FOR UPDATE
+Sync -> DB : buscar UNIQUE(tenant, UUID)
+alt UUID existente
+  Sync -> Sync : verificar hash inmutable
+  Sync --> Client : comprobante previo / 409 si datos distintos
+else UUID nuevo
+  Sync -> DB : validar suscripción, sucursal y cliente
+  Sync -> DB : bloquear Propiedad FOR UPDATE
+  alt precio, versión y disponibilidad válidos
+    Sync -> DB : insertar contrato, pago, cuota y operación
+    Sync -> DB : propiedad=Vendida, version++
+    Sync -> DB : COMMIT
+    Sync --> Client : confirmada + id_contrato
+  else conflicto o rechazo comercial
+    Sync -> DB : insertar operación + motivo, COMMIT
+    Sync --> Client : conflicto / rechazada + motivo
+  end
+end
+alt respuesta recibida
+  Client -> Local : guardar resultado durable
+else fallo de red / respuesta perdida
+  Client -> Local : pendiente, conservar UUID y payload
+end
+Client --> UI : mostrar historial
+@enduml
+
+@startuml
+title CU-P2-04 · Reporte en lenguaje natural
+actor Usuario
+boundary AnaliticaPage as UI
+control "API / require_staff" as API
+control "saas.require_ai" as Plan
+control "interpret / ReportSpec" as Interpret
+participant "Gemini REST o reglas locales" as AI
+control build_report as Query
+database PostgreSQL as DB
+Usuario -> UI : texto o dictado
+UI -> API : POST /api/analitica/reporte
+API -> Plan : comprobar suscripción y función
+Plan --> API : autorizado / 402 / 403
+API -> Interpret : texto
+Interpret -> AI : esquema permitido, sin datos privados
+AI --> Interpret : parámetros JSON / ambigüedad
+Interpret -> Interpret : validación Pydantic
+Interpret --> API : ReportSpec tipado
+API -> Query : construir consulta controlada del tenant
+Query -> DB : joins + filtros autorizados
+DB --> Query : datos reales
+Query --> UI : columnas, filas, filtros, intérprete
+UI --> Usuario : tabla / gráfico / PDF / Excel
+@enduml

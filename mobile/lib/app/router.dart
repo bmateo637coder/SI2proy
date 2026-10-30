@@ -11,12 +11,22 @@ import '../presentation/screens/clientes_screen.dart';
 import '../presentation/screens/registrar_cliente_screen.dart';
 import '../presentation/screens/contratos_screen.dart';
 import '../presentation/screens/nuevo_contrato_screen.dart';
+import '../presentation/screens/reportes_dinamicos_screen.dart';
+import '../presentation/screens/admin/usuarios_screen.dart';
+import '../presentation/screens/admin/roles_screen.dart';
+import '../presentation/screens/agendar_visita_screen.dart';
+import '../presentation/screens/forgot_password_screen.dart';
+import '../presentation/screens/map_screen.dart';
+import '../presentation/screens/propiedad_detalle_screen.dart';
+import '../presentation/screens/offline_screen.dart';
+
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorCatKey = GlobalKey<NavigatorState>(debugLabel: 'catalogo');
 final _shellNavigatorContratosKey = GlobalKey<NavigatorState>(debugLabel: 'contratos');
 final _shellNavigatorClientesKey = GlobalKey<NavigatorState>(debugLabel: 'clientes');
 final _shellNavigatorProfKey = GlobalKey<NavigatorState>(debugLabel: 'perfil');
+final _shellNavigatorReportesKey = GlobalKey<NavigatorState>(debugLabel: 'reportes');
 
 GoRouter createRouter(AuthProvider auth) => GoRouter(
       navigatorKey: _rootNavigatorKey,
@@ -29,6 +39,7 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
         if (auth.isAuthenticated && location == '/login') return '/catalogo';
         final user = auth.user;
         if (auth.isAuthenticated && user != null) {
+          if (location == '/offline' && !user.canOperateOffline) return '/perfil';
           if (location.startsWith('/clientes') && !user.canSeeClientes) return '/perfil';
           if (location.startsWith('/contratos') && !user.canSeeContratos) return '/perfil';
           if (location == '/registrar-cliente' && !user.isAdministrator) return '/perfil';
@@ -36,6 +47,7 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
         return null;
       },
       routes: [
+        GoRoute(path: '/offline', builder: (_, _) => const OfflineScreen()),
         GoRoute(
           path: '/login',
           builder: (_, _) => const LoginScreen(),
@@ -77,6 +89,15 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
               ],
             ),
             StatefulShellBranch(
+              navigatorKey: _shellNavigatorReportesKey,
+              routes: [
+                GoRoute(
+                  path: '/reportes',
+                  builder: (context, state) => const ReportesDinamicosScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
               navigatorKey: _shellNavigatorProfKey,
               routes: [
                 GoRoute(
@@ -100,6 +121,42 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
           path: '/contratos/nuevo',
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const NuevoContratoScreen(),
+        ),
+        GoRoute(
+          path: '/usuarios',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const UsuariosScreen(),
+        ),
+        GoRoute(
+          path: '/roles',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const RolesScreen(),
+        ),
+
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
+          path: '/propiedad-detalle',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final prop = state.extra as dynamic;
+            return PropiedadDetalleScreen(propiedad: prop);
+          },
+        ),
+        GoRoute(
+          path: '/agendar-visita',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) {
+            final prop = state.extra as dynamic;
+            return AgendarVisitaScreen(propiedad: prop);
+          },
+        ),
+        GoRoute(
+          path: '/mapa',
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const MapScreen(),
         ),
       ],
     );

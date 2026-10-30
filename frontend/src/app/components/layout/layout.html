@@ -5,17 +5,22 @@
             <h2 class="brand-text">Raíces</h2>
             <p class="brand-subtext">{{ rolNombre }}</p>
         </div>
-        
+
         <nav class="sidebar-nav">
+            <ng-container *ngIf="canOperate">
+            <a routerLink="/dashboard/offline" class="luxury-nav-link" routerLinkActive="active">Operaciones sin conexión</a>
+            <a routerLink="/dashboard/analitica" class="luxury-nav-link" routerLinkActive="active">Reportes y analítica</a>
+            <a routerLink="/dashboard/plan" class="luxury-nav-link" routerLinkActive="active">Plan y sucursales</a>
+            </ng-container>
             <p class="nav-section-title">Principal</p>
             <a routerLink="/dashboard/profile" class="luxury-nav-link" routerLinkActive="active">
                 Mi Perfil
             </a>
-            
+
             <a routerLink="/dashboard/catalogo" class="luxury-nav-link text-gold" routerLinkActive="active">
                 Catálogo
             </a>
-            
+
         <!-- Super Admin: SaaS -->
         <div class="nav-section" *appHasPermission="'UI:MENU_EMPRESAS'">
             <div class="nav-section-title">☁️ SaaS (Admin Global)</div>
@@ -26,7 +31,7 @@
                 💾 Copias de Seguridad
             </a>
         </div>
-            
+
         <!-- Solo Admin: Gestión -->
         <div class="mb-4" *appHasPermission="'UI:MENU_USUARIOS'">
             <h4 class="text-xs uppercase text-gray-500 mb-2 px-4 tracking-wider">Gestión</h4>
@@ -43,7 +48,7 @@
                 Bitácora de Sistema
             </a>
         </div>
-        
+
         <!-- Admin y Agente: Inmuebles -->
         <div class="mb-4" *appHasPermission="'UI:MENU_CATALOGO'">
             <h4 class="text-xs uppercase text-gray-500 mb-2 px-4 tracking-wider">Inmuebles</h4>
@@ -63,9 +68,9 @@
                 Contratos y Pagos
             </a>
         </div>
-            
+
             <div class="spacer"></div>
-            
+
             <button class="btn-logout-luxury" (click)="logout()">
                 Cerrar Sesión
             </button>
@@ -81,7 +86,7 @@
             <div class="topbar-right">
                 <div class="tenant-badge">
                     <span class="tenant-label">Inmobiliaria:</span>
-                    <span class="tenant-name">{{ tenantNombre || 'Premium' }}</span>
+                    <span class="tenant-name">{{ tenantNombre }}</span>
                 </div>
                 <span class="tenant-badge" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;" title="Build del frontend">
                     <span class="tenant-label">Build</span>
@@ -89,7 +94,7 @@
                 </span>
             </div>
         </header>
-        
+
         <div class="luxury-content-area animate-fade-in">
             <router-outlet></router-outlet>
         </div>
@@ -107,10 +112,10 @@
         <div class="help-content">
             <h5>Gestión de Roles y Permisos</h5>
             <p>Ve a "Gestión de Roles", selecciona un rol en la tabla y marca o desmarca las casillas para asignar accesos.</p>
-            
+
             <h5>Creación de Usuarios</h5>
             <p>En "Gestión de Usuarios", llena el formulario. Si un campo está en rojo, corrígelo antes de guardar.</p>
-            
+
             <h5>Catálogo de Inmuebles</h5>
             <p>Aquí verás todas las propiedades activas. Utiliza los filtros para encontrar lo que necesitas más rápido.</p>
         </div>

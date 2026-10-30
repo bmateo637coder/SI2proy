@@ -1,0 +1,10 @@
+backend/.venv/
+backend/__pycache__/
+backend/ml_artifacts/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/test-results/
+frontend/playwright-report/
+mobile/.dart_tool/
+mobile/build/

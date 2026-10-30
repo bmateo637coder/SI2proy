@@ -40,15 +40,26 @@ jobs:
             echo "::error::Variable PROD_API_URL no definida en GitHub (Settings > Variables)."
             exit 1
           fi
-          WS_URL=$(echo "$PROD_API_URL" | sed -e 's#^https://#wss://#' -e 's#^http://#ws://#')
-          FILES=$(grep -rlE "localhost:8000" src || true)
-          echo "Archivos a sustituir: $(echo "$FILES" | wc -l)"
-          for f in $FILES; do
-            sed -i "s#http://localhost:8000#$PROD_API_URL#g; s#ws://localhost:8000#$WS_URL#g" "$f"
-          done
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          api = os.environ['PROD_API_URL'].rstrip('/')
+          parsed = urlsplit(api)
+          if parsed.scheme != 'https' or not parsed.netloc or parsed.query or parsed.fragment:
+              raise SystemExit('PROD_API_URL debe ser una URL HTTPS sin query ni fragmento.')
+          config = {'production': True, 'apiUrl': api, 'wsUrl': 'wss://' + api[len('https://'):],
+                    'version': os.environ.get('GITHUB_SHA', 'parcial2')[:8]}
+          Path('src/environments/environment.ts').write_text(
+              'export const environment = ' + json.dumps(config) + ';\n', encoding='utf-8')
+          PY
 
       - name: Build Angular (base-href para Pages /SI2proy/)
         run: npx ng build --configuration production --base-href=/SI2proy/
+
+      - name: Preparar shell e instalación PWA
+        run: node scripts/build-pwa.mjs
 
       - name: Localizar carpeta de salida
         id: out

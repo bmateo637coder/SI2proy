@@ -17,18 +17,21 @@ export class Layout {
   userRole: number = 0;
   rolNombre: string = 'Inmobiliaria';
   tenantNombre: string = '';
+  canOperate: boolean = false;
   showHelp: boolean = false;
   buildVersion: string = environment.version;
 
   constructor(private router: Router, private authService: AuthService, private inmuebles: InmueblesService) {
     const userRole = localStorage.getItem('user_role');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    this.tenantNombre = user.id_tenant ? (user.tenant_nombre || `Inmobiliaria #${user.id_tenant}`) : 'Plataforma SaaS';
+    this.canOperate = !!user.id_tenant && (user.id_rol === 2 || user.es_agente || user.permisos?.includes('API:OPERACIONES'));
     this.userRole = userRole ? parseInt(userRole, 10) : 0;
     this.inmuebles.cargar();
-    
+
     switch (this.userRole) {
-      case 1: 
-        this.rolNombre = 'Administrador'; 
+      case 1:
+        this.rolNombre = 'Administrador';
         break;
       default:
         // El rol ya no controla los menús, pero podemos mostrar el nombre

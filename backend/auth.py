@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from database.database import get_db
@@ -37,7 +37,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db), request: Request = None):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudieron validar las credenciales",
@@ -50,8 +50,35 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-        
-    user = db.query(Usuario).filter(Usuario.correo == correo).first()
+
+    query = db.query(Usuario).filter(Usuario.correo == correo)
+    # El correo puede repetirse entre empresas: nunca resolverlo con first().
+    if "id_tenant" not in payload:
+        raise credentials_exception
+    query = query.filter(Usuario.id_tenant == payload["id_tenant"])
+    if payload.get("ci"):
+        query = query.filter(Usuario.ci == payload["ci"])
+    users = query.limit(2).all()
+    user = users[0] if len(users) == 1 else None
     if user is None:
         raise credentials_exception
+    if user.id_rol == 1 and user.id_tenant is not None:
+        raise credentials_exception
+    if request and user.id_tenant and not request.url.path.startswith(("/api/saas/suscripcion", "/api/saas/planes", "/users/me")):
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} or request.url.path.startswith("/api/ia"):
+            from saas import require_active
+            require_active(db, user.id_tenant)
+    return user
+
+
+def require_staff(user=Depends(get_current_user)):
+    codes = {p.codigo for p in user.rol.permisos} if user.rol else set()
+    if not user.id_tenant or (user.id_rol != 2 and not user.agente and "API:OPERACIONES" not in codes):
+        raise HTTPException(403, "Se requiere un administrador o agente de esta inmobiliaria.")
+    return user
+
+
+def require_admin(user=Depends(get_current_user)):
+    if user.id_rol not in (1, 2):
+        raise HTTPException(403, "Solo administradores.")
     return user

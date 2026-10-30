@@ -14,6 +14,7 @@ import 'data/services/clientes_service.dart';
 import 'data/services/contratos_service.dart';
 import 'data/services/propiedades_service.dart';
 import 'data/services/secure_storage_service.dart';
+import 'data/services/offline_service.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/clientes_provider.dart';
 import 'presentation/providers/contratos_provider.dart';
@@ -44,6 +45,7 @@ Future<void> main() async {
     propiedadesProvider: propiedadesProvider,
     clientesProvider: clientesProvider,
     contratosProvider: contratosProvider,
+    offlineService: OfflineService(dio),
   ));
 }
 
@@ -53,6 +55,7 @@ class InmobiliariaApp extends StatelessWidget {
     required this.propiedadesProvider,
     required this.clientesProvider,
     required this.contratosProvider,
+    required this.offlineService,
     super.key,
   });
 
@@ -60,6 +63,7 @@ class InmobiliariaApp extends StatelessWidget {
   final PropiedadesProvider propiedadesProvider;
   final ClientesProvider clientesProvider;
   final ContratosProvider contratosProvider;
+  final OfflineService offlineService;
 
   @override
   Widget build(BuildContext context) => MultiProvider(
@@ -68,6 +72,7 @@ class InmobiliariaApp extends StatelessWidget {
           ChangeNotifierProvider.value(value: propiedadesProvider),
           ChangeNotifierProvider.value(value: clientesProvider),
           ChangeNotifierProvider.value(value: contratosProvider),
+          Provider.value(value: offlineService),
         ],
         child: MaterialApp.router(
           title: 'Inmobiliaria',

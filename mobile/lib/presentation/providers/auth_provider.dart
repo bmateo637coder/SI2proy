@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'dart:convert';
+
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/services/secure_storage_service.dart';
@@ -24,12 +26,30 @@ class AuthProvider extends ChangeNotifier {
     if (token == null || token.isEmpty) return;
     try {
       _user = await _repository.getMe();
+      if (_user != null) {
+        await _storage.saveProfile(jsonEncode(_user!.toJson()));
+      }
       if (_user != null && _user!.idTenant > 0) {
         await _storage.saveTenantId(_user!.idTenant.toString());
       }
       notifyListeners();
-    } on DioException {
-      await signOut(notify: false);
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401 ||
+          error.response?.statusCode == 403) {
+        await signOut(notify: false);
+      } else {
+        final cached = await _storage.readProfile();
+        if (cached != null) {
+          try {
+            _user = UserModel.fromJson(
+              jsonDecode(cached) as Map<String, dynamic>,
+            );
+          } catch (_) {
+            _user = null;
+          }
+        }
+        notifyListeners();
+      }
     }
   }
 
@@ -45,17 +65,20 @@ class AuthProvider extends ChangeNotifier {
       UserModel? profile;
       try {
         profile = await _repository.getMe();
-        if (profile != null && profile.idTenant > 0) {
+        if (profile.idTenant > 0) {
           await _storage.saveTenantId(profile.idTenant.toString());
         }
       } on DioException {
         // El login fue exitoso pero el perfil no pudo cargarse.
         profile = tokens.user;
-        if (profile != null && profile.idTenant > 0) {
+        if (profile.idTenant > 0) {
           await _storage.saveTenantId(profile.idTenant.toString());
         }
       }
       _user = profile;
+      if (_user != null) {
+        await _storage.saveProfile(jsonEncode(_user!.toJson()));
+      }
       return _user != null;
     } catch (error) {
       if (error is DioException) {
@@ -66,6 +89,38 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<bool> signUp({
+    required String ci,
+    required String nombre,
+    required String correo,
+    required String telefono,
+    required String password,
+  }) async {
+    _setLoading(true);
+    _errorMessage = null;
+    try {
+      await _repository.register(
+        ci: ci,
+        nombre: nombre,
+        correo: correo,
+        telefono: telefono,
+        password: password,
+      );
+      // Tras registro exitoso, se intenta loguear.
+      return await signIn(correo, password);
+    } catch (error) {
+      if (error is DioException) {
+        _errorMessage = _apiError(error, 'No se pudo registrar la cuenta.');
+      } else {
+        _errorMessage = 'Error local: $error';
+      }
+      _setLoading(
+        false,
+      ); // set false si falla (signIn ya lo hace si es exitoso)
+      return false;
     }
   }
 

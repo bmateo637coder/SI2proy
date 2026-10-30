@@ -7,7 +7,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, AliasChoices
 import re
 
 # Esquemas para Usuario
@@ -25,10 +25,12 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioLogin(BaseModel):
     correo: EmailStr
     password: str
+    id_tenant: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):
     permisos: list[str] = [] # Se llenará dinámicamente con los códigos de permiso
-    
+    es_agente: bool = False
+
     class Config:
         from_attributes = True
 
@@ -65,7 +67,7 @@ class PermisoResponse(PermisoBase):
 # Esquemas para Empresa
 class EmpresaBase(BaseModel):
     nombre: str
-    slug: str
+    slug: str = Field(validation_alias=AliasChoices('slug', 'dominio'), min_length=1, max_length=100, pattern=r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
     plan: str = "basico"
     max_propiedades: int = 10
     estado: Optional[bool] = True
@@ -114,7 +116,7 @@ class PropiedadCatalogoResponse(BaseModel):
     estado: str
     imagenes: list[ImagenResponse] = []
     caracteristicas: list[CaracteristicaResponse] = []
-    
+
     class Config:
         from_attributes = True
 
@@ -128,9 +130,10 @@ class PropiedadCreate(BaseModel):
     titulo: str
     descripcion: Optional[str] = None
     direccion: str
-    precio: float
+    precio: float = Field(gt=0, le=9999999999.99)
     tipo_operacion: str  # 'Venta', 'Alquiler', 'Anticretico'
     imagenes: list[str] = []
+    id_sucursal: Optional[int] = None
 
 class PropiedadEstadoUpdate(BaseModel):
     estado: str  # 'Disponible', 'Reservada', 'Vendida', 'Alquilada'
@@ -154,6 +157,11 @@ class PropiedadAdminResponse(BaseModel):
 
 class PropietarioCreate(BaseModel):
     ci_usuario: str
+
+class PersonaUpdate(BaseModel):
+    nombre: str = Field(min_length=1, max_length=100)
+    correo: EmailStr
+    telefono: Optional[str] = None
 
 class PropietarioResponse(BaseModel):
     id_propietario: int
@@ -231,13 +239,13 @@ class ContratoCreate(BaseModel):
     id_cliente: int
     id_propiedad: int
     tipo_contrato: str  # 'Venta', 'Alquiler', 'Anticretico'
-    monto_total: float
+    monto_total: float = Field(gt=0, le=9999999999.99)
     fecha_inicio: date
     fecha_fin: Optional[date] = None
-    num_cuotas: Optional[int] = None
+    num_cuotas: Optional[int] = Field(default=None, ge=1, le=360)
     observacion: Optional[str] = None
 
 class PagoCreate(BaseModel):
-    monto: float
+    monto: float = Field(gt=0, le=9999999999.99)
     metodo_pago: str  # 'Transferencia', 'Efectivo', 'QR'
     observacion: Optional[str] = None

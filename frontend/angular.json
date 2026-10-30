@@ -33,6 +33,16 @@
             ]
           },
           "configurations": {
+            "local": {
+              "optimization": true,
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.local.ts" }]
+            },
+            "development-local": {
+              "optimization": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.local.ts" }]
+            },
             "production": {
               "budgets": [
                 {
@@ -59,6 +69,7 @@
         "serve": {
           "builder": "@angular/build:dev-server",
           "configurations": {
+            "local": { "buildTarget": "SI2-Frontend:build:development-local" },
             "production": {
               "buildTarget": "SI2-Frontend:build:production"
             },

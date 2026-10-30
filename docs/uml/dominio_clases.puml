@@ -1,0 +1,75 @@
+@startuml
+hide empty methods
+class Tenant { +id_tenant: Integer
++nombre: String
++slug: String
++estado: Boolean }
+class Usuario { +ci: String
++id_tenant: Integer
++correo: String
++id_rol: Integer }
+class Rol
+class Permiso
+class Plan { +codigo: String
++max_sucursales: Integer
++reportes_ia: Boolean }
+class Suscripcion { +id_tenant: Integer
++codigo_plan: String
++inicio: Date
++vencimiento: Date
++estado: String }
+class Sucursal { +id_sucursal: Integer
++id_tenant: Integer
++activa: Boolean }
+class UsuarioSucursal
+class Propiedad { +id_propiedad: Integer
++id_tenant: Integer
++id_sucursal: Integer
++precio: Decimal
++estado: String
++version: Integer }
+class Caracteristica
+class Cliente
+class Agente
+class Propietario
+class Contrato { +monto_total: Decimal
++fecha_inicio: Date
++tipo_contrato: String }
+class Cuota
+class Pago { +monto: Decimal
++metodo_pago: String }
+class OperacionOffline { +uuid: UUID
++payload_hash: String
++datos: JSON
++estado: String
++motivo: String
++registrado_en: DateTime
++procesado_en: DateTime }
+Tenant "1" -- "*" Usuario
+Usuario "*" -- "1" Rol
+Rol "*" -- "*" Permiso
+Tenant "1" -- "0..1" Suscripcion
+Suscripcion "*" -- "1" Plan
+Tenant "1" -- "*" Sucursal
+Sucursal "1" -- "*" UsuarioSucursal
+Usuario "1" -- "*" UsuarioSucursal
+Tenant "1" -- "*" Propiedad
+Sucursal "0..1" -- "*" Propiedad
+Propiedad "1" *-- "*" Caracteristica
+Usuario "1" -- "0..1" Cliente
+Usuario "1" -- "0..1" Agente
+Usuario "1" -- "0..1" Propietario
+Propietario "1" -- "*" Propiedad
+Agente "1" -- "*" Propiedad
+Cliente "1" -- "*" Contrato
+Propiedad "1" -- "*" Contrato
+Contrato "1" -- "*" Pago
+Contrato "1" *-- "*" Cuota
+Tenant "1" -- "*" OperacionOffline
+Sucursal "1" -- "*" OperacionOffline
+Usuario "1" -- "*" OperacionOffline
+Propiedad "1" -- "*" OperacionOffline
+Cliente "1" -- "*" OperacionOffline
+OperacionOffline "0..1" -- "0..1" Contrato : venta confirmada
+note bottom of OperacionOffline : UNIQUE(id_tenant, uuid)\nUUID + hash inmutable; estados durables.
+@enduml

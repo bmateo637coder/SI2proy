@@ -29,6 +29,8 @@ class PropiedadModel {
     required this.precio,
     required this.tipoOperacion,
     required this.estado,
+    this.latitud,
+    this.longitud,
     required this.imagenes,
   });
 
@@ -41,6 +43,8 @@ class PropiedadModel {
   final double precio;
   final String tipoOperacion;
   final String estado;
+  final double? latitud;
+  final double? longitud;
   final List<ImagenModel> imagenes;
 
   factory PropiedadModel.fromJson(Map<String, dynamic> json) => PropiedadModel(
@@ -55,6 +59,8 @@ class PropiedadModel {
             : 0.0,
         tipoOperacion: json['tipo_operacion'] as String? ?? '',
         estado: json['estado'] as String? ?? '',
+        latitud: json['latitud'] != null ? double.tryParse(json['latitud'].toString()) : null,
+        longitud: json['longitud'] != null ? double.tryParse(json['longitud'].toString()) : null,
         imagenes: (json['imagenes'] as List<dynamic>?)
                 ?.map((e) => ImagenModel.fromJson(e as Map<String, dynamic>))
                 .toList() ??

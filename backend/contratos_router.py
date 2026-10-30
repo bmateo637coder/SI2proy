@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 import schemas
 from auth import get_current_user
@@ -18,7 +19,7 @@ METODOS_PAGO = ("Transferencia", "Efectivo", "QR")
 
 
 def _es_operativo(user: models.Usuario) -> bool:
-    return user.id_rol in ROLES_OPERATIVOS
+    return bool(user.id_tenant and (user.id_rol == 2 or user.agente))
 
 
 def _serializar_cuota(cuota: models.Cuota) -> dict:
@@ -130,9 +131,13 @@ def crear_contrato(
     propiedad = db.query(models.Propiedad).filter(
         models.Propiedad.id_propiedad == body.id_propiedad,
         models.Propiedad.id_tenant == current_user.id_tenant,
-    ).first()
+    ).with_for_update().first()
     if not propiedad:
         raise HTTPException(status_code=404, detail="Propiedad no encontrada en esta empresa.")
+    if propiedad.estado != "Disponible" or propiedad.tipo_operacion != body.tipo_contrato:
+        raise HTTPException(409, "La propiedad no está disponible para este tipo de contrato.")
+    if body.fecha_fin and body.fecha_fin < body.fecha_inicio:
+        raise HTTPException(422, "La fecha final debe ser posterior al inicio.")
 
     if body.monto_total <= 0:
         raise HTTPException(status_code=400, detail="El monto total debe ser mayor a 0.")
@@ -173,6 +178,7 @@ def crear_contrato(
 
     if propiedad.estado == "Disponible":
         propiedad.estado = "Reservada"
+        propiedad.version += 1
 
     db.commit()
     db.refresh(contrato)
@@ -215,10 +221,12 @@ def registrar_pago(
     contrato = db.query(models.Contrato).filter(
         models.Contrato.id_contrato == id_contrato,
         models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    ).with_for_update().first()
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato no encontrado.")
 
+    # Bloquea también la propiedad: sincronización offline comparte este bloqueo.
+    db.query(models.Propiedad).filter_by(id_propiedad=contrato.id_propiedad).with_for_update().one()
     saldo = _serializar_contrato(contrato)["saldo_pendiente"]
     if body.monto > saldo + 0.001:
         raise HTTPException(status_code=400, detail=f"El monto excede el saldo pendiente ({saldo}).")
@@ -238,7 +246,9 @@ def registrar_pago(
         key=lambda q: q.numero_cuota,
     )
     cubiertas: list[int] = []
-    restante = round(body.monto, 2)
+    # Usa pagos acumulados: dos abonos parciales deben completar una cuota.
+    restante = round(float(db.query(func.sum(models.Pago.monto)).filter_by(id_contrato=contrato.id_contrato).scalar() or 0), 2)
+    restante -= sum(float(q.monto) for q in contrato.cuotas if q.estado == "Pagada")
     for cuota in cuotas:
         if restante <= 0.001:
             break
@@ -249,13 +259,12 @@ def registrar_pago(
             restante = round(restante - monto_cuota, 2)
             cubiertas.append(cuota.id_cuota)
 
-    db.commit()
-    db.refresh(contrato)
-
-    if _serializar_contrato(contrato)["estado"] == "Pagado" and contrato.tipo_contrato == "Venta":
+    if saldo - body.monto <= 0.001 and contrato.tipo_contrato == "Venta":
         if contrato.propiedad.estado != "Vendida":
             contrato.propiedad.estado = "Vendida"
-            db.commit()
+            contrato.propiedad.version += 1
+    db.commit()
+    db.refresh(contrato)
 
     return {
         "id_pago": pago.id_pago,

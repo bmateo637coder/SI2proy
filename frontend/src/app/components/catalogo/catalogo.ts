@@ -16,11 +16,11 @@ export class Catalogo implements OnInit, OnDestroy {
   recomendados: any[] = [];
   private apiBase = environment.apiUrl;
   private ws: WebSocket | null = null;
-  
+
   filtroOperacion: string = '';
   filtroPrecioMin: number | null = null;
   filtroPrecioMax: number | null = null;
-  
+
   // Advanced filters
   filtroCuartos: number | null = null;
   filtroBanos: number | null = null;
@@ -31,15 +31,15 @@ export class Catalogo implements OnInit, OnDestroy {
   filtroAmueblado: boolean = false;
   filtroServicios: boolean = false;
   mostrarFiltrosAvanzados: boolean = false;
-  
+
   // Detalle Modal
   propiedadSeleccionada: any = null;
   mostrarModalDetalle: boolean = false;
-  
+
   toggleFiltrosAvanzados() {
     this.mostrarFiltrosAvanzados = !this.mostrarFiltrosAvanzados;
   }
-  
+
   abrirDetalles(prop: any) {
     this.propiedadSeleccionada = prop;
     this.mostrarModalDetalle = true;
@@ -86,7 +86,7 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   connectWebSocket() {
-    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades`);
+    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades`, ['raices', localStorage.getItem('token') || 'missing']);
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -125,7 +125,7 @@ export class Catalogo implements OnInit, OnDestroy {
     if (this.filtroOperacion) params.tipo_operacion = this.filtroOperacion;
     if (this.filtroPrecioMin) params.precio_min = this.filtroPrecioMin;
     if (this.filtroPrecioMax) params.precio_max = this.filtroPrecioMax;
-    
+
     // Advanced filters
     if (this.filtroCuartos) params.cuartos = this.filtroCuartos;
     if (this.filtroBanos) params.banos = this.filtroBanos;
@@ -135,7 +135,7 @@ export class Catalogo implements OnInit, OnDestroy {
     if (this.filtroZona) params.zona = this.filtroZona;
     if (this.filtroAmueblado) params.amueblado = this.filtroAmueblado;
     if (this.filtroServicios) params.servicios_basicos = this.filtroServicios;
-    
+
     let headers = new HttpHeaders();
     const user = this.authService.currentUser();
     if (user && user.id_tenant) {
