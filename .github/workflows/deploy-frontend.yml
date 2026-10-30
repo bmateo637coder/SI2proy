@@ -2,6 +2,12 @@ name: Deploy Frontend (GitHub Pages)
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: 'inspect: revisar Render; deploy: actualizar backend y web; frontend: solo web'
+        type: choice
+        options: [inspect, deploy, frontend]
+        default: deploy
   push:
     branches: [main]
     paths: ['frontend/**']
@@ -10,17 +16,45 @@ permissions:
   contents: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: production
+  cancel-in-progress: false
 
 jobs:
+  render:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation != 'frontend'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Comprobar o actualizar el servicio existente de Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+          DEPLOY_OPERATION: ${{ inputs.operation }}
+        run: python backend/scripts/deploy_render.py "$DEPLOY_OPERATION"
+
   build-deploy:
+    needs: render
+    if: >-
+      always() && !cancelled() && inputs.operation != 'inspect' &&
+      (needs.render.result == 'success' || needs.render.result == 'skipped')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verificar compatibilidad del backend antes de publicar
+        working-directory: .
+        env:
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+        run: python3 backend/scripts/deploy_render.py verify
 
       - uses: actions/setup-node@v4
         with:
