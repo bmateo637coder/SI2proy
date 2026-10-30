@@ -27,7 +27,8 @@ test('persiste offline, conserva fallos y separa cuentas', async ({ page, contex
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
   await page.getByRole('button', { name: 'Registrar venta en efectivo' }).click();
-  await expect(page.locator('table')).toContainText('local');
+  await expect(page.locator('table .badge')).toHaveText('local');
+  await expect(page.locator('table')).toContainText('venta_contado');
   // La instalación y el shell cacheado permiten reiniciar sin red.
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();

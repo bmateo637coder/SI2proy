@@ -2,6 +2,7 @@ import os
 import sys
 import tempfile
 import atexit
+import base64
 from uuid import uuid4
 from pathlib import Path
 
@@ -12,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 _test_dir = tempfile.TemporaryDirectory(prefix="raices-tests-")
 os.environ["DATABASE_URL"] = "sqlite:///" + str(Path(_test_dir.name) / "legacy.db").replace("\\", "/")
 os.environ["JWT_SECRET_KEY"] = "isolated-tests-secret"
+os.environ["BITACORA_FERNET_KEY"] = base64.urlsafe_b64encode(os.urandom(32)).decode("ascii")
 os.environ["GEMINI_API_KEY"] = ""
 
 from datetime import timedelta
