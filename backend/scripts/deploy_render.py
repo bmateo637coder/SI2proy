@@ -80,6 +80,11 @@ def inspect_service(service):
     for row in rows:
         if row["envVar"]["key"] == "PYTHON_VERSION":
             summary["pythonVersion"] = row["envVar"]["value"]
+    recent = api(f"services/{service['id']}/deploys?limit=1")
+    if recent:
+        latest = recent[0]["deploy"]
+        summary["latestDeploy"] = {key: latest.get(key) for key in ("id", "status", "createdAt", "finishedAt")}
+        summary["latestDeploy"]["commit"] = latest.get("commit", {}).get("id")
     print(safe(json.dumps(summary, ensure_ascii=False, indent=2)), flush=True)
 
 
@@ -106,8 +111,8 @@ def verify_health(url, commit=None, attempts=12):
 def deploy(service, url):
     branch = os.environ["GITHUB_REF_NAME"]
     commit = os.environ["GITHUB_SHA"]
-    if branch != "feat/parcial2-saas-offline-analitica":
-        raise SystemExit("Esta actualizacion asistida requiere la rama del parcial 2.")
+    if branch not in {"feat/parcial2-saas-offline-analitica", "main"}:
+        raise SystemExit("Seleccionar la rama del parcial 2 o main para actualizar produccion.")
     service_id = service["id"]
     # Solo se actualiza Python: las credenciales y DATABASE_URL se conservan.
     api(f"services/{service_id}/env-vars/PYTHON_VERSION", "PUT", {"value": "3.12.10"})

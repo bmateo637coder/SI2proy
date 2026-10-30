@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: production
+  group: ${{ inputs.operation == 'inspect' && format('render-inspect-{0}', github.run_id) || 'production' }}
   cancel-in-progress: false
 
 jobs:

@@ -37,7 +37,7 @@ El repositorio ya usa `gh-pages` como origen de Pages y la variable pública `PR
 Con el backend ya actualizado:
 
 1. En Actions, abrir **Deploy Frontend (GitHub Pages)**.
-2. Ejecutar **Run workflow** seleccionando `feat/parcial2-saas-offline-analitica`.
+2. Ejecutar **Run workflow** seleccionando `feat/parcial2-saas-offline-analitica` y la operación `frontend` para publicar solo la web. La operación `deploy` actualiza primero Render y luego la web.
 3. El workflow construye con `/SI2proy/`, prepara manifest y Service Worker, genera el fallback SPA y publica en `gh-pages`.
 4. Abrir https://bmateo637coder.github.io/SI2proy/ y volver a iniciar sesión.
 
@@ -48,5 +48,19 @@ El Service Worker conserva una versión coherente para uso offline. Después de 
 ## 3. Acceso para desplegar
 
 El nombre `si2parcial` identifica una credencial en Render; el nombre por sí solo no autentica. Para despliegue asistido, conectar Render o configurar `RENDER_API_KEY` como secreto de GitHub y, si hace falta, el identificador del servicio. No subir claves, `.env`, volcados SQL o bases locales a la rama.
+
+### Despliegue mediante GitHub Actions
+
+El secreto `RENDER_API_KEY` se configura en **Settings > Secrets and variables > Actions > Secrets**. La variable pública `PROD_API_URL` identifica la API. El workflow busca el servicio por su URL y comprueba que pertenezca a este repositorio; no crea otro servicio ni otra base de datos.
+
+En **Deploy Frontend (GitHub Pages)**, elegir la rama del parcial 2 y una operación:
+
+- `inspect`: comprobar acceso y mostrar configuración y nombres de variables, sin sus valores ni cambios en Render.
+- `deploy`: conservar las credenciales existentes, fijar Python 3.12.10, cambiar la rama y el comando de arranque, desplegar el SHA seleccionado y esperar a que esté activo. Solo después publica Pages.
+- `frontend`: verificar que la API ya tenga las funciones del parcial 2 y publicar la web.
+
+La operación `deploy` desactiva los despliegues automáticos en Render para evitar que otro push reemplace la versión seleccionada. Las siguientes actualizaciones se ejecutan manualmente desde este workflow. No cancelar un workflow durante la migración: esperar su resultado y comprobar Render antes de reintentar.
+
+La comprobación final exige versión `2.0.0`, el SHA desplegado y las rutas SaaS/offline en OpenAPI. La clave de Render se utiliza exclusivamente en el job de backend, nunca en el build del frontend.
 
 Referencias: [despliegues Render](https://render.com/docs/deploys), [comandos de arranque](https://render.com/docs/deploys#start-command), [API de despliegue](https://api-docs.render.com/reference/create-deploy).
