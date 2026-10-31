@@ -5,6 +5,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } 
 
 import { RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   standalone: true,
@@ -22,7 +23,7 @@ export class Agentes implements OnInit {
   userRole: number = 0;
   empresaSeleccionada: number | null = null;
   
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, private auth: AuthService) {
     this.agenteForm = this.fb.group({
       ci_usuario: ['', Validators.required]
     });
@@ -33,7 +34,9 @@ export class Agentes implements OnInit {
     this.userRole = roleStr ? parseInt(roleStr, 10) : 0;
 
     if (this.userRole === 1) {
+      this.empresaSeleccionada = this.auth.tenantId();
       this.loadEmpresas();
+      if (this.empresaSeleccionada) this.loadAgentes();
     } else {
       this.loadAgentes();
     }
@@ -50,12 +53,8 @@ export class Agentes implements OnInit {
   }
 
   onEmpresaChange() {
-    if (this.empresaSeleccionada) {
-      this.loadAgentes();
-    } else {
-      this.agentes = [];
-    }
-    this.cdr.detectChanges();
+    this.auth.selectTenant(this.empresaSeleccionada);
+    window.location.reload();
   }
 
   loadAgentes() {

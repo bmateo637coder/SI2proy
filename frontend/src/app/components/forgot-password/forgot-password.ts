@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -17,7 +17,7 @@ export class ForgotPassword {
   mensaje: string = '';
   enviado: boolean = false;
 
-  constructor(private fb: FormBuilder, private http: HttpClient) {
+  constructor(private fb: FormBuilder, private http: HttpClient, private cdr: ChangeDetectorRef) {
     this.forgotForm = this.fb.group({
       correo: ['', [Validators.required, Validators.email]]
     });
@@ -25,13 +25,15 @@ export class ForgotPassword {
 
   onSubmit() {
     if (this.forgotForm.valid) {
-      this.http.post(`${environment.apiUrl}/gestion_usuarios/auth/forgot-password`, this.forgotForm.value).subscribe({
+      this.http.post(`${environment.apiUrl}/forgot-password`, this.forgotForm.value).subscribe({
         next: (res: any) => {
           this.mensaje = res.message;
           this.enviado = true;
+          this.cdr.detectChanges();
         },
         error: () => {
           this.mensaje = 'Hubo un error al procesar tu solicitud.';
+          this.cdr.detectChanges();
         }
       });
     }

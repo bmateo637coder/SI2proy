@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   standalone: true,
@@ -31,7 +32,7 @@ export class Propietarios implements OnInit {
   mostrarModalEditar: boolean = false;
   propietarioEditando: any = null;
 
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, private auth: AuthService) {
     this.propietarioForm = this.fb.group({
       ci_usuario: ['', Validators.required]
     });
@@ -45,7 +46,9 @@ export class Propietarios implements OnInit {
     this.userRole = roleStr ? parseInt(roleStr, 10) : 0;
 
     if (this.userRole === 1) {
+      this.empresaSeleccionada = this.auth.tenantId();
       this.loadEmpresas();
+      if (this.empresaSeleccionada) this.loadPropietarios();
     } else {
       this.loadPropietarios();
     }
@@ -63,12 +66,8 @@ export class Propietarios implements OnInit {
   }
 
   onEmpresaChange() {
-    if (this.empresaSeleccionada) {
-      this.loadPropietarios();
-    } else {
-      this.propietarios = [];
-    }
-    this.cdr.detectChanges();
+    this.auth.selectTenant(this.empresaSeleccionada);
+    window.location.reload();
   }
 
   // ── Cargar propietarios ──

@@ -54,6 +54,9 @@ Superficie y Dormitorios. Las predicciones se calculan en lote.
 
 ## Regresiones cubiertas
 
+- Cambio de contraseña en la ruta correcta y persistencia para el superadministrador.
+- Registro de agentes por empresa y eliminación protegida cuando existe historial.
+- Agentes y propietarios respetan la inmobiliaria seleccionada en la navegación.
 - Superadministrador con empresa elegida, contexto sin persistencia y aislamiento.
 - Sesión vencida con redirección y aviso; cambio de empresa sin datos anteriores.
 - Filtros inválidos, columnas sensibles, listado real de clientes y reportes guardados.
@@ -62,3 +65,7 @@ Superficie y Dormitorios. Las predicciones se calculan en lote.
 - Generación de reportes y descargas PDF/Excel desde el navegador.
 
 Los tests usan bases aisladas. No modifican los datos de producción ni regeneran semillas.
+
+La recuperación automática por correo requiere configurar un proveedor de correo.
+La pantalla informa esta limitación y remite al administrador, sin afirmar que se
+envió un mensaje que el sistema todavía no puede enviar.

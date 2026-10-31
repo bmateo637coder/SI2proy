@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -16,7 +16,7 @@ export class Profile {
   mensaje: string = '';
   error: boolean = false;
 
-  constructor(private fb: FormBuilder, private http: HttpClient) {
+  constructor(private fb: FormBuilder, private http: HttpClient, private cdr: ChangeDetectorRef) {
     this.passwordForm = this.fb.group({
       nueva_password: ['', [
         Validators.required, 
@@ -31,15 +31,17 @@ export class Profile {
       const token = localStorage.getItem('token');
       const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
       
-      this.http.put(`${environment.apiUrl}/gestion_usuarios/users/me/password`, this.passwordForm.value, { headers }).subscribe({
+      this.http.put(`${environment.apiUrl}/users/me/password`, this.passwordForm.value, { headers }).subscribe({
         next: (res: any) => {
           this.mensaje = '¡Contraseña actualizada con éxito!';
           this.error = false;
           this.passwordForm.reset();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.mensaje = 'Error al actualizar la contraseña.';
           this.error = true;
+          this.cdr.detectChanges();
         }
       });
     } else {

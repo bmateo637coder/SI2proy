@@ -20,6 +20,11 @@ def test_superadmin_selected_company_is_request_scoped(api):
     assert client.get('/users/me', headers=selected).json()['id_tenant'] is None
     with factory() as db:
         assert db.get(m.Usuario, 'super').id_tenant is None
+    response = client.put('/users/me/password', json={'nueva_password': 'NewPassword123@'}, headers=selected)
+    assert response.status_code == 200
+    from auth import verify_password
+    with factory() as db:
+        assert verify_password('NewPassword123@', db.get(m.Usuario, 'super').password_hash)
     assert client.get('/api/saas/sucursales', headers={**original, 'X-Tenant-ID': '9999'}).status_code == 404
     assert client.get('/modulo_inmuebles/clientes', headers={**headers(), 'X-Tenant-ID': '2'}).status_code == 403
 
@@ -109,3 +114,20 @@ def test_property_edits_preserve_and_enable_analytics_and_numeric_filters(api):
         assert property_features(db.get(m.Propiedad, 1)) == [120, 3, 2]
     result = client.get('/modulo_inmuebles/propiedades/catalogo?cuartos=2&metros_min=100', headers=selected)
     assert [p['id_propiedad'] for p in result.json()] == [1]
+
+
+def test_agent_registration_deletion_and_dependencies(api):
+    client, factory = api
+    selected = {**headers('super', None), 'X-Tenant-ID': '1'}
+    assert client.post('/modulo_inmuebles/agentes', json={'ci_usuario': 'owner2'}, headers=selected).status_code == 404
+    result = client.post('/modulo_inmuebles/agentes', json={'ci_usuario': 'owner1'}, headers=selected)
+    assert result.status_code == 201, result.text
+    aid = result.json()['id_agente']
+    assert client.post('/modulo_inmuebles/agentes', json={'ci_usuario': 'owner1'}, headers=selected).status_code == 409
+    with factory() as db:
+        assert db.get(m.UsuarioSucursal, ('owner1', 1)) is not None
+    assert client.delete('/modulo_inmuebles/agentes/1', headers=selected).status_code == 409
+    assert client.delete(f'/modulo_inmuebles/agentes/{aid}', headers=headers('admin2', 2)).status_code == 404
+    assert client.delete(f'/modulo_inmuebles/agentes/{aid}', headers=selected).status_code == 200
+    with factory() as db:
+        assert db.get(m.Usuario, 'owner1') is not None

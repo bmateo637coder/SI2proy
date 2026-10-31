@@ -217,13 +217,8 @@ class ForgotPasswordRequest(BaseModel):
 @app.post("/forgot-password")
 def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """CU-03: Recuperar contraseña"""
-    user = db.query(models.Usuario).filter(models.Usuario.correo == data.correo).first()
-    if not user:
-        # Por seguridad no revelamos si existe o no el correo
-        return {"message": "Si el correo existe, se han enviado las instrucciones de recuperación."}
-
-    # Aquí iría la lógica para enviar un email con SendGrid/SMTP
-    return {"message": "Si el correo existe, se han enviado las instrucciones de recuperación."}
+    # No afirmar que se envió un correo: este despliegue no tiene proveedor de correo.
+    return {"message": "Solicite al administrador de su inmobiliaria que restablezca su acceso. La recuperación automática por correo todavía no está habilitada.", "envio": False}
 
 # ==========================================
 # ENDPOINTS DE ROLES (CU-05)
@@ -1115,6 +1110,39 @@ def delete_cliente(
 # ==========================================
 # ENDPOINTS ADMIN DE AGENTES
 # ==========================================
+
+@app.post("/modulo_inmuebles/agentes", response_model=schemas.AgenteResponse, status_code=201)
+def create_agente(data: schemas.ClienteCreate, db: Session = Depends(get_db), user=Depends(require_admin)):
+    if not user.id_tenant:
+        raise HTTPException(422, "Seleccione una inmobiliaria para registrar un agente.")
+    saas.require_active(db, user.id_tenant)
+    target = db.query(models.Usuario).filter_by(ci=data.ci_usuario, id_tenant=user.id_tenant).first()
+    if not target:
+        raise HTTPException(404, "El usuario no pertenece a la inmobiliaria seleccionada.")
+    if db.query(models.Agente).filter_by(ci_usuario=target.ci).first():
+        raise HTTPException(409, "El usuario ya está registrado como agente.")
+    agent = models.Agente(ci_usuario=target.ci, id_tenant=user.id_tenant)
+    db.add(agent)
+    branch = db.query(models.Sucursal).filter_by(id_tenant=user.id_tenant, activa=True).order_by(models.Sucursal.id_sucursal).first()
+    if branch and not db.get(models.UsuarioSucursal, (target.ci, branch.id_sucursal)):
+        db.add(models.UsuarioSucursal(ci_usuario=target.ci, id_sucursal=branch.id_sucursal))
+    db.commit()
+    return {"id_agente": agent.id_agente, "id_tenant": agent.id_tenant, "ci_usuario": target.ci,
+            "nombre": target.nombre, "correo": target.correo}
+
+
+@app.delete("/modulo_inmuebles/agentes/{id_agente}")
+def delete_agente(id_agente: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+    agent = db.query(models.Agente).filter_by(id_agente=id_agente, id_tenant=user.id_tenant).with_for_update().first()
+    if not agent:
+        raise HTTPException(404, "Agente no encontrado en la inmobiliaria seleccionada.")
+    for model in (models.Propiedad, models.Contrato, models.Visita):
+        if db.query(model).filter_by(id_agente=id_agente).first():
+            raise HTTPException(409, "El agente tiene propiedades, contratos o visitas asociados. Conserve su historial o reasigne sus propiedades.")
+    db.delete(agent)
+    db.commit()
+    return {"message": "Agente eliminado. La cuenta del usuario se conserva."}
+
 
 @app.get("/modulo_inmuebles/agentes", response_model=list[schemas.AgenteResponse])
 def get_agentes(

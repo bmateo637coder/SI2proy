@@ -83,7 +83,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise HTTPException(403, "No puede acceder a otra inmobiliaria.")
         if not db.get(Tenant, tid):
             raise HTTPException(404, "Inmobiliaria no encontrada.")
-        if user.id_rol == 1 and request.url.path != "/users/me":
+        if user.id_rol == 1 and not request.url.path.startswith("/users/me"):
             user = ScopedUser(user, tid)
     if request and user.id_rol != 1 and user.id_tenant and not request.url.path.startswith(("/api/saas/suscripcion", "/api/saas/planes", "/users/me")):
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} or request.url.path.startswith("/api/ia"):
