@@ -7,6 +7,7 @@
         </div>
 
         <nav class="sidebar-nav">
+            <a *ngIf="authService.allTenants()" routerLink="/dashboard/vista-global" class="luxury-nav-link text-gold" routerLinkActive="active">Vista global por inmobiliaria</a>
             <ng-container *ngIf="canOperate">
             <a routerLink="/dashboard/offline" class="luxury-nav-link" routerLinkActive="active">Operaciones sin conexión</a>
             <a routerLink="/dashboard/analitica" class="luxury-nav-link" routerLinkActive="active">Reportes y analítica</a>
@@ -89,6 +90,7 @@
                     <select *ngIf="userRole === 1; else tenantLabel" aria-label="Inmobiliaria activa"
                         [(ngModel)]="selectedTenant" (ngModelChange)="cambiarEmpresa()">
                         <option [ngValue]="null">Selecciona una inmobiliaria</option>
+                        <option [ngValue]="0">Todas las inmobiliarias</option>
                         <option *ngFor="let empresa of empresas()" [ngValue]="empresa.id_tenant">{{ empresa.nombre }}</option>
                     </select>
                     <ng-template #tenantLabel><span class="tenant-name">{{ tenantNombre }}</span></ng-template>
@@ -101,7 +103,7 @@
         </header>
 
         <div class="luxury-content-area animate-fade-in">
-            <div *ngIf="userRole === 1 && !selectedTenant" class="api-notice" role="status">
+            <div *ngIf="userRole === 1 && selectedTenant === null" class="api-notice" role="status">
                 Selecciona una inmobiliaria en la barra superior para consultar sus datos, reportes y analítica.
             </div>
             <div *ngIf="feedback.error()" class="api-error" role="alert">

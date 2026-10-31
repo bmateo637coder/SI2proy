@@ -98,7 +98,7 @@ def verify_health(url, commit=None, attempts=12):
             if valid and (not commit or (deployed and commit.startswith(deployed))):
                 with urlopen(url + "/openapi.json", timeout=45) as response:
                     paths = json.load(response)["paths"]
-                if {"/api/offline/sincronizar", "/api/saas/suscripcion"}.issubset(paths):
+                if {"/api/offline/sincronizar", "/api/saas/suscripcion", "/admin/vista-global/resumen"}.issubset(paths):
                     print("API verificada: " + json.dumps(health), flush=True)
                     return
         except (HTTPError, URLError, TimeoutError, ValueError):

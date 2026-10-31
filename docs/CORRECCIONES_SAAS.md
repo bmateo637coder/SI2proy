@@ -3,12 +3,28 @@
 La API de producción conserva los datos de Raíces Inmobiliaria. Se comprobó mediante
 una sesión autenticada que contiene 3 propiedades, 3 clientes, 1 agente y 1 propietario.
 Las otras dos empresas estaban vacías al realizar el diagnóstico.
+Posteriormente se agregaron cinco propiedades de demostración a Horizonte y cinco
+a Cúspide, con fotografías ilustrativas y descripciones que identifican los datos
+ficticios.
 
 ## Uso como superadministrador
 
 1. Iniciar sesión y seleccionar la inmobiliaria en la barra superior.
 2. Abrir Clientes, Propiedades, Contratos y Pagos o Reportes y analítica.
 3. Para probar los datos existentes, seleccionar Raíces Inmobiliaria.
+
+La opción **Todas las inmobiliarias** abre una vista global de consulta, con
+totales por empresa y listados de propiedades, clientes, propietarios, agentes,
+contratos, usuarios y sucursales. Cada fila muestra la inmobiliaria de origen.
+Incluye búsqueda, filtro de empresa, paginación, detalle de propiedades y
+exportación del resumen o de la página actual a CSV.
+
+Esta selección se conserva al recargar y no se envía como un ID de empresa. Las
+consultas globales están en `/admin/vista-global` y exigen el rol de
+superadministrador en el servidor. No modifican el alcance de las rutas operativas.
+Para editar o crear registros, usar **Abrir inmobiliaria** o seleccionar una empresa
+concreta en la barra superior. Las exportaciones indican si contienen un resumen
+completo o únicamente la página visible.
 
 La selección viaja como `X-Tenant-ID`. El servidor valida la empresa y crea un
 contexto temporal por petición; no modifica el usuario ni sus credenciales. Una cuenta

@@ -32,6 +32,7 @@ import saas
 import offline
 import reportes_generativos
 import analitica_ml
+import vista_global
 
 from contextlib import asynccontextmanager
 
@@ -50,6 +51,7 @@ app.include_router(saas.router)
 app.include_router(offline.router)
 app.include_router(reportes_generativos.router)
 app.include_router(analitica_ml.router)
+app.include_router(vista_global.router)
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

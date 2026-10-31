@@ -13,12 +13,14 @@ export class AuthService {
   // Usamos signals para estado reactivo
   public userPermissions = signal<string[]>([]);
   public currentUser = signal<any>(null);
-  public selectedTenant = signal<number | null>(Number(localStorage.getItem('selected_tenant')) || null);
-  public tenantId = computed(() => this.currentUser()?.id_rol === 1 ? this.selectedTenant() : this.currentUser()?.id_tenant);
+  public selectedTenant = signal<number | null>(localStorage.getItem('selected_tenant') === 'all' ? 0 : Number(localStorage.getItem('selected_tenant')) || null);
+  public allTenants = computed(() => this.currentUser()?.id_rol === 1 && this.selectedTenant() === 0);
+  public tenantId = computed(() => this.currentUser()?.id_rol === 1 ? this.selectedTenant() || null : this.currentUser()?.id_tenant);
 
   selectTenant(id: number | null) {
     this.selectedTenant.set(id);
-    if (id) localStorage.setItem('selected_tenant', String(id));
+    if (id === 0) localStorage.setItem('selected_tenant', 'all');
+    else if (id) localStorage.setItem('selected_tenant', String(id));
     else localStorage.removeItem('selected_tenant');
   }
 
