@@ -52,7 +52,9 @@ def local_spec(text):
     t = normalized(text)
     if "reserva" in t:
         kind = "reservas_sucursal"
-    elif any(w in t for w in ("cartera", "disponib", "propiedades por estado", "inmuebles por estado")):
+    elif any(w in t for w in ("cartera", "disponib", "propiedades por estado", "inmuebles por estado")) or re.search(
+        r"(?:propiedades|inmuebles).*por (?:inmobiliarias?|empresas?) y estado", t
+    ):
         kind = "cartera_estado"
     elif "agente" in t:
         kind = "ranking_agentes"
@@ -111,6 +113,13 @@ def interpret(text):
     prompt = (f"Fecha actual en Bolivia: {today()}. Interpreta un reporte inmobiliario. "
         "Solo produce JSON según este esquema; nunca SQL. Si es ambiguo o no soportado devuelve {\"error\":\"explicacion\"}. "
         "No inventes IDs. Usa número de sucursal solo si se indica. "
+        "cartera_estado cuenta las propiedades actuales por estado. "
+        "En el alcance global el servidor separa automáticamente los resultados por inmobiliaria. "
+        "Una solicitud de cantidad de propiedades por inmobiliaria o empresa y estado corresponde "
+        "a cartera_estado; no necesita campos adicionales de agrupación en el JSON. "
+        "ventas_sucursal agrupa contratos; ingresos_semana agrupa pagos; ranking_agentes agrupa contratos "
+        "por agente; reservas_sucursal cuenta reservas confirmadas. "
+        "No incluyas fechas si el usuario no las pidió. cartera_estado representa el inventario actual y no admite fechas. "
         f"Esquema: {json.dumps(schema)}. Solicitud del usuario: {text}")
     try:
         parsed = json.loads(generate_text(prompt, json_mode=True))

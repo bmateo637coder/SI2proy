@@ -482,7 +482,7 @@ class _IaState extends State<IaScreen> {
                     ReportTable(
                       columns: const [
                         'inmobiliaria',
-                        'id',
+                        'id_propiedad',
                         'precio_publicado',
                         'precio_estimado_sintetico',
                         'grupo',

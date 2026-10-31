@@ -62,17 +62,24 @@ class ContratosProvider extends ChangeNotifier {
   }
 
   Future<void> fetchDetalle(int idContrato) async {
+    final generation = _generation;
+    _detalle = null;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _detalle = await _repository.getContratoDetalle(idContrato);
+      final result = await _repository.getContratoDetalle(idContrato);
+      if (generation != _generation) return;
+      _detalle = result;
     } catch (e) {
+      if (generation != _generation) return;
       _errorMessage = apiError(e);
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
