@@ -4,7 +4,7 @@ Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** publica `Raices-2.1.0.apk` y su SHA-256 en [GitHub Releases](https://github.com/bmateo637coder/SI2proy/releases). La publicación exige análisis de Dart, pruebas Flutter, integración en emulador Android y verificación de firma. No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-2.1.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública está en [GitHub Releases](https://github.com/bmateo637coder/SI2proy/releases). No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
 
@@ -40,3 +40,5 @@ flutter run --dart-define=API_BASE_URL=https://raices-backend-n1yy.onrender.com
 Las pruebas cubren identidad global y alcance, persistencia de selección sin red, exportaciones locales, aislamiento de colas por inmobiliaria y reintentos sin duplicación. La integración Android usa el backend controlado de pruebas y SQLite/almacenamiento seguro nativos, sin crear ventas en producción. Verifica inicio de sesión, catálogo global, reportes dinámicos y analíticos, cambio de empresa, reserva sin conexión, reinicio y recuperación, pérdida de confirmación y reintento.
 
 La distribución se firma con un almacén persistente protegido en secretos de GitHub Actions: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`. No se debe rotar esa firma para actualizaciones de la misma aplicación. Para compilar una distribución local, se suministran esas credenciales como variables de entorno y `ANDROID_KEYSTORE_PATH` como ruta al almacén; sin ellas, la compilación local utiliza la firma de desarrollo.
+
+GitHub exige permiso de escritura de Workflows para publicar una versión cuyo commit modifica workflows respecto de `main`; el token automático de Actions no ofrece ese permiso. En una rama de trabajo, el workflow conserva el APK firmado como artefacto. Se publica sin recompilar con `python scripts/publish_mobile_release.py ID_EJECUCION`, usando la credencial Git local o una variable `RELEASE_TOKEN`/`GH_TOKEN` autorizada. El script verifica el origen de la ejecución, las pruebas Android, la firma aprobada, el artefacto y su SHA-256; no reemplaza etiquetas ni archivos de una versión diferente. Opcionalmente, un secreto `RELEASE_TOKEN` con los permisos adecuados permite la publicación automática. La credencial Git local no se copia a secretos de Actions.
