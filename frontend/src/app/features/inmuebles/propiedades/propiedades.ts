@@ -26,6 +26,7 @@ export class Propiedades implements OnInit {
 
   // Super Admin: empresa seleccionada para filtrar
   empresaSeleccionada: number | null = null;
+  get canManage() { return this.userRole === 2 || (this.userRole === 1 && !!this.empresaSeleccionada); }
 
   // Modal de edición
   mostrarModalEditar: boolean = false;

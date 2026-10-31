@@ -15,6 +15,8 @@ test('superadministrador selecciona empresa, carga datos y exporta reportes', as
     const tid = route.request().headers()['x-tenant-id'];
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith('/clientes')) return route.fulfill({ json: tid === '1' ? [{ id_cliente: 1, nombre: 'Cliente Norte', ci_usuario: '123', correo: 'norte@example.com' }] : [] });
+    if (path.endsWith('/propiedades')) return route.fulfill({ json: tid === '1' ? [{ id_propiedad: 1, titulo: 'Casa Norte', precio: 120000,
+      descripcion: 'Descripción conservada', estado: 'Disponible', tipo_operacion: 'Venta', id_propietario: 1, id_agente: 1, direccion: 'Centro' }] : [] });
     return route.fulfill({ json: [] });
   });
   await page.route('**/reportes/guardados', route => route.fulfill({ json: [] }));
@@ -26,6 +28,10 @@ test('superadministrador selecciona empresa, carga datos y exporta reportes', as
   await page.goto('/dashboard/clientes');
   await page.getByRole('combobox', { name: 'Inmobiliaria activa' }).selectOption({ label: 'Empresa Norte' });
   await expect(page.getByText('Cliente Norte', { exact: true })).toBeVisible();
+  await page.goto('/dashboard/propiedades');
+  await expect(page.getByRole('button', { name: 'Nueva Propiedad' })).toBeVisible();
+  await page.getByRole('button', { name: 'Editar', exact: true }).click();
+  await expect(page.locator('textarea[formcontrolname="descripcion"]')).toHaveValue('Descripción conservada');
   await page.goto('/dashboard/reportes');
   await page.getByRole('button', { name: /Generar Previsualización/ }).click();
   await expect(page.locator('table')).toContainText('Casa Norte');

@@ -5,7 +5,7 @@
     <h2 style="color: var(--secondary-color); margin: 0; font-size: 1.8rem; font-weight: 700;">
       Gestión de Propiedades
     </h2>
-    <button *ngIf="userRole !== 1" class="btn-primary" (click)="abrirModalCrear()"
+    <button *ngIf="canManage" class="btn-primary" (click)="abrirModalCrear()"
       style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       Nueva Propiedad
@@ -36,9 +36,9 @@
         <option [ngValue]="null" disabled>-- Seleccionar empresa --</option>
         <option *ngFor="let emp of empresas" [ngValue]="emp.id_tenant">{{ emp.nombre }}</option>
       </select>
-      <!-- SuperAdmin solo puede visualizar, no crear propiedades directamente -->
+      <!-- Contexto compartido con el selector de la barra superior -->
       <span *ngIf="empresaSeleccionada" style="font-size:0.78rem;color:#b45309;font-weight:600;background:#fef3c7;padding:0.3rem 0.75rem;border-radius:20px;">
-        👁️ Modo Lectura — Vista Global
+        Gestión de la inmobiliaria seleccionada
       </span>
     </div>
   </div>
@@ -82,7 +82,7 @@
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Precio</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Operación</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Estado</th>
-            <th *ngIf="userRole !== 1" style="padding: 1rem 1.5rem; text-align: right; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Acciones</th>
+            <th *ngIf="canManage" style="padding: 1rem 1.5rem; text-align: right; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -100,7 +100,7 @@
             </td>
             <td style="padding: 1rem 1.5rem;">
               <!-- Admin de empresa: estado editable -->
-              <select *ngIf="userRole !== 1" (change)="updateEstado(prop.id_propiedad, $any($event.target).value)"
+              <select *ngIf="canManage" (change)="updateEstado(prop.id_propiedad, $any($event.target).value)"
                 [style.color]="getEstadoColor(prop.estado)"
                 [style.background]="getEstadoBg(prop.estado)"
                 style="border: none; border-radius: 20px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; outline: none;">
@@ -110,7 +110,7 @@
                 <option value="Alquilada" [selected]="prop.estado === 'Alquilada'">Alquilada</option>
               </select>
               <!-- SuperAdmin: estado solo lectura -->
-              <span *ngIf="userRole === 1"
+              <span *ngIf="!canManage"
                 [style.color]="getEstadoColor(prop.estado)"
                 [style.background]="getEstadoBg(prop.estado)"
                 style="border-radius: 20px; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; display:inline-block;">
@@ -118,7 +118,7 @@
               </span>
             </td>
             <!-- Acciones solo para admin de empresa -->
-            <td *ngIf="userRole !== 1" style="padding: 1rem 1.5rem; text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <td *ngIf="canManage" style="padding: 1rem 1.5rem; text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
               <button (click)="abrirEditar(prop)" class="btn-secondary" title="Editar"
                 style="padding: 0.4rem 0.8rem; font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
