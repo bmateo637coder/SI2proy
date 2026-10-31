@@ -16,6 +16,14 @@ class OfflineService {
   Future<Database>? _opening;
   bool syncing = false;
 
+  void requireOperator(UserModel user) {
+    if (!user.canOperateOffline) {
+      throw StateError(
+        'Selecciona una inmobiliaria con una cuenta autorizada para operaciones.',
+      );
+    }
+  }
+
   String scope(UserModel user) =>
       '${ApiConstants.baseUrl}|${user.idTenant}|${user.ci}';
 
@@ -89,8 +97,10 @@ class OfflineService {
   }
 
   Future<void> download(UserModel user) async {
+    requireOperator(user);
     final response = await dio.get<Map<String, dynamic>>(
       '/api/offline/catalogo',
+      options: Options(extra: {'tenantId': user.idTenant}),
     );
     final data = response.data!;
     if (data['id_tenant'] != user.idTenant || data['ci_usuario'] != user.ci) {
@@ -194,6 +204,9 @@ class OfflineService {
     int clientId,
     String type,
   ) async {
+    requireOperator(user);
+    if (!['reserva', 'venta_contado'].contains(type))
+      throw StateError('Operación no admitida.');
     if (prop['estado'] != 'Disponible' ||
         (type == 'venta_contado' && prop['tipo_operacion'] != 'Venta')) {
       throw StateError('Propiedad no disponible para esta operación.');
@@ -243,6 +256,7 @@ class OfflineService {
   }
 
   Future<void> synchronize(UserModel user) async {
+    requireOperator(user);
     if (syncing) return;
     syncing = true;
     try {
@@ -265,6 +279,7 @@ class OfflineService {
           final res = await dio.post<Map<String, dynamic>>(
             '/api/offline/sincronizar',
             data: jsonDecode(op['payload'] as String),
+            options: Options(extra: {'tenantId': user.idTenant}),
           );
           final result = res.data!;
           if (result['uuid'] != op['uuid'] ||
@@ -306,8 +321,10 @@ class OfflineService {
   }
 
   Future<void> cancel(UserModel user, String uuid) async {
+    requireOperator(user);
     final response = await dio.put<Map<String, dynamic>>(
       '/api/offline/reservas/$uuid/cancelar',
+      options: Options(extra: {'tenantId': user.idTenant}),
     );
     final result = response.data!;
     if (result['uuid'] != uuid || result['estado'] != 'cancelada') {

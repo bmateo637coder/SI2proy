@@ -6,6 +6,7 @@ class ClienteModel {
     required this.nombre,
     required this.correo,
     required this.telefono,
+    this.inmobiliaria = '',
   });
 
   final int idCliente;
@@ -14,22 +15,24 @@ class ClienteModel {
   final String nombre;
   final String correo;
   final String telefono;
+  final String inmobiliaria;
 
   factory ClienteModel.fromJson(Map<String, dynamic> json) => ClienteModel(
-        idCliente: json['id_cliente'] as int? ?? 0,
-        ciUsuario: json['ci_usuario'] as String? ?? '',
-        idTenant: json['id_tenant'] as int? ?? 0,
-        nombre: json['nombre'] as String? ?? '',
-        correo: json['correo'] as String? ?? '',
-        telefono: json['telefono'] as String? ?? '',
-      );
+    inmobiliaria: json['inmobiliaria']?.toString() ?? '',
+    idCliente: json['id_cliente'] as int? ?? 0,
+    ciUsuario: json['ci_usuario'] as String? ?? '',
+    idTenant: json['id_tenant'] as int? ?? 0,
+    nombre: json['nombre'] as String? ?? '',
+    correo: json['correo'] as String? ?? '',
+    telefono: json['telefono'] as String? ?? '',
+  );
 
   Map<String, dynamic> toJson() => {
-        'id_cliente': idCliente,
-        'ci_usuario': ciUsuario,
-        'id_tenant': idTenant,
-        'nombre': nombre,
-        'correo': correo,
-        'telefono': telefono,
-      };
+    'id_cliente': idCliente,
+    'ci_usuario': ciUsuario,
+    'id_tenant': idTenant,
+    'nombre': nombre,
+    'correo': correo,
+    'telefono': telefono,
+  };
 }

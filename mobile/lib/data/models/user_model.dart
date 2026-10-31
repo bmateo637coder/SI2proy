@@ -52,7 +52,13 @@ class UserModel {
   final bool esAgente;
   bool get canOperateOffline =>
       idTenant > 0 &&
-      (idRol == 2 || esAgente || permisos.contains('API:OPERACIONES'));
+      (idRol == 1 ||
+          idRol == 2 ||
+          esAgente ||
+          permisos.contains('API:OPERACIONES'));
+
+  UserModel forTenant(int tenant) =>
+      UserModel.fromJson({...toJson(), 'id_tenant': tenant});
 
   bool hasPermission(String codigo) => permisos.contains(codigo);
 
@@ -84,7 +90,8 @@ class UserModel {
   bool get canSeePropiedades =>
       isAdministrator || permisos.contains('UI:MENU_PROPIEDADES');
 
-  bool get canSeeReportes => true;
+  bool get canSeeReportes =>
+      isAdministrator || esAgente || permisos.contains('UI:MENU_REPORTES');
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     final roles = (json['roles'] as List<dynamic>? ?? [])

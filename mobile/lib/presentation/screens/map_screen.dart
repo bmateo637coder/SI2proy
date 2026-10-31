@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+
 import '../providers/propiedades_provider.dart';
 import '../../core/config/api_constants.dart';
 
@@ -80,10 +81,14 @@ class _MapScreenState extends State<MapScreen> {
                     imageUrl,
                     height: 150,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       height: 150,
                       color: Colors.grey[300],
-                      child: const Icon(Icons.home_work, size: 50, color: Colors.grey),
+                      child: const Icon(
+                        Icons.home_work,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 )
@@ -94,12 +99,17 @@ class _MapScreenState extends State<MapScreen> {
                     color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.home_work, size: 50, color: Colors.grey),
+                  child: const Icon(
+                    Icons.home_work,
+                    size: 50,
+                    color: Colors.grey,
+                  ),
                 ),
               const SizedBox(height: 16),
               Text(
                 prop.titulo,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Row(
@@ -146,8 +156,12 @@ class _MapScreenState extends State<MapScreen> {
 
     // Generar marcadores
     final List<Marker> markers = provider.propiedades.map((prop) {
-      final double lat = prop.latitud ?? (_defaultCenter.latitude + (prop.idPropiedad * 0.005));
-      final double lng = prop.longitud ?? (_defaultCenter.longitude + (prop.idPropiedad * 0.005));
+      final double lat =
+          prop.latitud ??
+          (_defaultCenter.latitude + (prop.idPropiedad * 0.005));
+      final double lng =
+          prop.longitud ??
+          (_defaultCenter.longitude + (prop.idPropiedad * 0.005));
 
       return Marker(
         point: LatLng(lat, lng),
@@ -182,13 +196,18 @@ class _MapScreenState extends State<MapScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mapa Premium', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Mapa Premium',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
-          initialCenter: _userLocation ?? _defaultCenter, // Centrar en el usuario si existe
+          initialCenter:
+              _userLocation ??
+              _defaultCenter, // Centrar en el usuario si existe
           initialZoom: 13.5,
         ),
         children: [

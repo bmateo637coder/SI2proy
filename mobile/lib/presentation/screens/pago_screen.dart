@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../data/models/propiedad_model.dart';
 
 class CardNumberFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     String newText = newValue.text.replaceAll(' ', '');
     // Limitar a 16 dígitos (4 bloques de 4, estándar internacional)
     if (newText.length > 16) {
@@ -29,7 +32,9 @@ class CardNumberFormatter extends TextInputFormatter {
 class ExpiryDateFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     String newText = newValue.text.replaceAll('/', '');
     if (newText.length > 4) {
       newText = newText.substring(0, 4);
@@ -116,7 +121,9 @@ class _PagoScreenState extends State<PagoScreen> {
     final monto = widget.propiedad.precio;
 
     return Scaffold(
-      appBar: AppBar(title: Text(esVenta ? 'Comprar Propiedad' : 'Reservar Alquiler')),
+      appBar: AppBar(
+        title: Text(esVenta ? 'Comprar Propiedad' : 'Reservar Alquiler'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -128,15 +135,21 @@ class _PagoScreenState extends State<PagoScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  color: theme.colorScheme.primaryContainer.withValues(
+                    alpha: 0.3,
+                  ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  ),
                 ),
                 child: Column(
                   children: [
                     Text(
                       'Total a pagar',
-                      style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -158,8 +171,16 @@ class _PagoScreenState extends State<PagoScreen> {
 
               SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment(value: 'tarjeta', label: Text('Tarjeta Crédito/Débito'), icon: Icon(Icons.credit_card)),
-                  ButtonSegment(value: 'transferencia', label: Text('QR / Transf.'), icon: Icon(Icons.qr_code_2)),
+                  ButtonSegment(
+                    value: 'tarjeta',
+                    label: Text('Tarjeta Crédito/Débito'),
+                    icon: Icon(Icons.credit_card),
+                  ),
+                  ButtonSegment(
+                    value: 'transferencia',
+                    label: Text('QR / Transf.'),
+                    icon: Icon(Icons.qr_code_2),
+                  ),
                 ],
                 selected: {_metodoPago},
                 onSelectionChanged: (Set<String> newSelection) {
@@ -174,7 +195,9 @@ class _PagoScreenState extends State<PagoScreen> {
                   decoration: InputDecoration(
                     labelText: 'Número de Tarjeta',
                     prefixIcon: const Icon(Icons.credit_card),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     hintText: '0000 0000 0000 0000',
                   ),
                   keyboardType: TextInputType.number,
@@ -202,10 +225,14 @@ class _PagoScreenState extends State<PagoScreen> {
                         decoration: InputDecoration(
                           labelText: 'Vencimiento (MM/AA)',
                           hintText: 'MM/AA',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         validator: (val) {
-                          if (val == null || val.length != 5 || !val.contains('/')) {
+                          if (val == null ||
+                              val.length != 5 ||
+                              !val.contains('/')) {
                             return 'Inválido';
                           }
                           return null;
@@ -221,9 +248,12 @@ class _PagoScreenState extends State<PagoScreen> {
                         decoration: InputDecoration(
                           labelText: 'CVC',
                           counterText: '',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        validator: (val) => val != null && val.length >= 3 ? null : 'Requerido',
+                        validator: (val) =>
+                            val != null && val.length >= 3 ? null : 'Requerido',
                       ),
                     ),
                   ],
@@ -232,10 +262,13 @@ class _PagoScreenState extends State<PagoScreen> {
                 TextFormField(
                   decoration: InputDecoration(
                     labelText: 'Nombre del Titular',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   textCapitalization: TextCapitalization.words,
-                  validator: (val) => val != null && val.isNotEmpty ? null : 'Requerido',
+                  validator: (val) =>
+                      val != null && val.isNotEmpty ? null : 'Requerido',
                 ),
               ] else ...[
                 Container(
@@ -243,12 +276,21 @@ class _PagoScreenState extends State<PagoScreen> {
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: _pagoVerificado ? Colors.green : Colors.grey.shade300, width: 2),
+                    border: Border.all(
+                      color: _pagoVerificado
+                          ? Colors.green
+                          : Colors.grey.shade300,
+                      width: 2,
+                    ),
                   ),
                   child: Column(
                     children: [
                       // Usar un ícono grande como QR falso o una imagen
-                      const Icon(Icons.qr_code_2, size: 150, color: Colors.black87),
+                      const Icon(
+                        Icons.qr_code_2,
+                        size: 150,
+                        color: Colors.black87,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'Escanea este código QR desde tu banca móvil para completar el pago.',
@@ -260,23 +302,40 @@ class _PagoScreenState extends State<PagoScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
-                            Icon(Icons.check_circle, color: Colors.green, size: 28),
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 28,
+                            ),
                             SizedBox(width: 8),
-                            Text('¡Pago verificado!', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(
+                              '¡Pago verificado!',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                           ],
-                        )
+                        ),
                       ] else ...[
                         FilledButton.tonalIcon(
                           onPressed: _isLoading ? null : _verificarPagoQR,
                           icon: _isLoading
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.sync),
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.sync),
                           label: const Text('Verificar Pago'),
                         ),
-                      ]
+                      ],
                     ],
                   ),
-                )
+                ),
               ],
 
               const SizedBox(height: 32),
@@ -284,11 +343,26 @@ class _PagoScreenState extends State<PagoScreen> {
                 onPressed: _isLoading ? null : _procesarTransaccion,
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Confirmar y Continuar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Confirmar y Continuar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ],
           ),

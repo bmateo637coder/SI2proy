@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/auth_provider.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -34,7 +32,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Si el correo existe, recibirás un enlace de recuperación pronto. (Requiere backend)'),
+          content: Text(
+            'Si el correo existe, recibirás un enlace de recuperación pronto. (Requiere backend)',
+          ),
           backgroundColor: Colors.blueAccent,
         ),
       );
@@ -71,7 +71,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               decoration: InputDecoration(
                 labelText: 'Correo electrónico',
                 prefixIcon: const Icon(Icons.email_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -79,12 +81,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               onPressed: _isLoading ? null : _submit,
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _isLoading
-                ? const CircularProgressIndicator(color: Colors.white)
-                : const Text('Enviar enlace de recuperación'),
-            )
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Enviar enlace de recuperación'),
+            ),
           ],
         ),
       ),

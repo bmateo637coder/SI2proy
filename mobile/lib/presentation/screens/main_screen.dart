@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/auth_provider.dart';
+import '../widgets/company_scope.dart';
 
 class MainScreen extends StatelessWidget {
-  const MainScreen({
-    required this.navigationShell,
-    super.key,
-  });
+  const MainScreen({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
@@ -29,42 +28,72 @@ class MainScreen extends StatelessWidget {
     final destinationIndex = destinationBranches.indexOf(currentBranch);
 
     final destinations = <NavigationDestination>[];
-    destinations.add(const NavigationDestination(
-      icon: Icon(Icons.home_outlined),
-      selectedIcon: Icon(Icons.home),
-      label: 'Catálogo',
-    ));
+    destinations.add(
+      const NavigationDestination(
+        icon: Icon(Icons.home_outlined),
+        selectedIcon: Icon(Icons.home),
+        label: 'Catálogo',
+      ),
+    );
     if (showContratos) {
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.assignment_outlined),
-        selectedIcon: Icon(Icons.assignment),
-        label: 'Contratos',
-      ));
+      destinations.add(
+        const NavigationDestination(
+          icon: Icon(Icons.assignment_outlined),
+          selectedIcon: Icon(Icons.assignment),
+          label: 'Contratos',
+        ),
+      );
     }
     if (showClientes) {
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.people_outline),
-        selectedIcon: Icon(Icons.people),
-        label: 'Clientes',
-      ));
+      destinations.add(
+        const NavigationDestination(
+          icon: Icon(Icons.people_outline),
+          selectedIcon: Icon(Icons.people),
+          label: 'Clientes',
+        ),
+      );
     }
     if (showReportes) {
-      destinations.add(const NavigationDestination(
-        icon: Icon(Icons.analytics_outlined),
-        selectedIcon: Icon(Icons.analytics),
-        label: 'Reportes',
-      ));
+      destinations.add(
+        const NavigationDestination(
+          icon: Icon(Icons.analytics_outlined),
+          selectedIcon: Icon(Icons.analytics),
+          label: 'Reportes',
+        ),
+      );
     }
-    destinations.add(const NavigationDestination(
-      icon: Icon(Icons.person_outline),
-      selectedIcon: Icon(Icons.person),
-      label: 'Perfil',
-    ));
+    destinations.add(
+      const NavigationDestination(
+        icon: Icon(Icons.person_outline),
+        selectedIcon: Icon(Icons.person),
+        label: 'Perfil',
+      ),
+    );
 
     return Scaffold(
-      floatingActionButton: user?.canOperateOffline == true ? FloatingActionButton.extended(
-        onPressed: () => context.push('/offline'), icon: const Icon(Icons.offline_bolt), label: const Text('Offline')) : null,
-      body: navigationShell,
+      floatingActionButton:
+          (user?.idRol == 1 || user?.canOperateOffline == true)
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/offline'),
+              icon: const Icon(Icons.offline_bolt),
+              label: const Text('Offline'),
+            )
+          : null,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const CompanyScope(),
+            if (context.watch<AuthProvider>().localSession)
+              const MaterialBanner(
+                content: Text(
+                  'Sesión local: abre Offline para consultar el catálogo descargado.',
+                ),
+                actions: [SizedBox.shrink()],
+              ),
+            Expanded(child: navigationShell),
+          ],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: destinationIndex >= 0 ? destinationIndex : 0,
         onDestinationSelected: (index) {

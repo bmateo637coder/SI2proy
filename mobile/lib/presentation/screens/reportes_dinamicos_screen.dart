@@ -1,228 +1,416 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../data/services/reportes_service.dart';
+import '../../data/services/api_error.dart';
 import '../providers/auth_provider.dart';
-
-class Filtro {
-  Filtro({this.columna = '', this.operador = 'eq', this.valor = ''});
-  String columna;
-  String operador;
-  String valor;
-  Map<String, dynamic> toJson() => {
-        'columna': columna,
-        'operador': operador,
-        'valor': valor,
-      };
-}
+import '../widgets/report_table.dart';
 
 class ReportesDinamicosScreen extends StatefulWidget {
   const ReportesDinamicosScreen({super.key});
   @override
-  State<ReportesDinamicosScreen> createState() => _ReportesDinamicosScreenState();
+  State<ReportesDinamicosScreen> createState() => _ReportesState();
 }
 
-class _ReportesDinamicosScreenState extends State<ReportesDinamicosScreen> {
-  final ReportesService _service = ReportesService();
-  final stt.SpeechToText _speech = stt.SpeechToText();
-  bool _escuchando = false;
-  String _textoEscuchado = '';
-  String _errorIa = '';
-  String _mensaje = '';
-  bool _cargando = false;
-
-  String _entidad = 'propiedades';
-  List<String> _columnasSeleccionadas = ['titulo', 'precio', 'estado'];
-  final List<Filtro> _filtros = [];
-  String _ordenColumna = 'precio';
-  String _ordenDireccion = 'asc';
-  List<Map<String, dynamic>> _resultados = [];
-  List<String> _columnasResultados = [];
-  List<Map<String, dynamic>> _guardados = [];
-  String _nombreNuevo = '';
-
-  final Map<String, List<Map<String, String>>> _columnasDisponibles = {
+class _ReportesState extends State<ReportesDinamicosScreen> {
+  static const fields = {
     'propiedades': [
-      {'id': 'id_propiedad', 'label': 'ID'},
-      {'id': 'titulo', 'label': 'Título'},
-      {'id': 'direccion', 'label': 'Dirección'},
-      {'id': 'precio', 'label': 'Precio'},
-      {'id': 'tipo_operacion', 'label': 'Operación'},
-      {'id': 'estado', 'label': 'Estado'},
+      'id_propiedad',
+      'titulo',
+      'direccion',
+      'precio',
+      'tipo_operacion',
+      'estado',
     ],
-    'usuarios': [
-      {'id': 'ci', 'label': 'CI'},
-      {'id': 'nombre', 'label': 'Nombre'},
-      {'id': 'correo', 'label': 'Correo'},
-      {'id': 'telefono', 'label': 'Teléfono'},
-    ],
+    'clientes': ['ci', 'nombre', 'correo', 'telefono'],
+    'usuarios': ['ci', 'nombre', 'correo', 'telefono', 'id_rol'],
+  };
+  final prompt = TextEditingController();
+  final name = TextEditingController();
+  final speech = SpeechToText();
+  String entity = 'propiedades';
+  List<String> selected = ['titulo', 'precio', 'estado'];
+  List<Map<String, dynamic>> filters = [];
+  String sort = 'precio', direction = 'asc', message = '';
+  List<Map<String, dynamic>> saved = [], rows = [];
+  List<String> columns = [];
+  bool busy = false, generated = false;
+  ReportesService get service => ReportesService(context.read<Dio>());
+  Map<String, dynamic> get config => {
+    'entidad': entity,
+    'columnas': selected,
+    'filtros': filters,
+    'orden': {'columna': sort, 'direccion': direction},
+    'limite': 500,
   };
 
   @override
   void initState() {
     super.initState();
-    _speech.initialize();
-    _cargarGuardados();
-  }
-
-  Future<void> _cargarGuardados() async {
-    try {
-      final l = await _service.listarGuardados();
-      setState(() => _guardados = l);
-    } catch (_) {}
-  }
-
-  void _onEntidadChange(String? v) {
-    if (v == null) return;
-    setState(() {
-      _entidad = v;
-      _columnasSeleccionadas = [];
-      final cols = _columnasDisponibles[_entidad] ?? [];
-      if (cols.isNotEmpty) _columnasSeleccionadas.add(cols[0]['id']!);
-      _ordenColumna = cols.isNotEmpty ? cols[0]['id']! : 'id';
-    });
-  }
-
-  bool _colSel(String id) => _columnasSeleccionadas.contains(id);
-
-  void _toggleCol(String id, bool checked) {
-    setState(() {
-      if (checked) {
-        if (!_columnasSeleccionadas.contains(id)) _columnasSeleccionadas.add(id);
-      } else {
-        _columnasSeleccionadas.remove(id);
-      }
-    });
-  }
-
-  void _addFiltro() => setState(() => _filtros.add(Filtro()));
-  void _remFiltro(int i) => setState(() => _filtros.removeAt(i));
-
-  Future<void> _generar() async {
-    setState(() { _cargando = true; _mensaje = ''; });
-    try {
-      final res = await _service.generarReporte(
-        entidad: _entidad,
-        columnas: _columnasSeleccionadas,
-        filtros: _filtros.map((e) => e.toJson()).toList(),
-        ordenColumna: _ordenColumna,
-        ordenDireccion: _ordenDireccion,
-      );
-      setState(() {
-        _resultados = (res['datos'] as List<dynamic>? ?? []).map((e) => Map<String,dynamic>.from(e)).toList();
-        _columnasResultados = List<String>.from(res['columnas'] as List<dynamic>? ?? []);
-        _mensaje = '${_resultados.length} registros';
-      });
-    } catch (e) {
-      setState(() => _mensaje = 'Error: $e');
-    } finally {
-      setState(() => _cargando = false);
-    }
-  }
-
-  Future<void> _guardar() async {
-    if (_nombreNuevo.isEmpty) { setState(() => _mensaje = 'Nombre requerido'); return; }
-    try {
-      await _service.guardarConfiguracion(
-        nombre: _nombreNuevo,
-        entidad: _entidad,
-        columnas: _columnasSeleccionadas,
-        filtros: _filtros.map((e)=>e.toJson()).toList(),
-        ordenColumna: _ordenColumna,
-        ordenDireccion: _ordenDireccion,
-      );
-      _nombreNuevo = '';
-      await _cargarGuardados();
-      setState(() => _mensaje = 'Guardado');
-    } catch (e) {
-      setState(() => _mensaje = 'Error: $e');
-    }
-  }
-
-  Future<void> _cargar(Map<String,dynamic> rep) async {
-    try {
-      final cfg = await _service.cargarGuardado(rep['id_reporte'] as int);
-      final c = cfg['configuracion'] as Map<String,dynamic>? ?? {};
-      setState(() {
-        _entidad = c['entidad']?.toString() ?? _entidad;
-        _columnasSeleccionadas = List<String>.from(c['columnas'] as List<dynamic>? ?? []);
-        _filtros.clear();
-        for (final f in (c['filtros'] as List<dynamic>? ?? [])) {
-          final m = Map<String,dynamic>.from(f);
-          _filtros.add(Filtro(columna: m['columna']?.toString()??'', operador: m['operador']?.toString()??'eq', valor: m['valor']?.toString()??''));
-        }
-        _ordenColumna = c['orden_columna']?.toString() ?? _ordenColumna;
-        _ordenDireccion = c['orden_direccion']?.toString() ?? _ordenDireccion;
-      });
-    } catch (e) {
-      setState(() => _mensaje = 'Error: $e');
-    }
-  }
-
-  Future<void> _iniciarVoz() async {
-    final ok = await _speech.initialize();
-    if (!ok) { setState(() => _errorIa = 'Voz no disponible'); return; }
-    setState(() { _escuchando = true; _textoEscuchado = 'Escuchando...'; _errorIa=''; });
-    _speech.listen(localeId: 'es_ES', onResult: (r){ setState(()=>_textoEscuchado=r.recognizedWords); });
-  }
-
-  Future<void> _detenerVoz() async {
-    await _speech.stop(); setState(()=>_escuchando=false);
-    if (_textoEscuchado.isEmpty||_textoEscuchado=='Escuchando...') return;
-    try {
-      final resp = await _service.comandoVoz(_textoEscuchado);
-      setState(() {
-        _entidad = resp['entidad']?.toString()??_entidad;
-        if (resp['columnas']!=null) _columnasSeleccionadas = List<String>.from(resp['columnas']);
-        _filtros.clear();
-        if (resp['filtros']!=null) {
-          for (final f in resp['filtros']) {
-            final m = Map<String,dynamic>.from(f);
-            _filtros.add(Filtro(columna:m['columna']?.toString()??'', operador:m['operador']?.toString()??'eq', valor:m['valor']?.toString()??''));
-          }
-        }
-        _ordenColumna = resp['orden_columna']?.toString()??_ordenColumna;
-        _ordenDireccion = resp['orden_direccion']?.toString()??_ordenDireccion;
-        _textoEscuchado = 'Aplicado';
-      });
-      await _generar();
-    } catch (e) {
-      setState(()=>_errorIa='IA: $e');
-    }
-  }
-
-  Future<void> _exp(String t) async {
-    try {
-      final file = switch(t){ 'pdf'=>await _service.exportarPdf(_resultados,_columnasResultados), 'csv'=>await _service.exportarCsv(_resultados,_columnasResultados), 'excel'=>await _service.exportarExcel(_resultados,_columnasResultados), 'html'=>await _service.exportarHtml(_resultados,_columnasResultados), _=>null };
-      if (file!=null) await _service.abrirYCompartir(file);
-    } catch(e){ setState(()=>_mensaje='Error export: $e'); }
+    WidgetsBinding.instance.addPostFrameCallback((_) => loadSaved());
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reportes Dinámicos')),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: ListView(children: [
-          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween, children:[
-            const Text('Asistente de Reportes', style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
-            ElevatedButton.icon(onPressed:_escuchando?_detenerVoz:_iniciarVoz, icon:Icon(_escuchando?Icons.mic:Icons.mic_none), label:Text(_escuchando?'Escuchando':'Voz IA')),
-          ]),
-          if(_textoEscuchado.isNotEmpty||_errorIa.isNotEmpty) Text(_errorIa.isNotEmpty?_errorIa:_textoEscuchado),
-          const SizedBox(height:8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [],
-              ),
+  void dispose() {
+    speech.cancel();
+    prompt.dispose();
+    name.dispose();
+    super.dispose();
+  }
+
+  Future<void> run(Future<void> Function() task) async {
+    if (busy) return;
+    setState(() {
+      busy = true;
+      message = '';
+    });
+    try {
+      await task();
+    } catch (error) {
+      if (mounted) setState(() => message = apiError(error));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> loadSaved() async {
+    try {
+      final result = await service.guardados();
+      if (mounted) setState(() => saved = result);
+    } catch (error) {
+      if (mounted) setState(() => message = apiError(error));
+    }
+  }
+
+  void apply(Map<String, dynamic> c) {
+    final next = c['entidad']?.toString() ?? 'propiedades';
+    if (!fields.containsKey(next)) throw StateError('Entidad no soportada.');
+    final order = c['orden'] is Map ? c['orden'] as Map : {};
+    setState(() {
+      entity = next;
+      selected = List<String>.from(c['columnas'] ?? [])
+          .where(fields[next]!.contains)
+          .toList();
+      filters = (c['filtros'] as List? ?? [])
+          .map((f) => Map<String, dynamic>.from(f))
+          .toList();
+      sort =
+          (order['columna'] ??
+                  c['ordenColumna'] ??
+                  c['orden_columna'] ??
+                  fields[next]!.first)
+              .toString();
+      if (!fields[next]!.contains(sort)) sort = fields[next]!.first;
+      direction =
+          (order['direccion'] ?? c['ordenDireccion'] ?? c['orden_direccion']) ==
+              'desc'
+          ? 'desc'
+          : 'asc';
+      generated = false;
+    });
+  }
+
+  Future<void> generate() async {
+    if (selected.isEmpty) throw StateError('Selecciona al menos una columna.');
+    final result = await service.generar(config);
+    if (!mounted) return;
+    setState(() {
+      columns = List<String>.from(result['columnas'] ?? selected);
+      rows = (result['data'] as List)
+          .map((r) => Map<String, dynamic>.from(r))
+          .toList();
+      generated = true;
+      message = result['truncado'] == true
+          ? 'Se muestran los primeros 500 registros. Usa filtros para acotar el reporte.'
+          : '';
+    });
+  }
+
+  Future<void> voice() async {
+    if (speech.isListening) {
+      await speech.stop();
+      if (mounted) setState(() {});
+      return;
+    }
+    try {
+      final available = await speech.initialize(
+        onError: (e) {
+          if (mounted)
+            setState(
+              () => message =
+                  'Dictado no disponible. Puedes escribir la solicitud.',
+            );
+        },
+      );
+      if (!available)
+        throw StateError(
+          'Dictado no disponible. Puedes escribir la solicitud.',
+        );
+      final locales = await speech.locales();
+      if (!mounted) return;
+      final spanish = locales.where((l) => l.localeId.startsWith('es')).firstOrNull;
+      await speech.listen(
+        listenOptions: SpeechListenOptions(localeId: spanish?.localeId),
+        onResult: (result) {
+          if (mounted) setState(() => prompt.text = result.recognizedWords);
+        },
+      );
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (mounted) setState(() => message = apiError(error));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Reportes dinámicos')),
+    body: ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          context.watch<AuthProvider>().scopeLabel,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: prompt,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: 'Solicitar reporte con IA',
+            hintText: 'Propiedades disponibles ordenadas por precio',
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: busy ? null : voice,
+              icon: Icon(speech.isListening ? Icons.stop : Icons.mic),
+              label: const Text('Dictar'),
+            ),
+            FilledButton.icon(
+              onPressed: busy
+                  ? null
+                  : () => run(() async {
+                      if (prompt.text.trim().isEmpty)
+                        throw StateError('Escribe o dicta una solicitud.');
+                      final c = await service.interpretar(prompt.text.trim());
+                      if (!mounted) return;
+                      apply(c);
+                      await generate();
+                    }),
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Generar con IA'),
+            ),
+          ],
+        ),
+        const Divider(height: 32),
+        DropdownButtonFormField<String>(
+          key: ValueKey(entity),
+          initialValue: entity,
+          decoration: const InputDecoration(labelText: 'Entidad'),
+          items: fields.keys
+              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+          onChanged: busy
+              ? null
+              : (v) {
+                  if (v != null) apply({'entidad': v, 'columnas': fields[v]});
+                },
+        ),
+        const SizedBox(height: 12),
+        const Text('Columnas'),
+        Wrap(
+          spacing: 6,
+          children: fields[entity]!
+              .map(
+                (c) => FilterChip(
+                  label: Text(c),
+                  selected: selected.contains(c),
+                  onSelected: busy
+                      ? null
+                      : (v) => setState(() {
+                          v ? selected.add(c) : selected.remove(c);
+                        }),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 12),
+        for (final (index, filter) in filters.indexed)
+          Padding(
+            key: ObjectKey(filter),
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue:
+                            fields[entity]!.contains(filter['columna'])
+                            ? filter['columna']
+                            : fields[entity]!.first,
+                        decoration: const InputDecoration(
+                          labelText: 'Filtrar columna',
+                        ),
+                        items: fields[entity]!
+                            .map(
+                              (c) => DropdownMenuItem(value: c, child: Text(c)),
+                            )
+                            .toList(),
+                        onChanged: busy
+                            ? null
+                            : (v) => setState(() => filter['columna'] = v),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: busy
+                          ? null
+                          : () => setState(() => filters.removeAt(index)),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: filter['operador'],
+                        items:
+                            const {
+                                  'eq': 'Igual',
+                                  'like': 'Contiene',
+                                  'gt': 'Mayor',
+                                  'gte': 'Mayor o igual',
+                                  'lt': 'Menor',
+                                  'lte': 'Menor o igual',
+                                }.entries
+                                .map(
+                                  (e) => DropdownMenuItem(
+                                    value: e.key,
+                                    child: Text(e.value),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: busy
+                            ? null
+                            : (v) => setState(() => filter['operador'] = v),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        initialValue: filter['valor']?.toString() ?? '',
+                        decoration: const InputDecoration(labelText: 'Valor'),
+                        onChanged: (v) => filter['valor'] = v,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ]),
-      ),
-    );
-  }
+        TextButton.icon(
+          onPressed: busy
+              ? null
+              : () => setState(
+                  () => filters.add({
+                    'columna': fields[entity]!.first,
+                    'operador': 'eq',
+                    'valor': '',
+                  }),
+                ),
+          icon: const Icon(Icons.add),
+          label: const Text('Añadir filtro'),
+        ),
+        DropdownButtonFormField<String>(
+          key: ValueKey('$entity/$sort'),
+          initialValue: sort,
+          decoration: const InputDecoration(labelText: 'Ordenar por'),
+          items: fields[entity]!
+              .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+              .toList(),
+          onChanged: busy ? null : (v) => setState(() => sort = v!),
+        ),
+        SwitchListTile(
+          title: const Text('Orden descendente'),
+          value: direction == 'desc',
+          onChanged: busy
+              ? null
+              : (v) => setState(() => direction = v ? 'desc' : 'asc'),
+        ),
+        FilledButton(
+          onPressed: busy ? null : () => run(generate),
+          child: const Text('Generar reporte'),
+        ),
+        if (busy) const LinearProgressIndicator(),
+        if (message.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(message, key: const ValueKey('report-message')),
+          ),
+        if (generated)
+          ReportTable(
+            columns: columns,
+            rows: rows,
+            title:
+                'Reporte de $entity · ${context.read<AuthProvider>().scopeLabel}',
+          ),
+        const Divider(height: 32),
+        if (context.watch<AuthProvider>().canWrite) ...[
+          TextField(
+            controller: name,
+            decoration: const InputDecoration(
+              labelText: 'Nombre de la configuración',
+            ),
+          ),
+          OutlinedButton(
+            onPressed: busy
+                ? null
+                : () => run(() async {
+                    if (name.text.trim().isEmpty)
+                      throw StateError('Escribe un nombre.');
+                    await service.guardar(name.text.trim(), config);
+                    await loadSaved();
+                    if (mounted)
+                      setState(() => message = 'Configuración guardada.');
+                  }),
+            child: const Text('Guardar configuración'),
+          ),
+        ] else
+          const Text(
+            'Selecciona una inmobiliaria para guardar una configuración.',
+          ),
+        ListTile(
+          title: const Text('Configuraciones guardadas'),
+          trailing: IconButton(
+            onPressed: busy ? null : loadSaved,
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+        ...saved.map(
+          (r) => ListTile(
+            title: Text(r['nombre'].toString()),
+            trailing: const Icon(Icons.play_arrow),
+            onTap: busy
+                ? null
+                : () => run(() async {
+                    final raw = r['configuracion'];
+                    apply(
+                      Map<String, dynamic>.from(
+                        raw is String ? jsonDecode(raw) : raw,
+                      ),
+                    );
+                    await generate();
+                  }),
+          ),
+        ),
+      ],
+    ),
+  );
 }

@@ -15,6 +15,68 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _user;
   bool _isLoading = false;
   String? _errorMessage;
+  int? selectedTenant;
+  List<Map<String, dynamic>> companies = [];
+  String? companyError;
+  bool localSession = false;
+  VoidCallback? onScopeChanged;
+  bool get isSuperAdmin => _user?.idRol == 1;
+  bool get allTenants => isSuperAdmin && selectedTenant == 0;
+  String get scopeKey =>
+      '${_user?.ci}|${isSuperAdmin ? selectedTenant : _user?.idTenant}';
+  UserModel? get operationUser => isSuperAdmin && (selectedTenant ?? 0) > 0
+      ? _user?.forTenant(selectedTenant!)
+      : _user;
+  bool get canWrite => !allTenants && (operationUser?.idTenant ?? 0) > 0;
+  String get scopeLabel => allTenants
+      ? 'Todas las inmobiliarias'
+      : companies
+                .where((c) => c['id_tenant'] == selectedTenant)
+                .map((c) => c['nombre'].toString())
+                .firstOrNull ??
+            'Inmobiliaria ${selectedTenant ?? _user?.idTenant ?? "sin seleccionar"}';
+
+  Future<void> loadCompanies() async {
+    if (!isSuperAdmin) return;
+    companyError = null;
+    try {
+      companies = await _repository.companies();
+      await _storage.saveCompanies(jsonEncode(companies));
+    } catch (_) {
+      companyError = 'No se pudo actualizar la lista. Se muestran las inmobiliarias guardadas.';
+    }
+    notifyListeners();
+  }
+
+  Future<void> _restoreScope() async {
+    final stored = await _storage.readTenantId();
+    selectedTenant = isSuperAdmin
+        ? (stored == 'all' ? 0 : int.tryParse(stored ?? '') ?? 0)
+        : _user?.idTenant;
+    final cached = await _storage.readCompanies();
+    if (isSuperAdmin && cached != null) {
+      try {
+        companies = (jsonDecode(cached) as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      } catch (_) {
+        companies = [];
+      }
+    }
+    await _storage.saveTenantId(
+      isSuperAdmin && selectedTenant == 0 ? 'all' : '${selectedTenant ?? ""}',
+    );
+  }
+
+  Future<void> selectTenant(int id) async {
+    if (!isSuperAdmin ||
+        (id != 0 && !companies.any((c) => c['id_tenant'] == id)))
+      return;
+    await _storage.saveTenantId(id == 0 ? 'all' : '$id');
+    selectedTenant = id;
+    onScopeChanged?.call();
+    notifyListeners();
+  }
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
@@ -32,6 +94,9 @@ class AuthProvider extends ChangeNotifier {
       if (_user != null && _user!.idTenant > 0) {
         await _storage.saveTenantId(_user!.idTenant.toString());
       }
+      await _restoreScope();
+      localSession = false;
+      if (isSuperAdmin) await loadCompanies();
       notifyListeners();
     } on DioException catch (error) {
       if (error.response?.statusCode == 401 ||
@@ -44,6 +109,8 @@ class AuthProvider extends ChangeNotifier {
             _user = UserModel.fromJson(
               jsonDecode(cached) as Map<String, dynamic>,
             );
+            await _restoreScope();
+            localSession = true;
           } catch (_) {
             _user = null;
           }
@@ -57,6 +124,7 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _errorMessage = null;
     try {
+      await _storage.clear();
       final tokens = await _repository.login(email, password);
       await _storage.saveTokens(
         accessToken: tokens.accessToken,
@@ -76,11 +144,22 @@ class AuthProvider extends ChangeNotifier {
         }
       }
       _user = profile;
+      if (_user == null || _user!.ci.isEmpty || _user!.idRol <= 0) {
+        throw StateError(
+          'No se pudo verificar el perfil. Reintenta iniciar sesión.',
+        );
+      }
       if (_user != null) {
         await _storage.saveProfile(jsonEncode(_user!.toJson()));
       }
+      await _restoreScope();
+      localSession = false;
+      if (isSuperAdmin) await loadCompanies();
+      onScopeChanged?.call();
       return _user != null;
     } catch (error) {
+      _user = null;
+      await _storage.clear();
       if (error is DioException) {
         _errorMessage = _apiError(error, 'No se pudo iniciar sesión.');
       } else {
@@ -127,6 +206,10 @@ class AuthProvider extends ChangeNotifier {
   Future<void> signOut({bool notify = true}) async {
     await _storage.clear();
     _user = null;
+    selectedTenant = null;
+    companies = [];
+    localSession = false;
+    onScopeChanged?.call();
     if (notify) notifyListeners();
   }
 

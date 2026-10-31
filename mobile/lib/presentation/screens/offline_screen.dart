@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 
 import '../../data/services/offline_service.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/company_scope.dart';
+import '../../data/services/api_error.dart';
 
 class OfflineScreen extends StatefulWidget {
   const OfflineScreen({super.key});
@@ -45,8 +47,8 @@ class _OfflineScreenState extends State<OfflineScreen>
   }
 
   Future<void> reload() async {
-    final user = context.read<AuthProvider>().user;
-    if (user == null) return;
+    final user = context.read<AuthProvider>().operationUser;
+    if (user == null || !user.canOperateOffline) return;
     try {
       final service = context.read<OfflineService>();
       final data = await service.readSnapshot(user);
@@ -77,7 +79,7 @@ class _OfflineScreenState extends State<OfflineScreen>
       await work(context.read<OfflineService>());
       await reload();
     } catch (e) {
-      if (mounted) setState(() => message = 'No se completó la operación: $e');
+      if (mounted) setState(() => message = apiError(e));
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -85,14 +87,14 @@ class _OfflineScreenState extends State<OfflineScreen>
 
   Future<void> sync() async {
     if (!mounted || busy) return;
-    final user = context.read<AuthProvider>().user;
+    final user = context.read<AuthProvider>().operationUser;
     if (user != null && user.canOperateOffline) {
       await action((s) => s.synchronize(user));
     }
   }
 
   Future<void> queue(Map<String, dynamic> prop, String type) async {
-    final user = context.read<AuthProvider>().user;
+    final user = context.read<AuthProvider>().operationUser;
     if (user == null || clientId == null) return;
     final accepted = await showDialog<bool>(
       context: context,
@@ -131,11 +133,20 @@ class _OfflineScreenState extends State<OfflineScreen>
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
+    final user = context.watch<AuthProvider>().operationUser;
     if (user == null || !user.canOperateOffline) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Acceso reservado a administradores y agentes.'),
+      return Scaffold(
+        appBar: AppBar(title: const Text('Operaciones offline')),
+        body: const Column(
+          children: [
+            CompanyScope(),
+            Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'Selecciona una inmobiliaria para descargar su catálogo y operar sin conexión.',
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -146,6 +157,8 @@ class _OfflineScreenState extends State<OfflineScreen>
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const CompanyScope(),
+          Text(context.read<AuthProvider>().scopeLabel),
           const Text(
             'La información local puede estar desactualizada. Una venta en efectivo requiere confirmación posterior del servidor.',
           ),

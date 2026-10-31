@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'app/router.dart';
+import 'package:go_router/go_router.dart';
 import 'core/config/api_constants.dart';
 import 'data/network/auth_interceptor.dart';
 import 'data/repositories/auth_repository.dart';
@@ -24,33 +25,50 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storage = SecureStorageService();
   late AuthProvider auth;
-  final dio = Dio(BaseOptions(
-    baseUrl: ApiConstants.baseUrl,
-    connectTimeout: const Duration(seconds: 10),
-    receiveTimeout: const Duration(seconds: 15),
-    headers: {'Content-Type': 'application/json'},
-  ));
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: ApiConstants.baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 90),
+      headers: {'Content-Type': 'application/json'},
+    ),
+  );
   final authService = AuthService(dio);
   final propiedadesService = PropiedadesService(dio);
   final clientesService = ClientesService(dio);
   final contratosService = ContratosService(dio);
   auth = AuthProvider(AuthRepository(authService), storage);
-  final propiedadesProvider = PropiedadesProvider(PropiedadesRepository(propiedadesService));
-  final clientesProvider = ClientesProvider(ClientesRepository(clientesService));
-  final contratosProvider = ContratosProvider(ContratosRepository(contratosService));
+  final propiedadesProvider = PropiedadesProvider(
+    PropiedadesRepository(propiedadesService),
+  );
+  final clientesProvider = ClientesProvider(
+    ClientesRepository(clientesService),
+  );
+  final contratosProvider = ContratosProvider(
+    ContratosRepository(contratosService),
+  );
   dio.interceptors.add(AuthInterceptor(storage, auth.signOut));
+  auth.onScopeChanged = () {
+    propiedadesProvider.reset();
+    clientesProvider.reset();
+    contratosProvider.reset();
+  };
   await auth.restoreSession();
-  runApp(InmobiliariaApp(
-    auth: auth,
-    propiedadesProvider: propiedadesProvider,
-    clientesProvider: clientesProvider,
-    contratosProvider: contratosProvider,
-    offlineService: OfflineService(dio),
-  ));
+  runApp(
+    InmobiliariaApp(
+      dio: dio,
+      auth: auth,
+      propiedadesProvider: propiedadesProvider,
+      clientesProvider: clientesProvider,
+      contratosProvider: contratosProvider,
+      offlineService: OfflineService(dio),
+    ),
+  );
 }
 
-class InmobiliariaApp extends StatelessWidget {
+class InmobiliariaApp extends StatefulWidget {
   const InmobiliariaApp({
+    required this.dio,
     required this.auth,
     required this.propiedadesProvider,
     required this.clientesProvider,
@@ -59,6 +77,7 @@ class InmobiliariaApp extends StatelessWidget {
     super.key,
   });
 
+  final Dio dio;
   final AuthProvider auth;
   final PropiedadesProvider propiedadesProvider;
   final ClientesProvider clientesProvider;
@@ -66,28 +85,41 @@ class InmobiliariaApp extends StatelessWidget {
   final OfflineService offlineService;
 
   @override
+  State<InmobiliariaApp> createState() => _InmobiliariaAppState();
+}
+
+class _InmobiliariaAppState extends State<InmobiliariaApp> {
+  late final GoRouter router = createRouter(widget.auth);
+  @override
+  void dispose() {
+    router.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: auth),
-          ChangeNotifierProvider.value(value: propiedadesProvider),
-          ChangeNotifierProvider.value(value: clientesProvider),
-          ChangeNotifierProvider.value(value: contratosProvider),
-          Provider.value(value: offlineService),
-        ],
-        child: MaterialApp.router(
-          title: 'Inmobiliaria',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xff0e7490),
-              brightness: Brightness.light,
-            ),
-            useMaterial3: true,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-            ),
-          ),
-          routerConfig: createRouter(auth),
+    providers: [
+      Provider.value(value: widget.dio),
+      ChangeNotifierProvider.value(value: widget.auth),
+      ChangeNotifierProvider.value(value: widget.propiedadesProvider),
+      ChangeNotifierProvider.value(value: widget.clientesProvider),
+      ChangeNotifierProvider.value(value: widget.contratosProvider),
+      Provider.value(value: widget.offlineService),
+    ],
+    child: MaterialApp.router(
+      title: 'Raíces',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xff0e7490),
+          brightness: Brightness.light,
         ),
-      );
+        useMaterial3: true,
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(),
+        ),
+      ),
+      routerConfig: router,
+    ),
+  );
 }

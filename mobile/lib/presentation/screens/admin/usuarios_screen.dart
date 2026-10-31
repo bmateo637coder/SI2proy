@@ -1,56 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import '../../../core/config/api_constants.dart';
-import '../../../data/network/auth_interceptor.dart';
-import '../../../data/services/secure_storage_service.dart';
+import 'package:provider/provider.dart';
+
+import '../../../data/services/api_error.dart';
+import '../../widgets/company_scope.dart';
 
 class UsuariosScreen extends StatefulWidget {
   const UsuariosScreen({super.key});
   @override
-  State<UsuariosScreen> createState() => _UsuariosScreenState();
+  State<UsuariosScreen> createState() => _ScreenState();
 }
 
-class _UsuariosScreenState extends State<UsuariosScreen> {
-  final Dio _dio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
-  final _storage = SecureStorageService();
-  List<dynamic> _items = [];
-  bool _loading = true;
-  String _msg = '';
-
+class _ScreenState extends State<UsuariosScreen> {
+  List<dynamic> items = [];
+  bool loading = true;
+  String message = '';
   @override
   void initState() {
     super.initState();
-    _dio.interceptors.add(AuthInterceptor(_storage, () async {}));
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => load());
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> load() async {
+    if (!mounted) return;
+    setState(() {
+      loading = true;
+      message = '';
+    });
     try {
-      final r = await _dio.get('/usuarios');
-      setState(() => _items = r.data as List<dynamic>? ?? []);
+      final response = await context.read<Dio>().get(
+        '/gestion_usuarios/usuarios',
+      );
+      if (mounted) setState(() => items = response.data as List);
     } catch (e) {
-      setState(() => _msg = 'Error: $e');
+      if (mounted) setState(() => message = apiError(e));
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => loading = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Gestión de Usuarios')),
-      body: _loading ? const Center(child: CircularProgressIndicator()) : ListView.builder(
-        itemCount: _items.length,
-        itemBuilder: (_, i) {
-          final u = _items[i] as Map<String,dynamic>;
-          return ListTile(
-            title: Text(u['nombre']?.toString() ?? ''),
-            subtitle: Text('${u['correo'] ?? ''} • Rol: ${u['id_rol']}'),
-            trailing: Text(u['is_active']==true?'Activo':'Inactivo'),
-          );
-        },
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Usuarios'),
+      actions: [
+        IconButton(
+          onPressed: loading ? null : load,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        const CompanyScope(),
+        if (loading) const LinearProgressIndicator(),
+        if (message.isNotEmpty)
+          Padding(padding: const EdgeInsets.all(16), child: Text(message)),
+        if (!loading && message.isEmpty && items.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('Sin registros para esta selección.'),
+          ),
+        Expanded(
+          child: ListView(
+            children: items
+                .map(
+                  (u) => ListTile(
+                    title: Text('${u['nombre'] ?? u['name'] ?? ''}'),
+                    subtitle: Text(
+                      '${u['inmobiliaria'] ?? ''}\n${u['correo'] ?? ''} · Rol ${u['id_rol'] ?? ''}',
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ],
+    ),
+  );
 }
