@@ -19,7 +19,7 @@ def ai_status(user=Depends(require_reader), db: Session = Depends(get_db)):
     sub = {"reportes_ia": True, "estado": "consulta_global_saas"} if is_all_tenants(user) else summary(db, user.id_tenant)
     return {"configurada": bool(os.getenv("GEMINI_API_KEY")),
             "modelo": os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
-            "plan_habilitado": bool(sub.get("reportes_ia")), "suscripcion": sub["estado"]}
+            "plan_habilitado": user.id_rol == 1 or bool(sub.get("reportes_ia")), "suscripcion": sub["estado"]}
 
 
 class VozRequest(BaseModel):

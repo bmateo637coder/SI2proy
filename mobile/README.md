@@ -12,7 +12,7 @@ La selección superior **Inmobiliaria activa** aplica a catálogo, clientes, con
 
 Los reportes dinámicos permiten elegir entidad, columnas, filtros y orden; guardar y recuperar configuraciones; dictar o escribir una solicitud; y compartir PDF, Excel, CSV y HTML generados en el dispositivo. La sección **IA y analítica**, accesible desde catálogo y perfil, reúne cinco reportes convencionales, consultas en lenguaje natural, gráficos, chat, recomendaciones, generación de descripciones y predicciones académicas. El modelo predictivo usa datos sintéticos y muestra sus limitaciones.
 
-La IA generativa requiere conexión. El alcance global SaaS permite consultar todas las empresas; al seleccionar una empresa, las funciones generativas siguen las condiciones de su plan. Los reportes convencionales y dinámicos permiten consultar los datos sin depender del proveedor de IA. El dictado requiere permiso del micrófono y un servicio de reconocimiento disponible; siempre se puede escribir la consulta.
+La IA generativa requiere conexión. El superadministrador SaaS puede usarla tanto para todas las empresas como para una inmobiliaria concreta, con independencia de su plan. Las cuentas de cada inmobiliaria conservan los límites de su suscripción. Los reportes convencionales y dinámicos permiten consultar los datos sin depender del proveedor de IA. El dictado requiere permiso del micrófono y un servicio de reconocimiento disponible; siempre se puede escribir la consulta.
 
 ## Uso offline
 

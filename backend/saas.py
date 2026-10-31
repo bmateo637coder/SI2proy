@@ -30,7 +30,8 @@ def require_active(db, tid):
 
 
 def require_ai(db, user):
-    if is_all_tenants(user):
+    # La cuenta de plataforma administra y audita cualquier empresa, sin adoptar su plan.
+    if user.id_rol == 1:
         return
     sub = require_active(db, user.id_tenant)
     if not sub.plan.reportes_ia:

@@ -251,6 +251,6 @@ def natural_report(body: NaturalRequest, db: Session = Depends(get_db), user=Dep
 @router.post("/convencional")
 def conventional_report(spec: ReportSpec, db: Session = Depends(get_db), user=Depends(require_reader)):
     from saas import require_active
-    if not is_all_tenants(user):
+    if user.id_rol != 1:
         require_active(db, user.id_tenant)
     return {**build_report(db, user, spec), "interprete": "seleccion_manual"}

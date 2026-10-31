@@ -108,7 +108,7 @@ jobs:
             - IA: reportes en lenguaje natural, analítica convencional, chat, descripciones, recomendaciones y predicciones académicas.
             - Offline: descarga por usuario/inmobiliaria, reservas y ventas en efectivo en SQLite, recuperación tras reinicio y sincronización idempotente.
 
-            Para operar offline, inicia sesión con conexión, selecciona una inmobiliaria y pulsa «Descargar catálogo» en Offline. La IA requiere conexión y un plan habilitado cuando se selecciona una empresa; el alcance global del superadministrador permite consultar la plataforma.
+            Para operar offline, inicia sesión con conexión, selecciona una inmobiliaria y pulsa «Descargar catálogo» en Offline. La IA requiere conexión. El superadministrador SaaS puede usarla en cualquier empresa o en todas; las cuentas de las inmobiliarias conservan los límites de su plan.
 
             Verificaciones: análisis de Dart, pruebas Flutter, integración en emulador Android con SQLite nativo y firma del APK.
           files: |
