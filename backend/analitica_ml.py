@@ -53,11 +53,13 @@ def train_models():
 def property_features(prop):
     from reportes_generativos import normalized
     attrs = {normalized(c.nombre): c.valor for c in prop.caracteristicas}
-    area = attrs.get("metros cuadrados") or attrs.get("superficie")
-    rooms = attrs.get("cuartos") or attrs.get("habitaciones")
+    area = attrs.get("metros cuadrados") or attrs.get("superficie") or attrs.get("m2") or attrs.get("area") or attrs.get("metros_cuadrados")
+    rooms = attrs.get("cuartos") or attrs.get("habitaciones") or attrs.get("dormitorios")
     zone = normalized(attrs.get("zona", ""))
     try:
-        area, rooms = float(area), int(rooms)
+        area, rooms = float(str(area).replace(',', '.')), float(rooms)
+        if not rooms.is_integer():
+            return None
         if not 35 <= area <= 500 or not 1 <= rooms <= 6:
             return None
     except (TypeError, ValueError):
@@ -74,16 +76,17 @@ def dashboard(db: Session = Depends(get_db), user=Depends(require_staff)):
     reg, scaler, cluster, metrics, _ = train_models()
     props = db.query(m.Propiedad).filter_by(id_tenant=user.id_tenant).options(
         selectinload(m.Propiedad.caracteristicas)).order_by(m.Propiedad.id_propiedad).limit(500).all()
-    rows, omitted = [], 0
-    for prop in props:
-        features = property_features(prop)
-        if features is None:
-            omitted += 1
-            continue
-        predicted = float(reg.predict([features])[0])
+    rows = []
+    valid = [(prop, features) for prop in props if (features := property_features(prop)) is not None]
+    omitted = len(props) - len(valid)
+    features = [item[1] for item in valid]
+    predictions = reg.predict(features) if valid else []
+    groups = cluster.predict(scaler.transform(features)) if valid else []
+    for (prop, _), prediction, group in zip(valid, predictions, groups):
+        predicted = float(prediction)
         rows.append({"id_propiedad": prop.id_propiedad, "titulo": prop.titulo, "precio_publicado": float(prop.precio),
             "precio_estimado_sintetico": round(predicted, 2),
-            "grupo": int(cluster.predict(scaler.transform([features]))[0]),
+            "grupo": int(group),
             "diferencia_porcentaje": round((float(prop.precio) - predicted) / predicted * 100, 1)})
     return {"metricas": metrics, "propiedades": rows, "omitidas": omitted, "limite": 500,
         "criterio": "Propiedades en venta: 35–500 m², 1–6 habitaciones y Zona Económica, Estándar o Premium. Los grupos no tienen orden de calidad."}

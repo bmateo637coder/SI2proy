@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -18,8 +18,12 @@ export class Login {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {
+    if (this.route.snapshot.queryParamMap.get('reason') === 'expired') {
+      this.errorMessage.set('Tu sesión venció. Inicia sesión nuevamente para continuar.');
+    }
     this.loginForm = this.fb.group({
       correo: ['', [Validators.required, Validators.email]],
       id_tenant: [null],

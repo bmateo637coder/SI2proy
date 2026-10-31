@@ -86,7 +86,12 @@
             <div class="topbar-right">
                 <div class="tenant-badge">
                     <span class="tenant-label">Inmobiliaria:</span>
-                    <span class="tenant-name">{{ tenantNombre }}</span>
+                    <select *ngIf="userRole === 1; else tenantLabel" aria-label="Inmobiliaria activa"
+                        [(ngModel)]="selectedTenant" (ngModelChange)="cambiarEmpresa()">
+                        <option [ngValue]="null">Selecciona una inmobiliaria</option>
+                        <option *ngFor="let empresa of empresas()" [ngValue]="empresa.id_tenant">{{ empresa.nombre }}</option>
+                    </select>
+                    <ng-template #tenantLabel><span class="tenant-name">{{ tenantNombre }}</span></ng-template>
                 </div>
                 <span class="tenant-badge" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;" title="Build del frontend">
                     <span class="tenant-label">Build</span>
@@ -96,6 +101,13 @@
         </header>
 
         <div class="luxury-content-area animate-fade-in">
+            <div *ngIf="userRole === 1 && !selectedTenant" class="api-notice" role="status">
+                Selecciona una inmobiliaria en la barra superior para consultar sus datos, reportes y analítica.
+            </div>
+            <div *ngIf="feedback.error()" class="api-error" role="alert">
+                {{ feedback.error() }}
+                <button type="button" (click)="feedback.clear()" aria-label="Cerrar aviso">Cerrar</button>
+            </div>
             <router-outlet></router-outlet>
         </div>
     </main>

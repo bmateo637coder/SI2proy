@@ -14,7 +14,7 @@ describe('Persistencia y sincronización offline', () => {
   beforeEach(() => {
     user.set({ ci: crypto.randomUUID(), id_tenant: 1 });
     localStorage.setItem('token', 'test');
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), { provide: AuthService, useValue: { currentUser: user } }] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), { provide: AuthService, useValue: { currentUser: user, tenantId: () => user()?.id_tenant } }] });
     service = TestBed.inject(OfflineService); http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());

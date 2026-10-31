@@ -205,6 +205,11 @@
         </div>
         <div *ngIf="subiendoImagen" style="font-size: 0.8rem; color: #3b82f6; margin-top: 5px;">Subiendo imagen... por favor espere</div>
       </div>
+      <div><label>Superficie (m²)<input type="number" min="1" formControlName="superficie" class="modern-input"></label></div>
+      <div><label>Habitaciones<input type="number" min="1" step="1" formControlName="habitaciones" class="modern-input"></label></div>
+      <div style="grid-column:span 2;"><label>Segmento de zona para analítica
+        <select formControlName="zona" class="modern-input"><option value="">Sin clasificar</option><option value="Económica">Económica</option><option value="Estándar">Estándar</option><option value="Premium">Premium</option></select>
+      </label><small>Complete estos datos para incluir la propiedad en el modelo académico de precios.</small></div>
       <div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:1rem;margin-top:0.5rem;padding-top:1rem;border-top:1px solid var(--border-light);">
         <button type="button" class="btn-secondary" (click)="mostrarModalCrear=false">Cancelar</button>
         <button type="submit" class="btn-primary" [disabled]="!propiedadForm.valid">Crear Propiedad</button>
@@ -260,6 +265,13 @@
           <option value="Anticretico">Anticrético</option>
         </select>
       </div>
+      <div><label>Superficie (m²)<input type="number" min="1" formControlName="superficie" class="modern-input"></label></div>
+      <div><label>Habitaciones<input type="number" min="1" step="1" formControlName="habitaciones" class="modern-input"></label></div>
+      <div style="grid-column:span 2;"><label>Segmento de zona para analítica
+        <select formControlName="zona" class="modern-input"><option value="">Sin clasificar</option><option value="Económica">Económica</option><option value="Estándar">Estándar</option><option value="Premium">Premium</option></select>
+      </label><small>Complete estos datos para incluir la propiedad en el modelo académico de precios.</small></div>
+      <div style="grid-column:span 2;"><label>Descripción<textarea formControlName="descripcion" class="modern-input" rows="3"></textarea></label></div>
+      <div style="grid-column:span 2;"><label>URL de la imagen principal<input formControlName="imagen_url" class="modern-input" placeholder="https://..."></label></div>
       <div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:1rem;margin-top:0.5rem;padding-top:1rem;border-top:1px solid var(--border-light);">
         <button type="button" class="btn-secondary" (click)="mostrarModalEditar=false">Cancelar</button>
         <button type="submit" class="btn-primary" [disabled]="!editForm.valid">Guardar Cambios</button>

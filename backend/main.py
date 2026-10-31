@@ -488,29 +488,33 @@ def get_catalogo_propiedades(
     if precio_max is not None:
         query = query.filter(models.Propiedad.precio <= precio_max)
 
+    from sqlalchemy import case, func
+    raw_value = func.replace(models.Caracteristica.valor, ',', '.')
+    numeric_value = case((raw_value.regexp_match(r'^[0-9]+(\.[0-9]+)?$'), cast(raw_value, Float)), else_=None)
+
     if cuartos is not None:
         query = query.filter(models.Propiedad.caracteristicas.any(
-            and_(models.Caracteristica.nombre == 'Cuartos', cast(models.Caracteristica.valor, Integer) >= cuartos)
+            and_(func.lower(models.Caracteristica.nombre).in_(['cuartos', 'habitaciones', 'dormitorios']), numeric_value >= cuartos)
         ))
 
     if banos is not None:
         query = query.filter(models.Propiedad.caracteristicas.any(
-            and_(models.Caracteristica.nombre == 'Baños', cast(models.Caracteristica.valor, Integer) >= banos)
+            and_(models.Caracteristica.nombre == 'Baños', numeric_value >= banos)
         ))
 
     if salas is not None:
         query = query.filter(models.Propiedad.caracteristicas.any(
-            and_(models.Caracteristica.nombre == 'Salas', cast(models.Caracteristica.valor, Integer) >= salas)
+            and_(models.Caracteristica.nombre == 'Salas', numeric_value >= salas)
         ))
 
     if metros_min is not None:
         query = query.filter(models.Propiedad.caracteristicas.any(
-            and_(models.Caracteristica.nombre == 'Metros Cuadrados', cast(models.Caracteristica.valor, Float) >= metros_min)
+            and_(func.lower(models.Caracteristica.nombre).in_(['metros cuadrados', 'superficie', 'm²', 'm2', 'area', 'metros_cuadrados']), numeric_value >= metros_min)
         ))
 
     if metros_max is not None:
         query = query.filter(models.Propiedad.caracteristicas.any(
-            and_(models.Caracteristica.nombre == 'Metros Cuadrados', cast(models.Caracteristica.valor, Float) <= metros_max)
+            and_(func.lower(models.Caracteristica.nombre).in_(['metros cuadrados', 'superficie', 'm²', 'm2', 'area', 'metros_cuadrados']), numeric_value <= metros_max)
         ))
 
     if zona:
@@ -653,8 +657,8 @@ def get_propiedades_admin(
     query = db.query(models.Propiedad)
     if current_user.id_rol == 1:
         # Super Admin: requiere seleccionar empresa
-        if id_tenant:
-            query = query.filter(models.Propiedad.id_tenant == id_tenant)
+        if id_tenant or current_user.id_tenant:
+            query = query.filter(models.Propiedad.id_tenant == (id_tenant or current_user.id_tenant))
         else:
             return []  # Sin filtro de empresa, devuelve vacío para que seleccione
     else:
@@ -662,6 +666,7 @@ def get_propiedades_admin(
     return query.all()
 
 import uuid
+import json
 
 def validar_relaciones_propiedad(db, data, tenant_id):
     for model, key, ident in [(models.Propietario, "id_propietario", data.id_propietario),
@@ -670,6 +675,23 @@ def validar_relaciones_propiedad(db, data, tenant_id):
             raise HTTPException(422, "El propietario y el agente deben pertenecer a esta inmobiliaria.")
     if data.tipo_operacion not in ("Venta", "Alquiler", "Anticretico"):
         raise HTTPException(422, "Tipo de operación inválido.")
+
+
+def guardar_caracteristicas(db, propiedad, characteristics):
+    if characteristics is None:
+        return
+    from reportes_generativos import normalized
+    seen = set()
+    for item in characteristics:
+        name = normalized(item.nombre.strip())
+        if not name or name in seen:
+            raise HTTPException(422, "Las características deben tener nombres únicos.")
+        seen.add(name)
+        existing = next((c for c in propiedad.caracteristicas if normalized(c.nombre) == name), None)
+        if existing:
+            existing.valor = item.valor.strip()
+        else:
+            db.add(models.Caracteristica(id_propiedad=propiedad.id_propiedad, nombre=item.nombre.strip(), valor=item.valor.strip()))
 
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...), current_user=Depends(require_staff)):
@@ -695,7 +717,7 @@ def create_propiedad(
         raise HTTPException(status_code=403, detail="Solo administradores pueden crear propiedades")
 
     # Determinar empresa
-    empresa_id = current_user.id_tenant if current_user.id_rol != 1 else None
+    empresa_id = current_user.id_tenant
     if empresa_id is None:
         raise HTTPException(status_code=400, detail="Super Admin debe operar a través del Admin de Empresa")
     validar_relaciones_propiedad(db, data, empresa_id)
@@ -720,8 +742,8 @@ def create_propiedad(
         id_sucursal=branch_id
     )
     db.add(new_prop)
-    db.commit()
-    db.refresh(new_prop)
+    db.flush()
+    guardar_caracteristicas(db, new_prop, data.caracteristicas)
 
     # Add images if provided
     if data.imagenes:
@@ -730,8 +752,7 @@ def create_propiedad(
             if img_url:
                 new_img = models.Imagen(id_propiedad=new_prop.id_propiedad, url=img_url)
                 db.add(new_img)
-        db.commit()
-        db.refresh(new_prop)
+    db.commit()
     db.refresh(new_prop)
     return new_prop
 
@@ -821,6 +842,12 @@ def update_propiedad(
     propiedad.direccion = data.direccion
     propiedad.precio = data.precio
     propiedad.tipo_operacion = data.tipo_operacion
+    guardar_caracteristicas(db, propiedad, data.caracteristicas)
+    if "imagenes" in data.model_fields_set:
+        db.query(models.Imagen).filter_by(id_propiedad=propiedad.id_propiedad).delete()
+        for url in data.imagenes:
+            if url.strip():
+                db.add(models.Imagen(id_propiedad=propiedad.id_propiedad, url=url.strip()))
     db.commit()
     db.refresh(propiedad)
     return propiedad
@@ -856,8 +883,8 @@ def get_propietarios(
     """Lista propietarios de la empresa del usuario autenticado (o filtrado por empresa para SuperAdmin)."""
     query = db.query(models.Propietario)
     if current_user.id_rol == 1:
-        if id_tenant:
-            query = query.filter(models.Propietario.id_tenant == id_tenant)
+        if id_tenant or current_user.id_tenant:
+            query = query.filter(models.Propietario.id_tenant == (id_tenant or current_user.id_tenant))
     else:
         query = query.filter(models.Propietario.id_tenant == current_user.id_tenant)
     propietarios_db = query.all()
@@ -977,8 +1004,8 @@ def get_clientes(
     """Lista clientes de la empresa del usuario autenticado (o filtrado por empresa para SuperAdmin)."""
     query = db.query(models.Cliente)
     if current_user.id_rol == 1:
-        if id_tenant:
-            query = query.filter(models.Cliente.id_tenant == id_tenant)
+        if id_tenant or current_user.id_tenant:
+            query = query.filter(models.Cliente.id_tenant == (id_tenant or current_user.id_tenant))
     else:
         query = query.filter(models.Cliente.id_tenant == current_user.id_tenant)
     clientes_db = query.all()
@@ -1098,8 +1125,8 @@ def get_agentes(
     """Lista agentes de la empresa del usuario autenticado."""
     query = db.query(models.Agente)
     if current_user.id_rol == 1:
-        if id_tenant:
-            query = query.filter(models.Agente.id_tenant == id_tenant)
+        if id_tenant or current_user.id_tenant:
+            query = query.filter(models.Agente.id_tenant == (id_tenant or current_user.id_tenant))
     else:
         query = query.filter(models.Agente.id_tenant == current_user.id_tenant)
     agentes_db = query.all()
@@ -1134,76 +1161,9 @@ def generar_reporte_dinamico(
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Genera datos para un reporte dinámico basado en la configuración."""
     require_staff(current_user)
-    permitidas = {
-        "usuarios": {"ci", "nombre", "correo", "telefono", "id_rol"},
-        "propiedades": {"id_propiedad", "titulo", "direccion", "precio", "tipo_operacion", "estado"},
-    }
-    columns = permitidas.get(request.entidad, set())
-    if not request.columnas or not set(request.columnas) <= columns:
-        raise HTTPException(422, "Columnas de reporte no autorizadas.")
-    if any(f.columna not in columns or f.operador not in {"eq", "gt", "lt", "gte", "lte", "like"} for f in request.filtros):
-        raise HTTPException(422, "Filtros no autorizados.")
-    if request.orden and (request.orden.columna not in columns or request.orden.direccion not in {"asc", "desc"}):
-        raise HTTPException(422, "Orden no autorizado.")
-    entidad_map = {
-        'propiedades': models.Propiedad,
-        'usuarios': models.Usuario
-    }
-
-    if request.entidad not in entidad_map:
-        raise HTTPException(status_code=400, detail="Entidad no soportada para reportes")
-
-    modelo = entidad_map[request.entidad]
-    query = db.query(modelo)
-
-    # Filtro multitenant
-    if request.entidad == 'propiedades':
-        if current_user.id_rol != 1:
-            query = query.filter(modelo.id_tenant == current_user.id_tenant)
-    elif request.entidad == 'usuarios':
-        if current_user.id_rol != 1:
-            query = query.filter(modelo.id_tenant == current_user.id_tenant)
-
-    # Aplicar Filtros Dinámicos
-    for f in request.filtros:
-        if not hasattr(modelo, f.columna):
-            continue
-        attr = getattr(modelo, f.columna)
-        if f.operador == 'eq':
-            query = query.filter(attr == f.valor)
-        elif f.operador == 'gt':
-            query = query.filter(attr > f.valor)
-        elif f.operador == 'lt':
-            query = query.filter(attr < f.valor)
-        elif f.operador == 'gte':
-            query = query.filter(attr >= f.valor)
-        elif f.operador == 'lte':
-            query = query.filter(attr <= f.valor)
-        elif f.operador == 'like':
-            query = query.filter(attr.ilike(f"%{f.valor}%"))
-
-    # Ordenamiento
-    if request.orden and hasattr(modelo, request.orden.columna):
-        attr = getattr(modelo, request.orden.columna)
-        if request.orden.direccion == 'desc':
-            query = query.order_by(desc(attr))
-        else:
-            query = query.order_by(asc(attr))
-
-    resultados = query.all()
-
-    # Serializar sólo las columnas solicitadas
-    data = []
-    for row in resultados:
-        item = {}
-        for col in request.columnas:
-            if hasattr(row, col):
-                item[col] = getattr(row, col)
-        data.append(item)
-
-    return {"data": data}
+    from reportes_dinamicos import execute_report
+    return execute_report(db, current_user, request)
 
 @app.post("/reportes/guardados", response_model=schemas.ReporteGuardadoResponse)
 def guardar_reporte(
@@ -1212,10 +1172,20 @@ def guardar_reporte(
     db: Session = Depends(get_db)
 ):
     """Guarda la configuración de un reporte para el usuario actual."""
-    # Buscar si existe la empresa para el admin general, sino asignamos null/error.
+    require_staff(current_user)
+    from reportes_dinamicos import validate_config
+    from pydantic import ValidationError
+    try:
+        config = json.loads(data.configuracion)
+        spec = schemas.ReporteRequest.model_validate({
+            **config, "orden": config.get("orden") or ({
+                "columna": config["ordenColumna"], "direccion": config.get("ordenDireccion", "asc")
+            } if config.get("ordenColumna") else None)
+        })
+        validate_config(spec)
+    except (ValueError, TypeError, KeyError, ValidationError):
+        raise HTTPException(422, "Configuración de reporte inválida.")
     empresa_id = current_user.id_tenant
-    if current_user.id_rol == 1 and not empresa_id:
-        empresa_id = 1 # Fallback seguro
 
     nuevo_reporte = models.ReporteGuardado(
         id_tenant=empresa_id,
@@ -1234,4 +1204,5 @@ def get_reportes_guardados(
     db: Session = Depends(get_db)
 ):
     """Obtiene los reportes guardados por el usuario."""
-    return db.query(models.ReporteGuardado).filter(models.ReporteGuardado.ci_usuario == current_user.ci).all()
+    require_staff(current_user)
+    return db.query(models.ReporteGuardado).filter_by(ci_usuario=current_user.ci, id_tenant=current_user.id_tenant).order_by(models.ReporteGuardado.id_reporte.desc()).all()

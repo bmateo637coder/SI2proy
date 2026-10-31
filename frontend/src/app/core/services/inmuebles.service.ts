@@ -32,7 +32,8 @@ export class InmueblesService {
 
   cargar(force = false) {
     const user = this.authService.currentUser();
-    const scope = `${user?.id_tenant}|${user?.ci}`;
+    const tid = this.authService.tenantId();
+    const scope = `${tid}|${user?.ci}`;
     if (scope !== this.cacheScope) {
       this.cacheScope = scope;
       this.clientes$.next([]);
@@ -40,6 +41,7 @@ export class InmueblesService {
       this.ultimaCarga = 0;
       this.cargando = false;
     }
+    if (!tid) return;
     const clientes = this.clientes$.getValue();
     const propiedades = this.propiedades$.getValue();
     const fresco = this.ultimaCarga && Date.now() - this.ultimaCarga < CACHE_TTL_MS;

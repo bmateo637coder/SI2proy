@@ -6,7 +6,7 @@ import re
 import unicodedata
 from datetime import date, timedelta
 from typing import Literal
-from generative_client import generate_text
+from generative_client import generate_text, GeminiError
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, model_validator, ConfigDict
@@ -103,7 +103,10 @@ def local_spec(text):
 def interpret(text):
     key = os.getenv("GEMINI_API_KEY")
     if not key:
-        return local_spec(text), "reglas_locales"
+        try:
+            return local_spec(text), "reglas_locales"
+        except ValueError:
+            raise HTTPException(422, "Revise las fechas y el límite solicitados.") from None
     schema = ReportSpec.model_json_schema()
     prompt = (f"Fecha actual en Bolivia: {today()}. Interpreta un reporte inmobiliario. "
         "Solo produce JSON según este esquema; nunca SQL. Si es ambiguo o no soportado devuelve {\"error\":\"explicacion\"}. "
@@ -116,6 +119,8 @@ def interpret(text):
         return ReportSpec.model_validate(parsed), "gemini"
     except HTTPException:
         raise
+    except GeminiError as error:
+        raise HTTPException(503, str(error)) from None
     except Exception:
         raise HTTPException(503, "No se pudo interpretar la solicitud con IA. Intente de nuevo o use el reporte convencional.")
 

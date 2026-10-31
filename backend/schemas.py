@@ -124,6 +124,11 @@ class PropiedadCatalogoResponse(BaseModel):
 # SCHEMAS MÓDULO INMUEBLES (ADMIN)
 # ============================================================
 
+class CaracteristicaInput(BaseModel):
+    nombre: str = Field(min_length=1, max_length=100)
+    valor: str = Field(max_length=100)
+
+
 class PropiedadCreate(BaseModel):
     id_propietario: int
     id_agente: int
@@ -134,6 +139,7 @@ class PropiedadCreate(BaseModel):
     tipo_operacion: str  # 'Venta', 'Alquiler', 'Anticretico'
     imagenes: list[str] = []
     id_sucursal: Optional[int] = None
+    caracteristicas: Optional[list[CaracteristicaInput]] = Field(default=None, max_length=50)
 
 class PropiedadEstadoUpdate(BaseModel):
     estado: str  # 'Disponible', 'Reservada', 'Vendida', 'Alquilada'
@@ -214,13 +220,14 @@ class ReporteOrden(BaseModel):
 
 class ReporteRequest(BaseModel):
     entidad: str # 'usuarios', 'propiedades'
-    columnas: list[str]
-    filtros: list[ReporteFiltro] = []
+    columnas: list[str] = Field(min_length=1, max_length=20)
+    filtros: list[ReporteFiltro] = Field(default_factory=list, max_length=20)
     orden: Optional[ReporteOrden] = None
+    limite: int = Field(default=500, ge=1, le=1000)
 
 class ReporteGuardadoCreate(BaseModel):
-    nombre: str
-    configuracion: str # JSON string of ReporteRequest
+    nombre: str = Field(min_length=1, max_length=100)
+    configuracion: str = Field(max_length=20000)
 
 class ReporteGuardadoResponse(BaseModel):
     id_reporte: int

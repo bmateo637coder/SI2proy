@@ -43,14 +43,14 @@ def tenant_scope(user, tid):
 def branch_scope(db, user, branch_id):
     branch = db.query(m.Sucursal).filter_by(id_sucursal=branch_id, id_tenant=user.id_tenant, activa=True).first()
     assigned = db.get(m.UsuarioSucursal, (user.ci, branch_id))
-    if not branch or (user.id_rol != 2 and not assigned):
+    if not branch or (user.id_rol not in (1, 2) and not assigned):
         raise HTTPException(403, "Sucursal no autorizada o inactiva.")
     return branch
 
 
 def branch_ids(db, user):
     q = db.query(m.Sucursal.id_sucursal).filter_by(id_tenant=user.id_tenant, activa=True)
-    if user.id_rol != 2:
+    if user.id_rol not in (1, 2):
         q = q.join(m.UsuarioSucursal).filter(m.UsuarioSucursal.ci_usuario == user.ci)
     return [r[0] for r in q.all()]
 
@@ -146,7 +146,7 @@ def update_subscription(tid: int, body: SubscriptionUpdate, db: Session = Depend
 @router.get("/sucursales")
 def branches(db: Session = Depends(get_db), user=Depends(require_staff)):
     q = db.query(m.Sucursal).filter_by(id_tenant=user.id_tenant)
-    if user.id_rol != 2:
+    if user.id_rol not in (1, 2):
         q = q.filter(m.Sucursal.id_sucursal.in_(branch_ids(db, user)))
     return q.order_by(m.Sucursal.nombre).all()
 

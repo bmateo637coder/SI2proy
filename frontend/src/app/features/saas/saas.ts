@@ -35,7 +35,7 @@ export class SaasPage implements OnInit {
     await firstValueFrom(this.http.request(method, `${environment.apiUrl}/api/saas/${path}`, { body: data, headers: this.headers() }));
     await this.load(); this.message.set('Cambios guardados.');
   }
-  subscription() { return this.act(() => this.save(`suscripcion/${this.auth.currentUser().id_tenant}`, { codigo_plan: this.plan, inicio: this.inicio, vencimiento: this.vencimiento, estado: this.estado }, 'put')); }
+  subscription() { return this.act(() => this.save(`suscripcion/${this.auth.tenantId()}`, { codigo_plan: this.plan, inicio: this.inicio, vencimiento: this.vencimiento, estado: this.estado }, 'put')); }
   create() { return this.act(async () => { await this.save('sucursales', { nombre: this.nombre, direccion: this.direccion, activa: true }); this.nombre = ''; this.direccion = ''; }); }
   toggle(b: any) { return this.act(() => this.save(`sucursales/${b.id_sucursal}`, { nombre: b.nombre, direccion: b.direccion, activa: !b.activa }, 'put')); }
   assign() { return this.act(() => this.save(`sucursales/${this.sid}/usuarios`, { ci_usuario: this.ci })); }

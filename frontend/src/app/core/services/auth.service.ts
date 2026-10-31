@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
@@ -13,12 +13,21 @@ export class AuthService {
   // Usamos signals para estado reactivo
   public userPermissions = signal<string[]>([]);
   public currentUser = signal<any>(null);
+  public selectedTenant = signal<number | null>(Number(localStorage.getItem('selected_tenant')) || null);
+  public tenantId = computed(() => this.currentUser()?.id_rol === 1 ? this.selectedTenant() : this.currentUser()?.id_tenant);
+
+  selectTenant(id: number | null) {
+    this.selectedTenant.set(id);
+    if (id) localStorage.setItem('selected_tenant', String(id));
+    else localStorage.removeItem('selected_tenant');
+  }
 
   constructor(private http: HttpClient, private router: Router) {
     this.loadStateFromStorage();
   }
 
   private loadStateFromStorage() {
+    try {
     const perms = localStorage.getItem('permissions');
     const user = localStorage.getItem('user');
     if (perms) {
@@ -26,6 +35,9 @@ export class AuthService {
     }
     if (user) {
       this.currentUser.set(JSON.parse(user));
+    }
+    } catch {
+      this.clearSession();
     }
   }
 
@@ -54,7 +66,7 @@ export class AuthService {
     );
   }
 
-  logout() {
+  private clearSession() {
     localStorage.removeItem('token');
     localStorage.removeItem('user_role');
     localStorage.removeItem('permissions');
@@ -62,7 +74,12 @@ export class AuthService {
     localStorage.removeItem('id_tenant');
     this.userPermissions.set([]);
     this.currentUser.set(null);
-    this.router.navigate(['/login']);
+    this.selectTenant(null);
+  }
+
+  logout(reason?: string) {
+    this.clearSession();
+    this.router.navigate(['/login'], { queryParams: reason ? { reason } : {} });
   }
 
   hasPermission(permission: string): boolean {

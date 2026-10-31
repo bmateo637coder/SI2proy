@@ -1,4 +1,5 @@
 <div class="reportes-container">
+  <p *ngIf="errorIA" role="alert" style="color:#a11">{{ errorIA }}</p>
   <div class="header-section mb-6" style="display: flex; justify-content: space-between; align-items: flex-start;">
       <div>
           <h2 class="text-3xl font-bold">Generador de Reportes Dinámicos</h2>
@@ -32,14 +33,6 @@
                   <label class="label-muted">Fuente de Datos</label>
                   <select class="modern-input" [(ngModel)]="entidadSeleccionada" (change)="onEntidadChange()">
                       <option *ngFor="let ent of entidades" [value]="ent.value">{{ent.label}}</option>
-                  </select>
-              </div>
-
-              <div class="form-group mb-4" *ngIf="userRole === 1">
-                  <label class="label-muted text-primary" style="color: var(--primary-color);">Filtro Global (SuperAdmin)</label>
-                  <select class="modern-input" [(ngModel)]="empresaFiltro">
-                      <option value="">Todas las Empresas (SaaS)</option>
-                      <option *ngFor="let emp of empresas" [value]="emp.id_tenant">{{emp.nombre}}</option>
                   </select>
               </div>
 

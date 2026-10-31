@@ -29,8 +29,9 @@ export class OfflineService {
 
   private scope(): string {
     const user = this.auth.currentUser();
-    if (!user?.ci || !user.id_tenant) throw new Error('Ingrese con una cuenta de inmobiliaria.');
-    return `${environment.apiUrl}|${user.id_tenant}|${user.ci}`;
+    const tid = this.auth.tenantId();
+    if (!user?.ci || !tid) throw new Error('Seleccione una inmobiliaria para continuar.');
+    return `${environment.apiUrl}|${tid}|${user.ci}`;
   }
 
   private db(): Promise<IDBDatabase> {
@@ -97,14 +98,14 @@ export class OfflineService {
     }
     const uuid = crypto.randomUUID();
     await this.put({ key: `${scope}|${uuid}`, scope, kind: 'operation', estado: 'local', payload: {
-      uuid, id_tenant: user.id_tenant, ci_usuario: user.ci, id_sucursal: prop.id_sucursal,
+      uuid, id_tenant: this.auth.tenantId(), ci_usuario: user.ci, id_sucursal: prop.id_sucursal,
       id_propiedad: prop.id_propiedad, id_cliente: clientId, tipo, registrado_en: new Date().toISOString(),
       version: prop.version, precio: String(prop.precio), total: String(prop.precio), cantidad: 1, forma_pago: 'Efectivo'
     }});
   }
 
   async synchronize() {
-    if (this.syncing() || !navigator.onLine || !this.auth.currentUser()?.id_tenant) return;
+    if (this.syncing() || !navigator.onLine || !this.auth.tenantId()) return;
     this.syncing.set(true);
     try {
       const scope = this.scope();

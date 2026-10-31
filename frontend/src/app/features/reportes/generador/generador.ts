@@ -20,7 +20,8 @@ export class GeneradorReportes implements OnInit {
   errorIA: string | null = null;
   entidades = [
     { value: 'propiedades', label: 'Inmuebles/Propiedades' },
-    { value: 'usuarios', label: 'Usuarios del Sistema' }
+    { value: 'usuarios', label: 'Usuarios del Sistema' },
+    { value: 'clientes', label: 'Clientes registrados' }
   ];
   
   columnasDisponibles: any = {
@@ -31,6 +32,12 @@ export class GeneradorReportes implements OnInit {
       { id: 'precio', label: 'Precio' },
       { id: 'tipo_operacion', label: 'Operación' },
       { id: 'estado', label: 'Estado' }
+    ],
+    clientes: [
+      { id: 'ci', label: 'CI' },
+      { id: 'nombre', label: 'Nombre' },
+      { id: 'correo', label: 'Correo' },
+      { id: 'telefono', label: 'Teléfono' }
     ],
     usuarios: [
       { id: 'ci', label: 'CI' },
@@ -141,7 +148,7 @@ export class GeneradorReportes implements OnInit {
         },
         error: (err) => {
           console.error(err);
-          this.errorIA = 'Error de conexión con el servidor IA.';
+          this.errorIA = err.error?.detail || 'No se pudo conectar con la IA.';
           this.mensaje = '';
           this.cdr.detectChanges();
         }
@@ -152,13 +159,6 @@ export class GeneradorReportes implements OnInit {
     const userRoleStr = localStorage.getItem('user_role');
     this.userRole = userRoleStr ? parseInt(userRoleStr, 10) : 0;
     
-    if (this.userRole === 1) {
-      this.cargarEmpresas();
-      // Add id_tenant as a selectable column for SuperAdmin
-      this.columnasDisponibles.propiedades.unshift({ id: 'id_tenant', label: 'ID Empresa' });
-      this.columnasDisponibles.usuarios.unshift({ id: 'id_tenant', label: 'ID Empresa' });
-    }
-
     this.cargarReportesGuardados();
   }
 
@@ -171,7 +171,7 @@ export class GeneradorReportes implements OnInit {
     this.http.get(`${environment.apiUrl}/admin/empresas`, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => this.empresas = res,
-        error: err => console.error(err)
+        error: err => { this.mensaje = typeof err.error?.detail === 'string' ? err.error.detail : 'No se pudo completar la solicitud.'; this.cdr.detectChanges(); }
       });
   }
 
@@ -179,6 +179,7 @@ export class GeneradorReportes implements OnInit {
     this.columnasSeleccionadas = [];
     this.filtros = [];
     this.resultados = [];
+    this.ordenColumna = this.columnasDisponibles[this.entidadSeleccionada][0].id;
   }
 
   toggleColumna(colId: string, event: any) {
@@ -205,11 +206,6 @@ export class GeneradorReportes implements OnInit {
 
     const filtrosFinales = this.filtros.filter(f => f.columna && f.valor !== '');
     
-    // Si es SuperAdmin y seleccionó una empresa, agregarla como filtro duro
-    if (this.userRole === 1 && this.empresaFiltro !== '') {
-      filtrosFinales.push({ columna: 'id_tenant', operador: 'eq', valor: parseInt(this.empresaFiltro, 10) });
-    }
-
     const payload = {
       entidad: this.entidadSeleccionada,
       columnas: this.columnasSeleccionadas,
@@ -217,14 +213,17 @@ export class GeneradorReportes implements OnInit {
       orden: { columna: this.ordenColumna, direccion: this.ordenDireccion }
     };
 
+    this.mensaje = 'Generando reporte...';
+    this.resultados = [];
     this.http.post(`${environment.apiUrl}/reportes/generar`, payload, { headers: this.getHeaders() })
       .subscribe({
         next: (res: any) => {
           this.resultados = res.data;
+          this.mensaje = res.truncado ? `Se muestran los primeros ${res.limite} registros. Ajusta los filtros para reducir el resultado.` : this.resultados.length ? `${this.resultados.length} registros encontrados.` : 'No hay registros que coincidan con los filtros.';
           this.columnasResultados = [...this.columnasSeleccionadas];
           this.cdr.detectChanges();
         },
-        error: err => console.error(err)
+        error: err => { this.mensaje = typeof err.error?.detail === 'string' ? err.error.detail : 'No se pudo completar la solicitud.'; this.cdr.detectChanges(); }
       });
   }
 
@@ -253,15 +252,15 @@ export class GeneradorReportes implements OnInit {
           this.cargarReportesGuardados();
           setTimeout(() => this.mensaje = '', 3000);
         },
-        error: err => console.error(err)
+        error: err => { this.mensaje = typeof err.error?.detail === 'string' ? err.error.detail : 'No se pudo completar la solicitud.'; this.cdr.detectChanges(); }
       });
   }
 
   cargarReportesGuardados() {
     this.http.get(`${environment.apiUrl}/reportes/guardados`, { headers: this.getHeaders() })
       .subscribe({
-        next: (res: any) => this.reportesGuardados = res,
-        error: err => console.error(err)
+        next: (res: any) => { this.reportesGuardados = res; this.cdr.detectChanges(); },
+        error: err => { this.mensaje = typeof err.error?.detail === 'string' ? err.error.detail : 'No se pudo completar la solicitud.'; this.cdr.detectChanges(); }
       });
   }
 
@@ -281,26 +280,32 @@ export class GeneradorReportes implements OnInit {
   // Exportar a CSV (Excel lo lee bien)
   exportarCSV() {
     if (this.resultados.length === 0) return;
-    let csvContent = "data:text/csv;charset=utf-8,";
+    let csvContent = "\uFEFF";
     // Header
     csvContent += this.columnasResultados.join(";") + "\r\n";
     // Rows
     this.resultados.forEach(row => {
       let rowArray = this.columnasResultados.map(col => {
         let val = row[col] === null || row[col] === undefined ? '' : String(row[col]);
+        if (/^[=+@\-\t\r]/.test(val)) val = "'" + val;
         // Escapar comillas dobles y comas si es necesario
         return `"${val.replace(/"/g, '""')}"`;
       });
       csvContent += rowArray.join(";") + "\r\n";
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const encodedUri = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `Reporte_${this.entidadSeleccionada}_${new Date().getTime()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(encodedUri), 1000);
+  }
+
+  private escapeHTML(value: unknown): string {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
   }
 
   exportarHTML() {
@@ -326,7 +331,7 @@ export class GeneradorReportes implements OnInit {
             <tr>${this.columnasResultados.map(c => `<th>${c.toUpperCase()}</th>`).join('')}</tr>
           </thead>
           <tbody>
-            ${this.resultados.map(row => `<tr>${this.columnasResultados.map(col => `<td>${row[col] || ''}</td>`).join('')}</tr>`).join('')}
+            ${this.resultados.map(row => `<tr>${this.columnasResultados.map(col => `<td>${this.escapeHTML(row[col])}</td>`).join('')}</tr>`).join('')}
           </tbody>
         </table>
       </body>
@@ -339,6 +344,7 @@ export class GeneradorReportes implements OnInit {
     link.href = url;
     link.download = `Reporte_${this.entidadSeleccionada}_${new Date().getTime()}.html`;
     link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   exportarPDF() {
@@ -347,7 +353,7 @@ export class GeneradorReportes implements OnInit {
     doc.text(`Reporte de ${this.entidadSeleccionada}`, 14, 15);
     
     const tableData = this.resultados.map(row => 
-      this.columnasResultados.map(col => String(row[col] || ''))
+      this.columnasResultados.map(col => String(row[col] ?? ''))
     );
 
     autoTable(doc, {

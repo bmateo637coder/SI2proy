@@ -19,7 +19,8 @@ METODOS_PAGO = ("Transferencia", "Efectivo", "QR")
 
 
 def _es_operativo(user: models.Usuario) -> bool:
-    return bool(user.id_tenant and (user.id_rol == 2 or user.agente))
+    codes = {p.codigo for p in user.rol.permisos} if user.rol else set()
+    return bool(user.id_tenant and (user.id_rol in (1, 2) or user.agente or "API:OPERACIONES" in codes))
 
 
 def _serializar_cuota(cuota: models.Cuota) -> dict:

@@ -136,7 +136,7 @@ def synchronize(body: Operation, db: Session = Depends(get_db), user=Depends(req
 def cancel_reservation(operation_id: UUID, db: Session = Depends(get_db), user=Depends(require_staff)):
     db.query(m.Tenant).filter_by(id_tenant=user.id_tenant).with_for_update().one()
     row = db.query(m.OperacionOffline).filter_by(id_tenant=user.id_tenant, uuid=str(operation_id), tipo="reserva").first()
-    if not row or (user.id_rol != 2 and row.ci_usuario != user.ci):
+    if not row or (user.id_rol not in (1, 2) and row.ci_usuario != user.ci):
         raise HTTPException(404, "Reserva no encontrada.")
     if row.estado == "cancelada":
         return receipt(row, True)

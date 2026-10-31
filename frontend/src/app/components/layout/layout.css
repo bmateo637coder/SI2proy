@@ -275,3 +275,7 @@
     margin-bottom: 1rem;
     line-height: 1.6;
 }
+:host .api-error, :host .api-notice { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background: #fff7db; color: #533d0c; border: 1px solid #dacb9d; }
+:host .api-error { background: #fff1f0; color: #86291f; border-color: #e5b8b4; }
+:host .api-error button { margin-left: 1rem; background: transparent; color: inherit; border: 1px solid; border-radius: 4px; padding: .25rem .5rem; }
+:host select { max-width: 260px; padding: .4rem; border: 1px solid #cdb77c; border-radius: 6px; }

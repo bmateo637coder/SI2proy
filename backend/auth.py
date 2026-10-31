@@ -7,7 +7,17 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from database.database import get_db
-from database.models import Usuario
+from database.models import Usuario, Tenant
+
+
+class ScopedUser:
+    """Contexto de una petición; nunca modifica el usuario persistido ni su JWT."""
+    def __init__(self, user, tenant_id):
+        self._user = user
+        self.id_tenant = tenant_id
+
+    def __getattr__(self, name):
+        return getattr(self._user, name)
 
 # Configuración de Seguridad
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -64,7 +74,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     if user.id_rol == 1 and user.id_tenant is not None:
         raise credentials_exception
-    if request and user.id_tenant and not request.url.path.startswith(("/api/saas/suscripcion", "/api/saas/planes", "/users/me")):
+    if request and request.headers.get("X-Tenant-ID"):
+        try:
+            tid = int(request.headers["X-Tenant-ID"])
+        except ValueError:
+            raise HTTPException(422, "Seleccione una inmobiliaria válida.")
+        if user.id_rol != 1 and tid != user.id_tenant:
+            raise HTTPException(403, "No puede acceder a otra inmobiliaria.")
+        if not db.get(Tenant, tid):
+            raise HTTPException(404, "Inmobiliaria no encontrada.")
+        if user.id_rol == 1 and request.url.path != "/users/me":
+            user = ScopedUser(user, tid)
+    if request and user.id_rol != 1 and user.id_tenant and not request.url.path.startswith(("/api/saas/suscripcion", "/api/saas/planes", "/users/me")):
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} or request.url.path.startswith("/api/ia"):
             from saas import require_active
             require_active(db, user.id_tenant)
@@ -73,7 +94,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 def require_staff(user=Depends(get_current_user)):
     codes = {p.codigo for p in user.rol.permisos} if user.rol else set()
-    if not user.id_tenant or (user.id_rol != 2 and not user.agente and "API:OPERACIONES" not in codes):
+    if user.id_rol == 1 and not user.id_tenant:
+        raise HTTPException(403, "Seleccione una inmobiliaria en la barra superior para continuar.")
+    if not user.id_tenant or (user.id_rol not in (1, 2) and not user.agente and "API:OPERACIONES" not in codes):
         raise HTTPException(403, "Se requiere un administrador o agente de esta inmobiliaria.")
     return user
 

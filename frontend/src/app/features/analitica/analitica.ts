@@ -13,6 +13,14 @@ export class AnaliticaPage {
   readonly error = signal('');
   readonly busy = signal(false);
   readonly listening = signal(false);
+  readonly aiStatus = signal<any>(null);
+  async checkAI() {
+    this.busy.set(true); this.error.set(''); this.aiStatus.set(null);
+    try {
+      this.aiStatus.set(await firstValueFrom(this.http.post(`${environment.apiUrl}/api/ia/probar`, {}, { headers: this.headers() })));
+    } catch (e: any) { this.error.set(e.error?.detail || 'No se pudo comprobar la conexión con Gemini.'); }
+    finally { this.busy.set(false); }
+  }
   text = 'Mostrame las ventas de este mes agrupadas por sucursal';
   tipo = 'ventas_sucursal';
   desde = '';
