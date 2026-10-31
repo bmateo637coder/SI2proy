@@ -1,58 +1,54 @@
 # Verificación del parcial 2
 
-Fecha local: **30 de octubre de 2026**, America/La_Paz.
+Actualizado el **31 de octubre de 2026**, America/La_Paz.
 
-## Resultados ejecutados
+## Pruebas automáticas
 
-| Verificación | Resultado |
+La [suite completa del commit bd4a95a](https://github.com/bmateo637coder/SI2proy/actions/runs/41214051294) terminó correctamente: backend con PostgreSQL 15, Angular, Playwright y Flutter. La compilación Android usa el código móvil del commit d59d262; la actualización bd4a95a añade la autorización SaaS en el servidor sin modificar el código del APK.
+
+| Componente | Cobertura verificada |
 |---|---|
-| API y modelos SQLAlchemy | Importación y mapeos correctos |
-| Suite backend con PostgreSQL 15 local aislado | **34 pruebas aprobadas**, incluido arranque de Render y fallo de migración |
-| Integración concurrente | Un UUID concurrente produce una venta; dos UUID sobre la misma propiedad producen confirmación y conflicto |
-| Atomicidad | Fallo inyectado al guardar un pago revierte contrato, pago, operación y disponibilidad; el reintento confirma correctamente |
-| Migración | Repetición sin pérdida de datos; prueba de esquema previo con propiedades conservadas |
-| Demostración SaaS | Dos empresas independientes, planes diferentes, usuarios y 18 propiedades por empresa en base temporal |
-| Reporte contra PostgreSQL demo | 12 contratos de Raíces Demo agrupados en Casa matriz; total 1.512.000 USD |
-| Dashboard contra catálogo demo | 18 predicciones sobre propiedades compatibles de la empresa autenticada |
-| Unitarias Angular | **5 pruebas aprobadas** en 3 archivos |
-| Playwright / Chromium | **3 pruebas aprobadas**: reinicio offline y separación de cuentas; manifest/iconos; tabla/gráfico y descargas PDF/Excel |
-| Flutter / SQLite | **1 prueba aprobada**, con archivo real, cierre/reapertura, respuesta perdida y reintento sin duplicación |
-| Análisis Dart de archivos modificados | **Sin problemas** en 8 archivos analizados |
-| Compilación web optimizada | Correcta; shell preparado con 22 recursos |
+| Backend | Aislamiento por empresa y alcance global SaaS, autorizaciones, migración aditiva, planes/sucursales, reportes, interpretación generativa, transacciones y sincronización concurrente/idempotente |
+| Angular y Playwright | Selección global aplicada a pantallas existentes, catálogo, reportes y exportación, sesión y operaciones offline |
+| Flutter | Identidad global separada de la empresa operativa, cabeceras de alcance, selección persistente sin red, exportaciones PDF/Excel/CSV/HTML, aislamiento SQLite y recuperación/reintento sin duplicar operaciones |
+| Android nativo | Login SaaS, catálogo global, reportes dinámicos y analíticos, cambio de empresa, descarga, reserva offline, recreación de app y base, recuperación de sesión, respuesta perdida, reintento y separación entre empresas |
 
-El tamaño inicial web se redujo desde aproximadamente 1,50 MB a 594 kB al cargar el generador de reportes y sus bibliotecas bajo demanda. Persisten avisos CommonJS de bibliotecas de exportación existentes; no impiden compilar. La suite Python conserva advertencias de obsolescencia de dependencias heredadas. El análisis completo móvil inicial detectó advertencias en pantallas anteriores; la verificación final sin problemas corresponde a los archivos modificados enumerados por el comando del análisis.
+La [compilación Android](https://github.com/bmateo637coder/SI2proy/actions/runs/41213010745) aprobó el análisis completo de Dart, las pruebas Flutter, la integración en emulador Android 35, la compilación de producción y la comprobación criptográfica de firma. GitHub rechazó solamente la publicación automática por el permiso Workflows del token de Actions. Se recuperó el mismo artefacto con [la carga verificada en Actions](https://github.com/bmateo637coder/SI2proy/actions/runs/41215153917) y se publicó mediante `scripts/publish_mobile_release.py`, usando el acceso local autorizado; no se recompiló ni alteró el APK. La ejecución original conserva el error de ese paso de publicación. El workflow actualizado admite artefactos desde la rama de trabajo, recuperación de cargas y publicación automática con un token que tenga el permiso requerido.
 
-Comando del análisis final móvil:
+El análisis se ejecuta con `--no-fatal-infos`: no hay errores ni advertencias bloqueantes; se conservan sugerencias de estilo sobre llaves en condicionales. La suite Python conserva avisos de obsolescencia de dependencias heredadas.
 
-```powershell
-flutter analyze --no-pub lib/data/services/offline_service.dart lib/presentation/screens/offline_screen.dart lib/presentation/providers/auth_provider.dart lib/data/services/secure_storage_service.dart lib/main.dart lib/app/router.dart lib/data/models/user_model.dart test/offline_service_test.dart
-```
+## Android publicado
 
-## Evaluación ML reproducible
+- [Descargar Raíces 2.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.1.0-8/Raices-2.1.0.apk).
+- [Versión y archivo SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-2.1.0-8).
+- Código de la compilación: `d59d262ba8f31554ac74328d3712ba1b77cffa68`.
+- Firma persistente protegida por secretos cifrados de GitHub Actions; no se incorpora al repositorio.
+- [Uso y pruebas de la app móvil](../mobile/README.md).
 
-Entrenamiento sintético con semilla 42: 1800 filas, 1350 entrenamiento y 450 validación. RandomForestRegressor: MAE 19.444,12 USD y R² 0,9659. KMeans con tres grupos: silhouette de validación 0,2428. Estas métricas describen el conjunto sintético, no precisión sobre el mercado inmobiliario. Los artefactos se regeneran con `python analitica_ml.py`.
+Las pruebas Android usan un servidor controlado y los plugins nativos de SQLite y almacenamiento seguro. No crean ventas ni reservas reales. La prueba cierra/reabre la base y recrea la aplicación; no sustituye una prueba manual en cada modelo de teléfono. El dictado y el diálogo para compartir archivos necesitan comprobación manual con el micrófono y las aplicaciones disponibles en el dispositivo.
 
-## Evidencia visual
+## Verificación en producción
 
-- [Operaciones offline](capturas/offline.png).
-- [Reporte, tabla y gráfico](capturas/analitica.png).
+API: https://raices-backend-n1yy.onrender.com · Web: https://bmateo637coder.github.io/SI2proy/
 
-Las capturas usan datos controlados de las pruebas de navegador; los reportes del backend se verificaron aparte contra PostgreSQL. No se presentan los datos de las capturas como datos productivos.
+Render confirmó `dep-dbj0dq8ae00c73csj000` como `live` con el commit `bd4a95a`. Se conserva el servicio, la base y su configuración. La verificación autenticada de lectura confirmó:
 
-## Límites de la validación
+- Las tres inmobiliarias tienen catálogo: Raíces 3 propiedades, Horizonte 5 y Cúspide 5. Los catálogos de Horizonte/Cúspide contienen registros de demostración identificados como tales.
+- En alcance global: 13 propiedades, 3 clientes y 10 usuarios de empresas en los reportes dinámicos; la columna inmobiliaria identifica su origen.
+- Descarga offline autorizada y separada para las tres inmobiliarias.
+- Los cinco reportes convencionales devuelven tablas válidas, incluso las consultas sin reservas confirmadas.
+- Gemini real responde a la prueba de conexión, configura un reporte dinámico, interpreta propiedades por inmobiliaria y estado, responde al chat y genera una descripción. Las recomendaciones devuelven datos del catálogo. No se publican credenciales ni datos personales de estas comprobaciones.
+- El superadministrador SaaS puede ejecutar reportes con IA en cada una de las tres empresas. En Horizonte y Cúspide se verificaron además descripciones con Gemini, recomendaciones y predicciones, conservando sus planes Básico. Las cuentas propias de esas inmobiliarias siguen sujetas a su suscripción.
+- El dashboard devuelve 6 predicciones y omite 7 propiedades que no cumplen los criterios del modelo.
 
-Las pruebas automáticas usan bases aisladas y no utilizaron una cuenta externa de IA. El repositorio está actualizado en `feat/parcial2-saas-offline-analitica`; el procedimiento de publicación está en [DESPLIEGUE.md](DESPLIEGUE.md). Quedan por comprobar Gemini con una clave válida, dictado con micrófono real, instalación PWA en dispositivos y compilación/instalación APK. Los archivos PlantUML son editables; no se generaron renders UML en este entorno.
+Estas comprobaciones no dieron de alta ni modificaron registros de negocio. La cuenta Gemini está configurada en Render; las claves no se envían al teléfono ni al navegador. Si el proveedor falla, están disponibles los reportes convencionales y el generador manual; el modo local de lenguaje natural se usa cuando no hay clave configurada.
 
-Las semillas de demostración se ejecutaron únicamente en PostgreSQL temporal local. El cluster de prueba se alojó dentro de `.venv/` y se detuvo al terminar; no comparte configuración ni puerto con la base del usuario.
+## Alcance y límites
 
-## Actualización del servicio existente en Render
+**Todas las inmobiliarias** aplica a catálogo, listas, reportes, analítica e IA dentro de las pantallas habituales. Los cambios y operaciones offline requieren seleccionar una empresa. La IA necesita conexión. El superadministrador puede consultar cualquier empresa o todas sin adoptar los límites de sus planes; las cuentas de cada inmobiliaria conservan los límites de su suscripción.
 
-El 30 de octubre de 2026 se ejecutó la migración aditiva en el arranque de producción, conservando la configuración de la base existente. Render confirmó el despliegue `dep-dbietukipgvc73btqos0` como `live`, con el commit de API `94e38fcc080b`, Python 3.12.10 y `python start_render.py`.
+La sesión móvil utiliza el perfil guardado ante fallos de red/servidor; un rechazo de credenciales exige autenticarse otra vez. SQLite conserva las operaciones por API, CI e inmobiliaria. La sincronización valida permisos, suscripción, sucursal, precio, versión y disponibilidad en el servidor.
 
-- [Despliegue de backend y Pages](https://github.com/bmateo637coder/SI2proy/actions/runs/41115014274): ambos jobs aprobados.
-- [Inspección posterior de Render](https://github.com/bmateo637coder/SI2proy/actions/runs/41115713346): rama del parcial 2, mismo servicio, mismo dominio y despliegue activo.
-- [CI con controles del despliegue](https://github.com/bmateo637coder/SI2proy/actions/runs/41115376277): 39 pruebas backend, además de las suites web y móvil.
-- `GET /api/health`: versión `2.0.0`, commit esperado y funciones `saas`, `offline`, `analitica`.
-- `GET /openapi.json`: 55 rutas, incluidas `/api/offline/sincronizar` y `/api/saas/suscripcion`.
+El modelo ML usa datos sintéticos con semilla 42: 1800 filas; 1350 de entrenamiento y 450 de validación. MAE 19.444,12 USD, R² 0,9659 y silhouette 0,2428 describen ese conjunto, no precisión sobre el mercado. No es una tasación profesional ni un historial de disponibilidad.
 
-Las verificaciones públicas no registraron ventas, reservas ni usuarios de prueba en producción. La clave de Render permanece en GitHub Actions; no se incorpora al frontend. Render no tiene `GEMINI_API_KEY`, por lo que los reportes usan el intérprete local indicado en cada resultado.
+La recuperación de contraseña heredada sigue siendo informativa porque no hay SMTP configurado. Los diagramas PlantUML están disponibles como fuentes editables. Las pruebas usan bases aisladas y no reemplazan la comprobación manual del dispositivo o la instalación de la PWA.

@@ -8,3 +8,4 @@ frontend/test-results/
 frontend/playwright-report/
 mobile/.dart_tool/
 mobile/build/
+scripts/__pycache__/

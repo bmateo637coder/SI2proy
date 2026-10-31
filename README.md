@@ -14,7 +14,7 @@ Sistema Inmobiliario "Raíces" — monorepo con las tres partes del proyecto.
 |------------|-------------------|------------------------------------------------|
 | `backend/` | Python + FastAPI  | API REST, autenticación JWT, PostgreSQL (SQLAlchemy) |
 | `frontend/`| Angular           | Panel web (comercial / administración)          |
-| `mobile/`  | Flutter           | Aplicación móvil (catálogo, perfil, clientes)   |
+| `mobile/`  | Flutter           | App Android: SaaS, catálogo, reportes, IA y SQLite offline   |
 
 ## Backend (`backend/`)
 
@@ -69,11 +69,13 @@ ng build       # producción → dist/
 
 ## Mobile (`mobile/`)
 
-App Flutter. La URL de la API se define en `lib/core/config/api_constants.dart`
+[Descargar APK Android 2.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.1.0-8/Raices-2.1.0.apk) · [Guía de uso móvil](mobile/README.md).
+
+App Flutter con selección de una o todas las inmobiliarias, reportes/IA y operaciones offline. La URL de la API se define en `lib/core/config/api_constants.dart`
 y puede sobrescribirse en build/run:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://192.168.x.x:8000
+flutter run --dart-define=API_BASE_URL=https://raices-backend-n1yy.onrender.com
 flutter build apk --dart-define=API_BASE_URL=https://<backend-publico>/
 ```
 
