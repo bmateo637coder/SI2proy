@@ -11,6 +11,7 @@ export class SaasPage implements OnInit {
   private http = inject(HttpClient);
   readonly auth = inject(AuthService);
   readonly status = signal<any>(null);
+  readonly globalCompanies = signal<any[]>([]);
   readonly plans = signal<any[]>([]);
   readonly branches = signal<any[]>([]);
   readonly message = signal('');
@@ -21,6 +22,11 @@ export class SaasPage implements OnInit {
   private get(path: string) { return firstValueFrom(this.http.get<any>(`${environment.apiUrl}/api/saas/${path}`, { headers: this.headers() })); }
   async ngOnInit() { await this.act(() => this.load()); }
   async load() {
+    if (this.auth.allTenants()) {
+      const [summary, plans, branches] = await Promise.all([
+        firstValueFrom(this.http.get<any>(`${environment.apiUrl}/admin/vista-global/resumen`)), this.get('planes'), this.get('sucursales')]);
+      this.globalCompanies.set(summary.empresas); this.plans.set(plans); this.branches.set(branches); return;
+    }
     const [status, plans, branches] = await Promise.all([this.get('suscripcion'), this.get('planes'), this.get('sucursales')]);
     this.status.set(status); this.plans.set(plans); this.branches.set(branches);
     this.plan = status.codigo_plan || 'basico'; this.inicio = status.inicio || ''; this.vencimiento = status.vencimiento || ''; this.estado = ['activa', 'suspendida', 'cancelada'].includes(status.estado) ? status.estado : 'activa';

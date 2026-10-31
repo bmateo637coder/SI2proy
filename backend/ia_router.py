@@ -6,7 +6,7 @@ import json
 from generative_client import generate_text, GeminiError
 from typing import Optional
 from sqlalchemy.orm import Session
-from auth import get_current_user, require_staff
+from auth import get_current_user, require_staff, require_reader, is_all_tenants, scope_query, label_tenants
 from saas import require_ai, tenant_scope
 from database import models
 from database.database import get_db
@@ -14,9 +14,9 @@ from database.database import get_db
 router = APIRouter(prefix="/api/ia", tags=["IA"])
 
 @router.get("/estado")
-def ai_status(user=Depends(require_staff), db: Session = Depends(get_db)):
+def ai_status(user=Depends(require_reader), db: Session = Depends(get_db)):
     from saas import summary
-    sub = summary(db, user.id_tenant)
+    sub = {"reportes_ia": True, "estado": "consulta_global_saas"} if is_all_tenants(user) else summary(db, user.id_tenant)
     return {"configurada": bool(os.getenv("GEMINI_API_KEY")),
             "modelo": os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite"),
             "plan_habilitado": bool(sub.get("reportes_ia")), "suscripcion": sub["estado"]}
@@ -27,7 +27,7 @@ class VozRequest(BaseModel):
 
 
 @router.post("/probar")
-def test_ai_connection(user=Depends(require_staff), db: Session = Depends(get_db)):
+def test_ai_connection(user=Depends(require_reader), db: Session = Depends(get_db)):
     require_ai(db, user)
     try:
         generate_text('Responde únicamente OK para verificar la conexión.')
@@ -36,7 +36,7 @@ def test_ai_connection(user=Depends(require_staff), db: Session = Depends(get_db
     return {"conectada": True, "modelo": os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")}
 
 @router.post("/reporte-voz")
-def generar_reporte_por_voz(req: VozRequest, user=Depends(require_staff), db: Session = Depends(get_db)):
+def generar_reporte_por_voz(req: VozRequest, user=Depends(require_reader), db: Session = Depends(get_db)):
     require_ai(db, user)
     prompt = f"""
     Eres un asistente experto en sistemas inmobiliarios. El usuario ha dictado por voz lo siguiente:
@@ -139,7 +139,7 @@ def _score_similitud(base: models.Propiedad, candidato: models.Propiedad) -> flo
 
 def _serializar_recomendada(p: models.Propiedad) -> dict:
     return {
-        "id_propiedad": p.id_propiedad,
+        "id_propiedad": p.id_propiedad, "id_tenant": p.id_tenant, "inmobiliaria": getattr(p, "inmobiliaria", None),
         "titulo": p.titulo,
         "direccion": p.direccion,
         "precio": float(p.precio),
@@ -159,14 +159,13 @@ def recomendar(
     if x_tenant_id is not None:
         tenant_scope(current_user, x_tenant_id)
     tenant = current_user.id_tenant if current_user.id_rol != 1 else x_tenant_id
-    query = db.query(models.Propiedad).filter(
-        models.Propiedad.id_tenant == tenant,
+    query = scope_query(db.query(models.Propiedad), current_user, models.Propiedad.id_tenant).filter(
         models.Propiedad.estado.in_(["Disponible", "Reservada"]),
     )
     limite = max(1, min(req.limite, 20))
 
     if req.propiedad_id:
-        base = db.query(models.Propiedad).filter_by(id_propiedad=req.propiedad_id, id_tenant=tenant).first()
+        base = scope_query(db.query(models.Propiedad), current_user, models.Propiedad.id_tenant).filter_by(id_propiedad=req.propiedad_id).first()
         if not base:
             raise HTTPException(status_code=404, detail="Propiedad base no encontrada.")
         candidatas = query.filter(models.Propiedad.id_propiedad != req.propiedad_id).all()
@@ -174,6 +173,7 @@ def recomendar(
     else:
         candidatas = query.order_by(models.Propiedad.id_propiedad.desc()).all()
 
+    label_tenants(db, candidatas)
     return {"recomendaciones": [_serializar_recomendada(p) for p in candidatas[:limite]]}
 
 
@@ -212,8 +212,9 @@ def chat(req: ChatRequest, user=Depends(get_current_user), db: Session = Depends
     if not os.getenv("GEMINI_API_KEY"):
         return {"respuesta": "Ayuda local (Gemini sin configurar): " + _respuesta_fallback(req.mensaje), "modo": "ayuda_local"}
 
-    inventory = db.query(models.Propiedad).filter_by(id_tenant=user.id_tenant, estado="Disponible").order_by(models.Propiedad.id_propiedad.desc()).limit(20).all()
-    context = [{"titulo": p.titulo, "precio": float(p.precio), "operacion": p.tipo_operacion} for p in inventory]
+    inventory = scope_query(db.query(models.Propiedad), user, models.Propiedad.id_tenant).filter_by(estado="Disponible").order_by(models.Propiedad.id_propiedad.desc()).limit(20).all()
+    label_tenants(db, inventory)
+    context = [{"inmobiliaria": p.inmobiliaria, "titulo": p.titulo, "precio": float(p.precio), "operacion": p.tipo_operacion} for p in inventory]
     prompt = f"""
     Eres Rai, el asistente virtual de la inmobiliaria Raíces. Responde de forma breve, útil y en español.
     Tema del sistema: gestión inmobiliaria con contratos, cuotas, pagos con comprobante PDF, propiedades,

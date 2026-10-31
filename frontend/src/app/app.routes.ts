@@ -16,7 +16,7 @@ import { Backup } from './features/admin/backup/backup';
 import { Contratos } from './features/gestion-contractual/contratos/contratos';
 
 import { permissionGuard } from './core/guards/permission.guard';
-import { sessionGuard, staffGuard, superAdminGuard, globalContextGuard } from './core/guards/session.guard';
+import { sessionGuard, staffGuard, superAdminGuard } from './core/guards/session.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -26,7 +26,6 @@ export const routes: Routes = [
     path: 'dashboard',
     component: Layout,
     canActivate: [sessionGuard],
-    canActivateChild: [globalContextGuard],
     children: [
       { path: 'vista-global', canActivate: [superAdminGuard], loadComponent: () => import('./features/admin/vista-global/vista-global').then(m => m.VistaGlobalPage) },
       { path: 'offline', canActivate: [staffGuard], loadComponent: () => import('./features/offline/offline').then(m => m.OfflinePage) },

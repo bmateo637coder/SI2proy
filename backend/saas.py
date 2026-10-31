@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session
 
-from auth import get_current_user, require_admin, require_staff
+from auth import get_current_user, require_admin, require_staff, require_reader, is_all_tenants, scope_query, label_tenants
 from database import models as m
 from database.database import get_db
 
@@ -30,6 +30,8 @@ def require_active(db, tid):
 
 
 def require_ai(db, user):
+    if is_all_tenants(user):
+        return
     sub = require_active(db, user.id_tenant)
     if not sub.plan.reportes_ia:
         raise HTTPException(403, "Los reportes generativos y la analítica requieren el plan Profesional.")
@@ -144,11 +146,11 @@ def update_subscription(tid: int, body: SubscriptionUpdate, db: Session = Depend
 
 
 @router.get("/sucursales")
-def branches(db: Session = Depends(get_db), user=Depends(require_staff)):
-    q = db.query(m.Sucursal).filter_by(id_tenant=user.id_tenant)
+def branches(db: Session = Depends(get_db), user=Depends(require_reader)):
+    q = scope_query(db.query(m.Sucursal), user, m.Sucursal.id_tenant)
     if user.id_rol not in (1, 2):
         q = q.filter(m.Sucursal.id_sucursal.in_(branch_ids(db, user)))
-    return q.order_by(m.Sucursal.nombre).all()
+    return label_tenants(db, q.order_by(m.Sucursal.nombre).all())
 
 
 class BranchInput(BaseModel):

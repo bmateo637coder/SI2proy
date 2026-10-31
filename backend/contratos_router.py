@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 import schemas
-from auth import get_current_user
+from auth import get_current_user, is_all_tenants, scope_query
 from database import models
 from database.database import get_db
 
@@ -20,7 +20,7 @@ METODOS_PAGO = ("Transferencia", "Efectivo", "QR")
 
 def _es_operativo(user: models.Usuario) -> bool:
     codes = {p.codigo for p in user.rol.permisos} if user.rol else set()
-    return bool(user.id_tenant and (user.id_rol in (1, 2) or user.agente or "API:OPERACIONES" in codes))
+    return is_all_tenants(user) or bool(user.id_tenant and (user.id_rol in (1, 2) or user.agente or "API:OPERACIONES" in codes))
 
 
 def _serializar_cuota(cuota: models.Cuota) -> dict:
@@ -60,7 +60,7 @@ def _serializar_contrato(contrato: models.Contrato, detalle: bool = False) -> di
 
     data = {
         "id_contrato": contrato.id_contrato,
-        "id_tenant": contrato.id_tenant,
+        "id_tenant": contrato.id_tenant, "inmobiliaria": contrato.tenant.nombre,
         "id_cliente": contrato.id_cliente,
         "cliente": _nombre_usuario(contrato.cliente),
         "id_propiedad": contrato.id_propiedad,
@@ -100,9 +100,7 @@ def listar_contratos(
     if not _es_operativo(current_user):
         raise HTTPException(status_code=403, detail="Sin permisos para operar la gestión contractual.")
 
-    contratos = db.query(models.Contrato).filter(
-        models.Contrato.id_tenant == current_user.id_tenant
-    ).order_by(models.Contrato.id_contrato.desc()).all()
+    contratos = scope_query(db.query(models.Contrato), current_user, models.Contrato.id_tenant).order_by(models.Contrato.id_contrato.desc()).all()
 
     resultados = [_serializar_contrato(c) for c in contratos]
     if estado:
@@ -195,10 +193,7 @@ def detalle_contrato(
     if not _es_operativo(current_user):
         raise HTTPException(status_code=403, detail="Sin permisos para operar la gestión contractual.")
 
-    contrato = db.query(models.Contrato).filter(
-        models.Contrato.id_contrato == id_contrato,
-        models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    contrato = scope_query(db.query(models.Contrato), current_user, models.Contrato.id_tenant).filter(models.Contrato.id_contrato == id_contrato).first()
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato no encontrado.")
     return _serializar_contrato(contrato, detalle=True)
@@ -387,10 +382,7 @@ def comprobante_pago(
     if not _es_operativo(current_user):
         raise HTTPException(status_code=403, detail="Sin permisos para operar la gestión contractual.")
 
-    pago = db.query(models.Pago).join(models.Contrato).filter(
-        models.Pago.id_pago == id_pago,
-        models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    pago = scope_query(db.query(models.Pago).join(models.Contrato), current_user, models.Contrato.id_tenant).filter(models.Pago.id_pago == id_pago).first()
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado.")
 
@@ -412,10 +404,7 @@ def eliminar_contrato(
     if current_user.id_rol not in (1, 2):
         raise HTTPException(status_code=403, detail="Solo Super Admin o Administrador pueden eliminar contratos.")
 
-    contrato = db.query(models.Contrato).filter(
-        models.Contrato.id_contrato == id_contrato,
-        models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    contrato = scope_query(db.query(models.Contrato), current_user, models.Contrato.id_tenant).filter(models.Contrato.id_contrato == id_contrato).first()
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato no encontrado.")
     if contrato.pagos:

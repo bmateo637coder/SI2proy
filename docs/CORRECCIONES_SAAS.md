@@ -13,18 +13,26 @@ ficticios.
 2. Abrir Clientes, Propiedades, Contratos y Pagos o Reportes y analítica.
 3. Para probar los datos existentes, seleccionar Raíces Inmobiliaria.
 
-La opción **Todas las inmobiliarias** abre una vista global de consulta, con
-totales por empresa y listados de propiedades, clientes, propietarios, agentes,
-contratos, usuarios y sucursales. Cada fila muestra la inmobiliaria de origen.
-Incluye búsqueda, filtro de empresa, paginación, detalle de propiedades y
-exportación del resumen o de la página actual a CSV.
+La opción **Todas las inmobiliarias** es un alcance de consulta compartido por las
+pantallas existentes. No cambia la ruta: el catálogo muestra las propiedades de
+todas las empresas; Propiedades, Clientes, Propietarios, Agentes, Contratos, Usuarios
+y Sucursales muestran sus registros con la inmobiliaria de origen. Los filtros de
+cada pantalla se aplican sobre el conjunto seleccionado.
 
-Esta selección se conserva al recargar y no se envía como un ID de empresa. Las
-consultas globales están en `/admin/vista-global` y exigen el rol de
-superadministrador en el servidor. No modifican el alcance de las rutas operativas.
-Para editar o crear registros, usar **Abrir inmobiliaria** o seleccionar una empresa
-concreta en la barra superior. Las exportaciones indican si contienen un resumen
-completo o únicamente la página visible.
+La selección se conserva al recargar y viaja como `X-Tenant-Scope: all`, nunca como
+un ID de empresa. El servidor solo permite ese alcance al superadministrador.
+Las escrituras comerciales requieren una empresa concreta y se rechazan antes de
+modificar datos si se intenta realizarlas con alcance global. Las credenciales del
+usuario permanecen sin cambios. La vista `/admin/vista-global` sigue disponible
+como resumen opcional, sin redirigir el catálogo ni los reportes.
+
+Los reportes dinámicos incluyen automáticamente la columna `inmobiliaria` en la
+tabla y en PDF, Excel, CSV y HTML. Los reportes convencionales y generativos
+conservan los grupos separados por inmobiliaria, y la analítica identifica la
+empresa de cada predicción. El superadministrador puede consultar la plataforma
+completa; las cuentas de empresa conservan los permisos de su suscripción.
+El modo offline, el guardado de configuraciones y las operaciones de escritura
+requieren una inmobiliaria concreta para evitar asignaciones ambiguas.
 
 La selección viaja como `X-Tenant-ID`. El servidor valida la empresa y crea un
 contexto temporal por petición; no modifica el usuario ni sus credenciales. Una cuenta

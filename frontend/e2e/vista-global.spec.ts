@@ -27,6 +27,8 @@ test('todas las inmobiliarias consolida, filtra, exporta y vuelve a una empresa'
   });
   await page.goto('/dashboard/profile');
   await page.getByRole('combobox', { name: 'Inmobiliaria activa' }).selectOption({ label: 'Todas las inmobiliarias' });
+  await expect(page).toHaveURL(/dashboard\/profile/);
+  await page.getByRole('link', { name: 'Vista global por inmobiliaria', exact: true }).click();
   await expect(page).toHaveURL(/vista-global/);
   await expect(page.getByRole('heading', { name: 'Todas las inmobiliarias', exact: true })).toBeVisible();
   await expect(page.locator('tbody tr')).toHaveCount(2);
@@ -43,7 +45,7 @@ test('todas las inmobiliarias consolida, filtra, exporta y vuelve a una empresa'
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await expect(page.locator('table')).not.toContainText('Empresa Norte');
   await page.getByRole('link', { name: 'Catálogo', exact: true }).click();
-  await expect(page).toHaveURL(/vista-global\?entidad=propiedades/);
+  await expect(page).toHaveURL(/dashboard\/catalogo/);
   await page.getByRole('combobox', { name: 'Inmobiliaria activa' }).selectOption({ label: 'Empresa Norte' });
   await expect(page).toHaveURL(/dashboard\/catalogo/);
   await expect(page.getByRole('heading', { name: 'Descubre tu Próximo Hogar' })).toBeVisible();

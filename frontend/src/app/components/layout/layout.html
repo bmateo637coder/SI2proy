@@ -103,6 +103,7 @@
         </header>
 
         <div class="luxury-content-area animate-fade-in">
+            <div *ngIf="authService.allTenants()" class="api-notice" role="status">Mostrando todas las inmobiliarias en esta pantalla. Para crear o modificar registros, selecciona una empresa concreta.</div>
             <div *ngIf="userRole === 1 && selectedTenant === null" class="api-notice" role="status">
                 Selecciona una inmobiliaria en la barra superior para consultar sus datos, reportes y analítica.
             </div>

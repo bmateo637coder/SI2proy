@@ -23,7 +23,7 @@ export class Agentes implements OnInit {
   userRole: number = 0;
   empresaSeleccionada: number | null = null;
   
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, private auth: AuthService) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, public auth: AuthService) {
     this.agenteForm = this.fb.group({
       ci_usuario: ['', Validators.required]
     });
@@ -36,7 +36,7 @@ export class Agentes implements OnInit {
     if (this.userRole === 1) {
       this.empresaSeleccionada = this.auth.tenantId();
       this.loadEmpresas();
-      if (this.empresaSeleccionada) this.loadAgentes();
+      if (this.empresaSeleccionada || this.auth.allTenants()) this.loadAgentes();
     } else {
       this.loadAgentes();
     }

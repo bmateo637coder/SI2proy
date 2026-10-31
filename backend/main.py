@@ -9,6 +9,7 @@ import os
 from database.database import engine, get_db
 from database import models
 from auth import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user, SECRET_KEY, ALGORITHM, require_admin, require_staff
+from auth import is_all_tenants, scope_query, label_tenants, require_reader
 from jose import jwt, JWTError
 import schemas
 from logger import log_accion_segura, leer_bitacora_segura
@@ -108,7 +109,7 @@ def read_root():
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "version": app.version, "commit": os.getenv("RENDER_GIT_COMMIT", "local")[:12],
-            "features": ["saas", "offline", "analitica"]}
+            "features": ["saas", "offline", "analitica", "tenant_scope_all"]}
 
 # ==========================================
 # ENDPOINTS DE AUTENTICACIÓN (SPRINT 0)
@@ -396,14 +397,15 @@ def reset_admin_password(id_tenant: int, current_user: models.Usuario = Depends(
 @app.get("/gestion_usuarios/usuarios", response_model=list[schemas.UsuarioResponse])
 def get_usuarios(current_user: models.Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.id_rol == 1:
-        usuarios = db.query(models.Usuario).all()
+        query = db.query(models.Usuario)
+        usuarios = scope_query(query, current_user, models.Usuario.id_tenant).all() if is_all_tenants(current_user) or current_user.id_tenant else query.all()
     else:
         usuarios = db.query(models.Usuario).filter(models.Usuario.id_tenant == current_user.id_tenant).all()
 
     # Inject permissions dynamically
     for user in usuarios:
         user.permisos = [p.codigo for p in user.rol.permisos] if user.rol else []
-    return usuarios
+    return label_tenants(db, usuarios)
 
 @app.get("/gestion_usuarios/roles", response_model=list[schemas.RolResponse])
 def get_roles_gestion(current_user: models.Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -474,7 +476,7 @@ def get_catalogo_propiedades(
     if x_tenant_id is not None:
         saas.tenant_scope(current_user, x_tenant_id)
     tenant_id = x_tenant_id if current_user.id_rol == 1 else current_user.id_tenant
-    query = query.filter(models.Propiedad.id_tenant == tenant_id)
+    query = scope_query(query, current_user, models.Propiedad.id_tenant)
 
     if tipo_operacion:
         query = query.filter(models.Propiedad.tipo_operacion == tipo_operacion)
@@ -532,7 +534,7 @@ def get_catalogo_propiedades(
         ))
 
     propiedades = query.all()
-    return propiedades
+    return label_tenants(db, propiedades)
 
 # ==========================================
 # ENDPOINTS DE BACKUP Y RESTORE
@@ -657,10 +659,11 @@ def get_propiedades_admin(
         if id_tenant or current_user.id_tenant:
             query = query.filter(models.Propiedad.id_tenant == (id_tenant or current_user.id_tenant))
         else:
-            return []  # Sin filtro de empresa, devuelve vacío para que seleccione
+            if not is_all_tenants(current_user):
+                return []  # Requiere una selección explícita de empresa o de todas.
     else:
         query = query.filter(models.Propiedad.id_tenant == current_user.id_tenant)
-    return query.all()
+    return label_tenants(db, query.all())
 
 import uuid
 import json
@@ -789,7 +792,7 @@ def update_propiedad_estado(
 # ==========================================
 
 @app.websocket("/ws/propiedades")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, id_tenant: Optional[int] = None, scope: Optional[str] = None):
     from database.database import SessionLocal
     protocols = [p.strip() for p in websocket.headers.get("sec-websocket-protocol", "").split(",")]
     try:
@@ -797,8 +800,14 @@ async def websocket_endpoint(websocket: WebSocket):
             raise ValueError("Missing credentials")
         with SessionLocal() as db:
             user = get_current_user(protocols[1], db)
-            tenant_id = user.id_tenant
-            if not tenant_id:
+            if scope is not None and (scope != 'all' or user.id_rol != 1 or id_tenant is not None):
+                raise ValueError('Invalid scope')
+            if id_tenant is not None:
+                saas.tenant_scope(user, id_tenant)
+                if not db.get(models.Tenant, id_tenant):
+                    raise ValueError('Missing tenant')
+            tenant_id = id_tenant if id_tenant is not None else user.id_tenant
+            if not tenant_id and scope != 'all':
                 raise ValueError("Missing tenant")
     except Exception:
         await websocket.close(code=1008)
@@ -895,7 +904,7 @@ def get_propietarios(
             "correo": p.usuario.correo if p.usuario else None,
             "telefono": p.usuario.telefono if p.usuario else None,
         })
-    return resultado
+    return label_tenants(db, resultado)
 
 @app.post("/modulo_inmuebles/propietarios", response_model=schemas.PropietarioResponse, status_code=201)
 def create_propietario(
@@ -1016,7 +1025,7 @@ def get_clientes(
             "correo": c.usuario.correo if c.usuario else None,
             "telefono": c.usuario.telefono if c.usuario else None,
         })
-    return resultado
+    return label_tenants(db, resultado)
 
 @app.post("/modulo_inmuebles/clientes", response_model=schemas.ClienteResponse, status_code=201)
 def create_cliente(
@@ -1169,7 +1178,7 @@ def get_agentes(
             "nombre": a.usuario.nombre if a.usuario else None,
             "correo": a.usuario.correo if a.usuario else None,
         })
-    return resultado
+    return label_tenants(db, resultado)
 
 # Alias para compatibilidad con frontend
 @app.get("/modulo_inmuebles/propietarios_list", response_model=list[schemas.PropietarioResponse])
@@ -1191,7 +1200,7 @@ def generar_reporte_dinamico(
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    require_staff(current_user)
+    require_reader(current_user)
     from reportes_dinamicos import execute_report
     return execute_report(db, current_user, request)
 
@@ -1234,5 +1243,6 @@ def get_reportes_guardados(
     db: Session = Depends(get_db)
 ):
     """Obtiene los reportes guardados por el usuario."""
-    require_staff(current_user)
-    return db.query(models.ReporteGuardado).filter_by(ci_usuario=current_user.ci, id_tenant=current_user.id_tenant).order_by(models.ReporteGuardado.id_reporte.desc()).all()
+    require_reader(current_user)
+    query = db.query(models.ReporteGuardado).filter_by(ci_usuario=current_user.ci)
+    return scope_query(query, current_user, models.ReporteGuardado.id_tenant).order_by(models.ReporteGuardado.id_reporte.desc()).all()

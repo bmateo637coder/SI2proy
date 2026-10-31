@@ -124,10 +124,10 @@
       <!-- Panel Lateral (Guardados) -->
       <div class="sidebar-panel">
           <div class="luxury-card mb-4" style="background-color: var(--surface-hover);">
-            <h4 style="margin-top:0;">Guardar Estructura</h4>
+            <h4 style="margin-top:0;">Guardar Estructura</h4><p *ngIf="auth.allTenants()">Selecciona una inmobiliaria concreta para guardar una configuración. Puedes generar y exportar reportes de todas desde esta pantalla.</p>
             <p class="text-xs text-muted mb-3">Guarde estos filtros para no tener que volver a armarlos la próxima vez.</p>
             <input type="text" [(ngModel)]="nombreNuevoReporte" class="modern-input mb-2" placeholder="Nombre de este reporte">
-            <button class="btn-primary" style="width: 100%" (click)="guardarConfiguracion()">💾 Guardar Configuración</button>
+            <button class="btn-primary" style="width: 100%" [disabled]="auth.allTenants()" (click)="guardarConfiguracion()">💾 Guardar Configuración</button>
             <div *ngIf="mensaje" class="text-xs text-green-600 mt-2">{{mensaje}}</div>
           </div>
 

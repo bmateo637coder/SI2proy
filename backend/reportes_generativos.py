@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, model_validator, ConfigDict
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from auth import require_staff
+from auth import require_reader, is_all_tenants, ScopedUser
 from database import models as m
 from database.database import get_db
 from saas import branch_scope, require_ai, today
@@ -126,6 +126,25 @@ def interpret(text):
 
 
 def build_report(db, user, spec):
+    if is_all_tenants(user):
+        companies = db.query(m.Tenant).order_by(m.Tenant.nombre, m.Tenant.id_tenant).all()
+        if spec.id_sucursal is not None:
+            branch = db.get(m.Sucursal, spec.id_sucursal)
+            if not branch or not branch.activa:
+                raise HTTPException(403, "Sucursal no autorizada o inactiva.")
+            companies = [c for c in companies if c.id_tenant == branch.id_tenant]
+        combined = []
+        result = None
+        for company in companies:
+            result = build_report(db, ScopedUser(user, company.id_tenant), spec)
+            combined.extend([[company.nombre, *row] for row in result['filas']])
+        if result is None:
+            # Conserva esquema y validación incluso si la plataforma no tiene empresas.
+            result = build_report(db, ScopedUser(user, None), spec)
+        return {**result, 'id_tenant': None, 'alcance': 'todas',
+                'columnas': ['Inmobiliaria', *result['columnas']], 'filas': combined[:spec.limite],
+                'truncado': len(combined) > spec.limite,
+                'resumen': f"{len(combined[:spec.limite])} grupos encontrados en todas las inmobiliarias."}
     tid = user.id_tenant
     if spec.id_sucursal is not None:
         branch_scope(db, user, spec.id_sucursal)
@@ -211,7 +230,7 @@ def build_report(db, user, spec):
 
 
 @router.post("/reporte")
-def natural_report(body: NaturalRequest, db: Session = Depends(get_db), user=Depends(require_staff)):
+def natural_report(body: NaturalRequest, db: Session = Depends(get_db), user=Depends(require_reader)):
     require_ai(db, user)
     try:
         spec, provider = interpret(body.texto)
@@ -221,7 +240,8 @@ def natural_report(body: NaturalRequest, db: Session = Depends(get_db), user=Dep
 
 
 @router.post("/convencional")
-def conventional_report(spec: ReportSpec, db: Session = Depends(get_db), user=Depends(require_staff)):
+def conventional_report(spec: ReportSpec, db: Session = Depends(get_db), user=Depends(require_reader)):
     from saas import require_active
-    require_active(db, user.id_tenant)
+    if not is_all_tenants(user):
+        require_active(db, user.id_tenant)
     return {**build_report(db, user, spec), "interprete": "seleccion_manual"}

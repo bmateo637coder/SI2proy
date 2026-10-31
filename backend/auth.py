@@ -12,9 +12,10 @@ from database.models import Usuario, Tenant
 
 class ScopedUser:
     """Contexto de una petición; nunca modifica el usuario persistido ni su JWT."""
-    def __init__(self, user, tenant_id):
+    def __init__(self, user, tenant_id, all_tenants=False):
         self._user = user
         self.id_tenant = tenant_id
+        self.all_tenants = all_tenants
 
     def __getattr__(self, name):
         return getattr(self._user, name)
@@ -74,6 +75,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     if user.id_rol == 1 and user.id_tenant is not None:
         raise credentials_exception
+    if request and request.headers.get('X-Tenant-Scope'):
+        if request.headers['X-Tenant-Scope'] != 'all':
+            raise HTTPException(422, 'Alcance de inmobiliarias inválido.')
+        if user.id_rol != 1:
+            raise HTTPException(403, 'Solo el superadministrador puede consultar todas las inmobiliarias.')
+        if request.headers.get('X-Tenant-ID'):
+            raise HTTPException(422, 'Seleccione todas las inmobiliarias o una empresa concreta.')
+        read_posts = {'/reportes/generar', '/api/analitica/reporte', '/api/analitica/convencional',
+                      '/api/ia/probar', '/api/ia/reporte-voz', '/api/ia/chat'}
+        business = ('/modulo_inmuebles', '/gestion_contractual', '/api/offline', '/api/saas',
+                    '/upload', '/reportes/guardados', '/gestion_usuarios/usuarios', '/api/ia/generar-descripcion')
+        if request.method not in {'GET', 'HEAD', 'OPTIONS'} and request.url.path not in read_posts and request.url.path.startswith(business):
+            raise HTTPException(403, 'Seleccione una inmobiliaria concreta para crear o modificar registros.')
+        if not request.url.path.startswith('/users/me'):
+            user = ScopedUser(user, None, all_tenants=True)
     if request and request.headers.get("X-Tenant-ID"):
         try:
             tid = int(request.headers["X-Tenant-ID"])
@@ -105,3 +121,26 @@ def require_admin(user=Depends(get_current_user)):
     if user.id_rol not in (1, 2):
         raise HTTPException(403, "Solo administradores.")
     return user
+
+
+def is_all_tenants(user):
+    return user.id_rol == 1 and bool(getattr(user, 'all_tenants', False))
+
+
+def require_reader(user=Depends(get_current_user)):
+    return user if is_all_tenants(user) else require_staff(user)
+
+
+def scope_query(query, user, tenant_column):
+    return query.filter(tenant_column.is_not(None)) if is_all_tenants(user) else query.filter(tenant_column == user.id_tenant)
+
+
+def label_tenants(db, rows):
+    ids = {row.get('id_tenant') if isinstance(row, dict) else row.id_tenant for row in rows}
+    names = dict(db.query(Tenant.id_tenant, Tenant.nombre).filter(Tenant.id_tenant.in_(ids)).all()) if ids else {}
+    for row in rows:
+        if isinstance(row, dict):
+            row['inmobiliaria'] = names.get(row.get('id_tenant'))
+        else:
+            row.inmobiliaria = names.get(row.id_tenant)
+    return rows

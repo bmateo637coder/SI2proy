@@ -28,6 +28,7 @@ class UsuarioLogin(BaseModel):
     id_tenant: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):
+    inmobiliaria: Optional[str] = None
     permisos: list[str] = [] # Se llenará dinámicamente con los códigos de permiso
     es_agente: bool = False
 
@@ -106,6 +107,7 @@ class CaracteristicaResponse(BaseModel):
         from_attributes = True
 
 class PropiedadCatalogoResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_propiedad: int
     id_tenant: int
     titulo: str
@@ -145,6 +147,7 @@ class PropiedadEstadoUpdate(BaseModel):
     estado: str  # 'Disponible', 'Reservada', 'Vendida', 'Alquilada'
 
 class PropiedadAdminResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_propiedad: int
     id_tenant: int
     id_propietario: int
@@ -170,6 +173,7 @@ class PersonaUpdate(BaseModel):
     telefono: Optional[str] = None
 
 class PropietarioResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_propietario: int
     ci_usuario: str
     id_tenant: int
@@ -181,6 +185,7 @@ class PropietarioResponse(BaseModel):
         from_attributes = True
 
 class AgenteResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_agente: int
     ci_usuario: str
     id_tenant: int
@@ -194,6 +199,7 @@ class ClienteCreate(BaseModel):
     ci_usuario: str
 
 class ClienteResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_cliente: int
     ci_usuario: str
     id_tenant: int

@@ -20,7 +20,7 @@
   <!-- ══════════════════════════════════════════════ -->
   <!-- SUPER ADMIN: selector de empresa              -->
   <!-- ══════════════════════════════════════════════ -->
-  <div *ngIf="userRole === 1" class="luxury-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fefce8, #fef9c3); border: 1px solid #fde68a;">
+  <div *ngIf="userRole === 1 && !auth.allTenants()" class="luxury-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fefce8, #fef9c3); border: 1px solid #fde68a;">
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
       <div style="flex-shrink: 0;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2">
@@ -44,7 +44,7 @@
   </div>
 
   <!-- Estado vacío super admin sin empresa -->
-  <div *ngIf="userRole === 1 && !empresaSeleccionada" style="text-align:center; padding: 4rem 2rem; color: #94a3b8;">
+  <div *ngIf="userRole === 1 && !empresaSeleccionada && !auth.allTenants()" style="text-align:center; padding: 4rem 2rem; color: #94a3b8;">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin-bottom:1rem;">
       <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
     </svg>
@@ -54,7 +54,7 @@
   <!-- ══════════════════════════════════════════════ -->
   <!-- TABLA DE PROPIEDADES                          -->
   <!-- ══════════════════════════════════════════════ -->
-  <div *ngIf="userRole !== 1 || empresaSeleccionada" class="luxury-card" style="padding: 0; overflow: hidden;">
+  <div *ngIf="userRole !== 1 || empresaSeleccionada || auth.allTenants()" class="luxury-card" style="padding: 0; overflow: hidden;">
     <div style="padding: 1.5rem 1.5rem 0; display: flex; justify-content: space-between; align-items: center;">
       <h3 style="color: var(--secondary-color); font-weight: 700; margin: 0;">
         Propiedades
@@ -75,7 +75,7 @@
     <div *ngIf="propiedades.length > 0" style="overflow-x: auto;">
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr style="border-bottom: 2px solid var(--border-light); background: #fafafa;">
+          <tr style="border-bottom: 2px solid var(--border-light); background: #fafafa;"><th *ngIf="auth.allTenants()" style="padding:1rem">Inmobiliaria</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">ID</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Título</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Dirección</th>
@@ -88,7 +88,7 @@
         <tbody>
           <tr *ngFor="let prop of propiedades"
             style="border-bottom: 1px solid var(--border-light); transition: background 0.15s;"
-            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'"><td *ngIf="auth.allTenants()" style="padding:1rem">{{ prop.inmobiliaria }}</td>
             <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">#{{ prop.id_propiedad }}</td>
             <td style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary-color);">{{ prop.titulo }}</td>
             <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.875rem;">{{ prop.direccion }}</td>

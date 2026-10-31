@@ -16,6 +16,8 @@ export class Catalogo implements OnInit, OnDestroy {
   recomendados: any[] = [];
   private apiBase = environment.apiUrl;
   private ws: WebSocket | null = null;
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private destroyed = false;
 
   filtroOperacion: string = '';
   filtroPrecioMin: number | null = null;
@@ -56,7 +58,7 @@ export class Catalogo implements OnInit, OnDestroy {
     return this.apiBase + url;
   }
 
-  constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, public authService: AuthService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.aplicarFiltros();
@@ -86,7 +88,9 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   connectWebSocket() {
-    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades`, ['raices', localStorage.getItem('token') || 'missing']);
+    if (this.destroyed || (!this.authService.tenantId() && !this.authService.allTenants())) return;
+    const scope = this.authService.allTenants() ? 'scope=all' : `id_tenant=${this.authService.tenantId()}`;
+    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades?${scope}`, ['raices', localStorage.getItem('token') || 'missing']);
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -107,13 +111,14 @@ export class Catalogo implements OnInit, OnDestroy {
         console.error("Error parsing WS message", e);
       }
     };
-    this.ws.onclose = () => {
-      console.log('WebSocket connection closed, reconnecting in 5s...');
-      setTimeout(() => this.connectWebSocket(), 5000);
+    this.ws.onclose = event => {
+      if (!this.destroyed && event.code !== 1008) this.reconnectTimer = setTimeout(() => this.connectWebSocket(), 5000);
     };
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
+    clearTimeout(this.reconnectTimer);
     if (this.ws) {
       this.ws.onclose = null; // Prevent auto-reconnect
       this.ws.close();

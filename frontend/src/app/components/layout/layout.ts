@@ -32,7 +32,7 @@ export class Layout {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     this.tenantNombre = user.id_tenant ? (user.tenant_nombre || `Inmobiliaria #${user.id_tenant}`) : 'Plataforma SaaS';
     this.selectedTenant = user.id_rol === 1 ? authService.selectedTenant() : authService.tenantId();
-    this.canOperate = !!this.selectedTenant && (user.id_rol === 1 || user.id_rol === 2 || user.es_agente || user.permisos?.includes('API:OPERACIONES'));
+    this.canOperate = (!!this.selectedTenant || authService.allTenants()) && (user.id_rol === 1 || user.id_rol === 2 || user.es_agente || user.permisos?.includes('API:OPERACIONES'));
     this.userRole = userRole ? parseInt(userRole, 10) : 0;
     this.inmuebles.cargar();
     if (this.userRole === 1) {
@@ -61,11 +61,6 @@ export class Layout {
 
   cambiarEmpresa() {
     this.authService.selectTenant(this.selectedTenant);
-    if (this.selectedTenant === 0 || this.router.url.includes('/vista-global')) {
-      this.router.navigate([this.selectedTenant === 0 ? '/dashboard/vista-global' : '/dashboard/catalogo'])
-        .then(() => window.location.reload());
-      return;
-    }
     // Reinicia los formularios y cachés de la empresa anterior, conservando la cola offline.
     window.location.reload();
   }

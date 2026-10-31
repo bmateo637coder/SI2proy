@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 
 import { RouterModule } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -18,7 +19,7 @@ export class Clientes implements OnInit {
   mensajeError: string = '';
   mensajeExito: string = '';
   
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, public auth: AuthService) {
     this.clienteForm = this.fb.group({
       ci_usuario: ['', Validators.required]
     });

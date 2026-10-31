@@ -1,4 +1,5 @@
-<section class="p2-page">
+<p *ngIf="auth.allTenants()" class="notice">Para descargar datos y registrar operaciones sin conexión, selecciona una inmobiliaria concreta. El catálogo y los reportes permiten consultar todas las empresas.</p>
+<ng-container *ngIf="!auth.allTenants()"><section class="p2-page">
   <header><div><h1>Operaciones sin conexión</h1><p>Reservas y ventas de contado desde tu dispositivo.</p></div><span class="badge">{{ service.online() ? 'Con conexión' : 'Sin conexión' }}</span></header>
   <div class="actions"><button (click)="download()" [disabled]="busy() || !service.online()">Descargar catálogo y clientes</button><button (click)="sync()" [disabled]="busy() || service.syncing() || !service.online()">{{ service.syncing() ? 'Sincronizando…' : 'Sincronizar pendientes' }}</button><button (click)="reload()">Actualizar estados</button></div>
   <p class="notice" role="status" *ngIf="message()">{{ message() }}</p>
@@ -14,3 +15,5 @@
   <div class="table-scroll"><table><thead><tr><th>Registro</th><th>Operación</th><th>Propiedad</th><th>Total</th><th>Estado</th><th>Resultado</th></tr></thead><tbody><tr *ngFor="let o of operations()"><td>{{ o.payload.registrado_en | date:'short' }}<small>{{ o.payload.uuid }}</small></td><td>{{ o.payload.tipo }}</td><td>#{{ o.payload.id_propiedad }}</td><td>{{ o.payload.total | currency:'USD' }}</td><td><span class="badge">{{ o.estado }}</span></td><td>{{ o.motivo || 'Guardada; aún sin confirmación.' }}</td></tr><tr *ngIf="!operations().length"><td colspan="6">No hay operaciones locales para esta cuenta.</td></tr></tbody></table></div>
   <div *ngFor="let o of operations()"><button *ngIf="o.payload.tipo === 'reserva' && o.estado === 'confirmada'" (click)="cancel(o)" [disabled]="busy() || !service.online()">Cancelar reserva de propiedad #{{ o.payload.id_propiedad }} (sujeta al plazo)</button></div>
 </section>
+
+</ng-container>

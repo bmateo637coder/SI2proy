@@ -14,6 +14,9 @@ export const apiInterceptor: HttpInterceptorFn = (request, next) => {
   if (token && !request.url.endsWith('/login')) {
     request = request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
   }
+  if (auth.allTenants() && !request.url.includes('/users/me') && !request.url.endsWith('/login')) {
+    request = request.clone({ headers: request.headers.delete('X-Tenant-ID').set('X-Tenant-Scope', 'all') });
+  }
   if (tid && !request.url.endsWith('/users/me')) {
     request = request.clone({ setHeaders: { 'X-Tenant-ID': String(tid) } });
     // Compatibilidad con los listados que reciben la empresa como query parameter.

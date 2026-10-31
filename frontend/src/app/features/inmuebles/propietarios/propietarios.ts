@@ -32,7 +32,7 @@ export class Propietarios implements OnInit {
   mostrarModalEditar: boolean = false;
   propietarioEditando: any = null;
 
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, private auth: AuthService) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, public auth: AuthService) {
     this.propietarioForm = this.fb.group({
       ci_usuario: ['', Validators.required]
     });
@@ -48,7 +48,7 @@ export class Propietarios implements OnInit {
     if (this.userRole === 1) {
       this.empresaSeleccionada = this.auth.tenantId();
       this.loadEmpresas();
-      if (this.empresaSeleccionada) this.loadPropietarios();
+      if (this.empresaSeleccionada || this.auth.allTenants()) this.loadPropietarios();
     } else {
       this.loadPropietarios();
     }

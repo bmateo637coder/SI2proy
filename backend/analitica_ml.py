@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, selectinload
 
-from auth import require_staff
+from auth import require_reader, is_all_tenants, scope_query, label_tenants
 from database import models as m
 from database.database import get_db
 from saas import require_ai
@@ -71,11 +71,12 @@ def property_features(prop):
 
 
 @router.get("/dashboard")
-def dashboard(db: Session = Depends(get_db), user=Depends(require_staff)):
+def dashboard(db: Session = Depends(get_db), user=Depends(require_reader)):
     require_ai(db, user)
     reg, scaler, cluster, metrics, _ = train_models()
-    props = db.query(m.Propiedad).filter_by(id_tenant=user.id_tenant).options(
+    props = scope_query(db.query(m.Propiedad), user, m.Propiedad.id_tenant).options(
         selectinload(m.Propiedad.caracteristicas)).order_by(m.Propiedad.id_propiedad).limit(500).all()
+    label_tenants(db, props)
     rows = []
     valid = [(prop, features) for prop in props if (features := property_features(prop)) is not None]
     omitted = len(props) - len(valid)
@@ -84,7 +85,7 @@ def dashboard(db: Session = Depends(get_db), user=Depends(require_staff)):
     groups = cluster.predict(scaler.transform(features)) if valid else []
     for (prop, _), prediction, group in zip(valid, predictions, groups):
         predicted = float(prediction)
-        rows.append({"id_propiedad": prop.id_propiedad, "titulo": prop.titulo, "precio_publicado": float(prop.precio),
+        rows.append({"id_tenant": prop.id_tenant, "inmobiliaria": prop.inmobiliaria, "id_propiedad": prop.id_propiedad, "titulo": prop.titulo, "precio_publicado": float(prop.precio),
             "precio_estimado_sintetico": round(predicted, 2),
             "grupo": int(group),
             "diferencia_porcentaje": round((float(prop.precio) - predicted) / predicted * 100, 1)})

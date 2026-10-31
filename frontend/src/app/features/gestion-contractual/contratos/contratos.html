@@ -8,7 +8,7 @@
       <button (click)="toggleChat()" class="btn-secondary">
         {{ chatAbierto ? 'Cerrar Asistente IA' : 'Asistente IA' }}
       </button>
-      <button (click)="abrirFormulario()" class="btn-primary">+ Nuevo Contrato</button>
+      <button *ngIf="!authService.allTenants()" (click)="abrirFormulario()" class="btn-primary">+ Nuevo Contrato</button>
     </div>
   </header>
 
@@ -88,7 +88,7 @@
     <div style="overflow-x: auto;">
       <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
         <thead>
-          <tr style="text-align: left; color: var(--secondary-color); border-bottom: 2px solid var(--border-light);">
+          <tr style="text-align: left; color: var(--secondary-color); border-bottom: 2px solid var(--border-light);"><th *ngIf="authService.allTenants()" style="padding:.75rem">Inmobiliaria</th>
             <th style="padding: 0.75rem;">#</th>
             <th style="padding: 0.75rem;">Cliente</th>
             <th style="padding: 0.75rem;">Propiedad</th>
@@ -101,7 +101,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let c of filtrarContratos()" style="border-bottom: 1px solid var(--border-light);">
+          <tr *ngFor="let c of filtrarContratos()" style="border-bottom: 1px solid var(--border-light);"><td *ngIf="authService.allTenants()" style="padding:.75rem">{{ c.inmobiliaria }}</td>
             <td style="padding: 0.75rem;">{{ c.id_contrato }}</td>
             <td style="padding: 0.75rem;">{{ c.cliente }}</td>
             <td style="padding: 0.75rem;">{{ c.propiedad }}</td>
@@ -118,8 +118,8 @@
             </td>
             <td style="padding: 0.75rem;">
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button (click)="verDetalle(c)" class="btn-secondary" style="padding: 0.35rem 0.9rem; font-size: 0.8rem;">Detalle / Pagar</button>
-                <button *ngIf="esSuperAdmin() && c.pagos.length === 0" (click)="eliminarContrato(c)" class="btn-danger" style="padding: 0.35rem 0.9rem; font-size: 0.8rem;">Eliminar</button>
+                <button (click)="verDetalle(c)" class="btn-secondary" style="padding: 0.35rem 0.9rem; font-size: 0.8rem;">{{ authService.allTenants() ? 'Detalle' : 'Detalle / Pagar' }}</button>
+                <button *ngIf="esSuperAdmin() && !authService.allTenants() && c.pagos.length === 0" (click)="eliminarContrato(c)" class="btn-danger" style="padding: 0.35rem 0.9rem; font-size: 0.8rem;">Eliminar</button>
               </div>
             </td>
           </tr>

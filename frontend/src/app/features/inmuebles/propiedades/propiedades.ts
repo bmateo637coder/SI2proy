@@ -35,7 +35,7 @@ export class Propiedades implements OnInit {
   // Modal crear
   mostrarModalCrear: boolean = false;
 
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, private auth: AuthService) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, public auth: AuthService) {
     const formDef = {
       id_propietario: ['', Validators.required],
       id_agente: ['', Validators.required],
@@ -60,7 +60,7 @@ export class Propiedades implements OnInit {
     if (this.userRole === 1) {
       this.empresaSeleccionada = this.auth.tenantId();
       this.loadEmpresas();
-      if (this.empresaSeleccionada) this.onEmpresaChange(false);
+      if (this.empresaSeleccionada || this.auth.allTenants()) this.onEmpresaChange(false);
     } else {
       this.loadPropiedades();
       this.loadPropietarios();
@@ -85,7 +85,7 @@ export class Propiedades implements OnInit {
       window.location.reload();
       return;
     }
-    if (this.empresaSeleccionada) {
+    if (this.empresaSeleccionada || this.auth.allTenants()) {
       this.loadPropiedades();
       this.loadPropietarios();
       this.loadAgentes();

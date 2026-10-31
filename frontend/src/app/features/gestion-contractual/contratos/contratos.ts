@@ -40,7 +40,7 @@ export class Contratos implements OnInit {
   constructor(
     private http: HttpClient,
     private fb: FormBuilder,
-    private authService: AuthService,
+    public authService: AuthService,
     private inmuebles: InmueblesService,
     private cdr: ChangeDetectorRef,
   ) {

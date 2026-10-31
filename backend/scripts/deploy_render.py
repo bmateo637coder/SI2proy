@@ -93,7 +93,7 @@ def verify_health(url, commit=None, attempts=12):
         try:
             with urlopen(url + "/api/health", timeout=45) as response:
                 health = json.load(response)
-            valid = health.get("version") == "2.0.0" and {"saas", "offline", "analitica"}.issubset(health.get("features", []))
+            valid = health.get("version") == "2.0.0" and {"saas", "offline", "analitica", "tenant_scope_all"}.issubset(health.get("features", []))
             deployed = health.get("commit", "")
             if valid and (not commit or (deployed and commit.startswith(deployed))):
                 with urlopen(url + "/openapi.json", timeout=45) as response:

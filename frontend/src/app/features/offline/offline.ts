@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../core/services/auth.service';
 import { OfflineService, LocalOperation } from '../../core/services/offline.service';
 
 @Component({
@@ -11,13 +12,14 @@ import { OfflineService, LocalOperation } from '../../core/services/offline.serv
 })
 export class OfflinePage implements OnInit {
   readonly service = inject(OfflineService);
+  readonly auth = inject(AuthService);
   readonly data = signal<any>(null);
   readonly operations = signal<LocalOperation[]>([]);
   readonly message = signal('');
   readonly busy = signal(false);
   clientId = 0;
   branchId = 0;
-  async ngOnInit() { await this.reload(); }
+  async ngOnInit() { if (!this.auth.allTenants()) await this.reload(); }
   async reload() {
     try {
       this.data.set(await this.service.snapshot());

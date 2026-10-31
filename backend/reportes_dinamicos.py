@@ -1,5 +1,6 @@
 """Configuración compartida por reportes manuales y Gemini; sin SQL generado."""
 import math
+from auth import is_all_tenants, scope_query, label_tenants
 from fastapi import HTTPException
 from database import models as m
 
@@ -42,9 +43,9 @@ def validate_config(spec):
 def execute_report(db, user, spec):
     validate_config(spec)
     model = m.Propiedad if spec.entidad == 'propiedades' else m.Usuario
-    query = db.query(model).filter(model.id_tenant == user.id_tenant)
+    query = scope_query(db.query(model), user, model.id_tenant)
     if spec.entidad == 'clientes':
-        query = query.join(m.Cliente, m.Cliente.ci_usuario == m.Usuario.ci).filter(m.Cliente.id_tenant == user.id_tenant)
+        query = query.join(m.Cliente, (m.Cliente.ci_usuario == m.Usuario.ci) & (m.Cliente.id_tenant == m.Usuario.id_tenant))
     for f in spec.filtros:
         attr = getattr(model, f.columna)
         if f.operador == 'like':
@@ -57,5 +58,8 @@ def execute_report(db, user, spec):
         query = query.order_by(attr.desc() if spec.orden.direccion == 'desc' else attr.asc())
     query = query.order_by(model.id_propiedad if model == m.Propiedad else model.ci)
     rows = query.limit(spec.limite + 1).all()
-    return {'data': [{c: getattr(row, c) for c in spec.columnas} for row in rows[:spec.limite]],
+    data = [{**{c: getattr(row, c) for c in spec.columnas}, **({'id_tenant': row.id_tenant} if is_all_tenants(user) else {})} for row in rows[:spec.limite]]
+    if is_all_tenants(user):
+        label_tenants(db, data)
+    return {'data': data, 'columnas': (['inmobiliaria'] if is_all_tenants(user) else []) + spec.columnas,
             'id_tenant': user.id_tenant, 'limite': spec.limite, 'truncado': len(rows) > spec.limite}

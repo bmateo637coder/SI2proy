@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -66,7 +67,7 @@ export class GeneradorReportes implements OnInit {
   empresas: any[] = [];
   empresaFiltro: string = ''; // '' = Todas
 
-  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef, public auth: AuthService) {}
 
   grabarVoz() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -220,7 +221,7 @@ export class GeneradorReportes implements OnInit {
         next: (res: any) => {
           this.resultados = res.data;
           this.mensaje = res.truncado ? `Se muestran los primeros ${res.limite} registros. Ajusta los filtros para reducir el resultado.` : this.resultados.length ? `${this.resultados.length} registros encontrados.` : 'No hay registros que coincidan con los filtros.';
-          this.columnasResultados = [...this.columnasSeleccionadas];
+          this.columnasResultados = res.columnas || [...this.columnasSeleccionadas];
           this.cdr.detectChanges();
         },
         error: err => { this.mensaje = typeof err.error?.detail === 'string' ? err.error.detail : 'No se pudo completar la solicitud.'; this.cdr.detectChanges(); }

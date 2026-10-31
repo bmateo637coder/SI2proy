@@ -58,7 +58,7 @@ export class AnaliticaPage {
   async excel() {
     const XLSX = await import('xlsx');
     const r = this.report();
-    const ws = XLSX.utils.aoa_to_sheet([[r.titulo], [`Empresa ${r.id_tenant} · ${r.generado_en}`], [JSON.stringify(r.filtros)], [], r.columnas, ...r.filas]);
+    const ws = XLSX.utils.aoa_to_sheet([[r.titulo], [`${r.alcance === 'todas' ? 'Todas las inmobiliarias' : 'Empresa ' + r.id_tenant} · ${r.generado_en}`], [JSON.stringify(r.filtros)], [], r.columnas, ...r.filas]);
     // Celdas explícitas de texto: no permitir fórmulas provenientes de nombres.
     const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, ws, 'Reporte');
     XLSX.writeFile(book, 'reporte-raices.xlsx');
@@ -68,7 +68,7 @@ export class AnaliticaPage {
     const { default: autoTable } = await import('jspdf-autotable');
     const r = this.report(); const doc = new jsPDF();
     doc.setFontSize(16); doc.text(r.titulo, 14, 18);
-    doc.setFontSize(9); doc.text(`Empresa ${r.id_tenant} | ${r.generado_en}`, 14, 26);
+    doc.setFontSize(9); doc.text(`${r.alcance === 'todas' ? 'Todas las inmobiliarias' : 'Empresa ' + r.id_tenant} | ${r.generado_en}`, 14, 26);
     const filters = doc.splitTextToSize(JSON.stringify(r.filtros), 180); doc.text(filters, 14, 33);
     autoTable(doc, { head: [r.columnas], body: r.filas, startY: 40 + filters.length * 4 });
     doc.save('reporte-raices.pdf');
