@@ -33,6 +33,7 @@ void main() {
       await storage.clear();
       final dir = await Directory.systemTemp.createTemp('raices-integration-');
       final database = '${dir.path}/offline.db';
+      final vertical = find.byWidgetPredicate((widget) => widget is Scrollable && widget.axisDirection == AxisDirection.down);
       late AuthProvider auth;
       late OfflineService offline;
       Future<InmobiliariaApp> app({bool restore = false}) async {
@@ -77,19 +78,19 @@ void main() {
       expect(find.text('2 propiedades'), findsOneWidget);
       await tester.tap(find.text('Reportes').last);
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('Generar reporte'), 200, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(find.text('Generar reporte'), 200, scrollable: vertical.first);
       await tester.tap(find.text('Generar reporte'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('2 registros'), 150, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(find.text('2 registros'), 150, scrollable: vertical.first);
       expect(find.text('2 registros'), findsOneWidget);
       await tester.tap(find.text('Catálogo').last);
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('IA y analítica'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('Generar reporte convencional'), 150, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(find.text('Generar reporte convencional'), 150, scrollable: vertical.first);
       await tester.tap(find.text('Generar reporte convencional'));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('2 registros'), 150, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(find.text('2 registros'), 150, scrollable: vertical.first);
       expect(find.text('2 registros'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -108,7 +109,7 @@ void main() {
       await tester.tap(find.text('Cliente de prueba').last);
       await tester.pumpAndSettle();
       server.offline = true;
-      await tester.scrollUntilVisible(find.text('Reservar'), 150, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(find.text('Reservar'), 150, scrollable: vertical.first);
       await tester.tap(find.text('Reservar'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Guardar en dispositivo'));
