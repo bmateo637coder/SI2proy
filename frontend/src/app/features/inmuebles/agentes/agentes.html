@@ -47,7 +47,7 @@
           <label class="block text-sm mb-2 text-muted">CI del Usuario</label>
           <input type="text" formControlName="ci_usuario" class="modern-input" placeholder="Ingrese el CI del usuario existente">
         </div>
-        <button type="submit" class="btn-primary" [disabled]="!agenteForm.valid">Asignar Rol de Agente</button>
+        <button type="submit" class="btn-primary" [disabled]="!agenteForm.valid">Registrar agente</button>
       </form>
       
       <div style="margin-top: 2rem; padding: 1rem; border-radius: 0.5rem; background-color: #f8fafc; border: 1px solid #e2e8f0; text-align: center;">
@@ -65,7 +65,7 @@
         <div *ngFor="let ag of agentes" class="luxury-card" style="display: flex; justify-content: space-between; align-items: center;">
           <div>
             <p class="font-bold">{{ag.nombre}}</p>
-            <p class="text-muted text-sm">CI: {{ag.ci}}</p>
+            <p class="text-muted text-sm">CI: {{ag.ci_usuario}}</p>
           </div>
           <button (click)="deleteAgente(ag.id_agente)" class="btn-secondary" style="border-color: #ef4444; color: #ef4444;">
             Eliminar
