@@ -71,7 +71,7 @@ class AuthProvider extends ChangeNotifier {
                 .firstOrNull ??
             'Inmobiliaria ${selectedTenant ?? _user?.idTenant ?? "sin seleccionar"}';
 
-  Future<void> loadCompanies() async {
+  Future<void> loadCompanies({bool notify = true}) async {
     if (!isSuperAdmin) return;
     companyError = null;
     try {
@@ -80,7 +80,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {
       companyError = 'No se pudo actualizar la lista. Se muestran las inmobiliarias guardadas.';
     }
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
   Future<void> _restoreScope() async {
@@ -191,7 +191,7 @@ class AuthProvider extends ChangeNotifier {
       }
       await _restoreScope();
       localSession = false;
-      if (isSuperAdmin) await loadCompanies();
+      if (isSuperAdmin) await loadCompanies(notify: false);
       needsOnlineLogin = false;
       await _offlineIdentity.remember(
         email,

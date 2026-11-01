@@ -210,7 +210,7 @@ class ReplicaController with WidgetsBindingObserver {
     receiveTimeout: const Duration(seconds: 30),
   );
   Future<void> refresh({bool force = false}) async {
-    if (busy || disposed || auth.user == null) return;
+    if (busy || disposed || auth.user == null || auth.isLoading) return;
     busy = true;
     final identity = auth.user!;
     final key = store.account!;

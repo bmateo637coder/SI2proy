@@ -27,7 +27,16 @@ void main() {
     dio.interceptors.add(AuthInterceptor(storage, auth.signOut));
   });
   test('Super SaaS cambia todas/una, identidad no recibe contexto y conserva alcance sin red', () async {
+    var publishedBeforeReady = false;
+    auth.addListener(() {
+      if (auth.isLoading && auth.isAuthenticated) publishedBeforeReady = true;
+    });
     expect(await auth.signIn('saas@example.test', 'test-password'), isTrue);
+    expect(
+      publishedBeforeReady,
+      isFalse,
+      reason: 'El router solo debe ver la identidad después de preparar credenciales locales y reiniciar proveedores.',
+    );
     expect(auth.allTenants, isTrue);
     expect(auth.canWrite, isFalse);
     final reports = ReportesService(dio);
