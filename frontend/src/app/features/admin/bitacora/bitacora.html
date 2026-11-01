@@ -5,13 +5,15 @@
     <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
       <div style="flex: 1; min-width: 300px;">
         <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--secondary-color); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;">Llave de Desarrollador</label>
-        <input type="password" [(ngModel)]="devKey" class="modern-input" placeholder="Ingrese la llave secreta para desencriptar">
+        <input type="password" [(ngModel)]="devKey" (keyup.enter)="cargarBitacora()" class="modern-input" placeholder="Ingrese la llave secreta para desencriptar" aria-label="Llave de desarrollador">
       </div>
       <button (click)="cargarBitacora()" class="btn-primary" [disabled]="loading" style="height: 48px; padding: 0 2rem;">
         {{ loading ? 'Cargando...' : 'Desencriptar y Ver' }}
       </button>
     </div>
-    <p *ngIf="error" style="color: red; margin-top: 1rem; font-weight: 600;">{{error}}</p>
+    <p *ngIf="error" role="alert" style="color: red; margin-top: 1rem; font-weight: 600;">{{error}}</p>
+    <p *ngIf="loading" role="status">Consultando la bitácora. El servidor puede tardar en iniciar.</p>
+    <p *ngIf="loaded && !loading && registros.length === 0" role="status">No hay registros en la bitácora de esta instancia del servidor.</p>
   </div>
 
   <div class="luxury-card" *ngIf="registros.length > 0" style="padding: 0;">
@@ -29,7 +31,7 @@
           <tr *ngFor="let reg of registros" style="border-bottom: 1px solid var(--border-light); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f9f9f9'" onmouseout="this.style.backgroundColor='transparent'">
             <td style="padding: 1rem 1.5rem;">{{reg.fecha_hora}}</td>
             <td style="padding: 1rem 1.5rem; font-weight: 500; color: var(--secondary-color);">{{reg.usuario}}</td>
-            <td style="padding: 1rem 1.5rem; font-family: monospace; font-size: 0.9rem; color: var(--primary-color);">{{reg.accion}}</td>
+            <td style="padding: 1rem 1.5rem; font-family: monospace; font-size: 0.9rem; color: var(--primary-color);">{{reg.error || reg.accion}}</td>
             <td style="padding: 1rem 1.5rem; color: var(--text-muted);">{{reg.ip}}</td>
           </tr>
         </tbody>
