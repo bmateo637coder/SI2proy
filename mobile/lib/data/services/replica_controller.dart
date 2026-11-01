@@ -151,6 +151,7 @@ class ReplicaController with WidgetsBindingObserver {
   bool busy = false, disposed = false;
   bool imagesBusy = false;
   DateTime? lastRefresh;
+  String? activeAccount;
   final images = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 5),
@@ -158,6 +159,7 @@ class ReplicaController with WidgetsBindingObserver {
     ),
   );
   void start() {
+    activeAccount = store.account;
     store.legacyOperations = () async {
       final identity = auth.user;
       if (identity == null) return [];
@@ -182,6 +184,18 @@ class ReplicaController with WidgetsBindingObserver {
   }
 
   void changed() {
+    if (activeAccount != store.account) {
+      activeAccount = store.account;
+      lastRefresh = null;
+      store.pending = 0;
+      store.conflicts = 0;
+      store.lastDownload = null;
+      store.downloading = false;
+      store.syncing = false;
+      store.imagesStatus = null;
+      store.message = null;
+      store.emit();
+    }
     if (auth.localSession) store.online = false;
     if (!disposed) scheduleMicrotask(() => refresh(force: true));
   }
@@ -380,6 +394,11 @@ class ReplicaController with WidgetsBindingObserver {
         store.syncing = false;
         await store.counters();
         store.emit();
+      } else if (!disposed && auth.user != null) {
+        store.downloading = false;
+        store.syncing = false;
+        lastRefresh = null;
+        scheduleMicrotask(() => refresh(force: true));
       }
     }
   }
