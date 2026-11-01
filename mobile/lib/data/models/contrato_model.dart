@@ -14,12 +14,12 @@ class PagoModel {
   final String numeroRecibo;
 
   factory PagoModel.fromJson(Map<String, dynamic> json) => PagoModel(
-        idPago: (json['id_pago'] as num?)?.toInt() ?? 0,
-        monto: (json['monto'] as num?)?.toDouble() ?? 0.0,
-        fechaPago: json['fecha_pago'] as String?,
-        metodoPago: json['metodo_pago'] as String? ?? '',
-        numeroRecibo: json['numero_recibo'] as String? ?? '',
-      );
+    idPago: (json['id_pago'] as num?)?.toInt() ?? 0,
+    monto: (json['monto'] as num?)?.toDouble() ?? 0.0,
+    fechaPago: json['fecha_pago'] as String?,
+    metodoPago: json['metodo_pago'] as String? ?? '',
+    numeroRecibo: json['numero_recibo'] as String? ?? '',
+  );
 }
 
 class CuotaModel {
@@ -38,17 +38,19 @@ class CuotaModel {
   final String estado;
 
   factory CuotaModel.fromJson(Map<String, dynamic> json) => CuotaModel(
-        idCuota: (json['id_cuota'] as num?)?.toInt() ?? 0,
-        numeroCuota: (json['numero_cuota'] as num?)?.toInt() ?? 0,
-        monto: (json['monto'] as num?)?.toDouble() ?? 0.0,
-        fechaVencimiento: json['fecha_vencimiento'] as String? ?? '',
-        estado: json['estado'] as String? ?? 'Pendiente',
-      );
+    idCuota: (json['id_cuota'] as num?)?.toInt() ?? 0,
+    numeroCuota: (json['numero_cuota'] as num?)?.toInt() ?? 0,
+    monto: (json['monto'] as num?)?.toDouble() ?? 0.0,
+    fechaVencimiento: json['fecha_vencimiento'] as String? ?? '',
+    estado: json['estado'] as String? ?? 'Pendiente',
+  );
 }
 
 class ContratoModel {
   const ContratoModel({
+    this.pendienteSync = false,
     required this.idContrato,
+    this.inmobiliaria = '',
     required this.idTenant,
     required this.idCliente,
     required this.cliente,
@@ -69,6 +71,8 @@ class ContratoModel {
   });
 
   final int idContrato;
+  final bool pendienteSync;
+  final String inmobiliaria;
   final int idTenant;
   final int idCliente;
   final String? cliente;
@@ -88,29 +92,31 @@ class ContratoModel {
   final List<CuotaModel> cuotas;
 
   factory ContratoModel.fromJson(Map<String, dynamic> json) => ContratoModel(
-        idContrato: (json['id_contrato'] as num?)?.toInt() ?? 0,
-        idTenant: (json['id_tenant'] as num?)?.toInt() ?? 0,
-        idCliente: (json['id_cliente'] as num?)?.toInt() ?? 0,
-        cliente: json['cliente'] as String?,
-        idPropiedad: (json['id_propiedad'] as num?)?.toInt() ?? 0,
-        propiedad: json['propiedad'] as String?,
-        idAgente: (json['id_agente'] as num?)?.toInt(),
-        agente: json['agente'] as String?,
-        tipoContrato: json['tipo_contrato'] as String? ?? '',
-        montoTotal: (json['monto_total'] as num?)?.toDouble() ?? 0.0,
-        saldoPendiente: (json['saldo_pendiente'] as num?)?.toDouble() ?? 0.0,
-        estado: json['estado'] as String? ?? 'Activo',
-        fechaInicio: json['fecha_inicio'] as String? ?? '',
-        fechaFin: json['fecha_fin'] as String?,
-        cuotasTotales: (json['cuotas_totales'] as num?)?.toInt() ?? 0,
-        cuotasPagadas: (json['cuotas_pagadas'] as num?)?.toInt() ?? 0,
-        pagos: (json['pagos'] as List<dynamic>? ?? [])
-            .whereType<Map<String, dynamic>>()
-            .map(PagoModel.fromJson)
-            .toList(),
-        cuotas: (json['cuotas'] as List<dynamic>? ?? [])
-            .whereType<Map<String, dynamic>>()
-            .map(CuotaModel.fromJson)
-            .toList(),
-      );
+    pendienteSync: json['pendiente_sync'] == true,
+    inmobiliaria: json['inmobiliaria']?.toString() ?? '',
+    idContrato: (json['id_contrato'] as num?)?.toInt() ?? 0,
+    idTenant: (json['id_tenant'] as num?)?.toInt() ?? 0,
+    idCliente: (json['id_cliente'] as num?)?.toInt() ?? 0,
+    cliente: json['cliente'] as String?,
+    idPropiedad: (json['id_propiedad'] as num?)?.toInt() ?? 0,
+    propiedad: json['propiedad'] as String?,
+    idAgente: (json['id_agente'] as num?)?.toInt(),
+    agente: json['agente'] as String?,
+    tipoContrato: json['tipo_contrato'] as String? ?? '',
+    montoTotal: (json['monto_total'] as num?)?.toDouble() ?? 0.0,
+    saldoPendiente: (json['saldo_pendiente'] as num?)?.toDouble() ?? 0.0,
+    estado: json['estado'] as String? ?? 'Activo',
+    fechaInicio: json['fecha_inicio'] as String? ?? '',
+    fechaFin: json['fecha_fin'] as String?,
+    cuotasTotales: (json['cuotas_totales'] as num?)?.toInt() ?? 0,
+    cuotasPagadas: (json['cuotas_pagadas'] as num?)?.toInt() ?? 0,
+    pagos: (json['pagos'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(PagoModel.fromJson)
+        .toList(),
+    cuotas: (json['cuotas'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(CuotaModel.fromJson)
+        .toList(),
+  );
 }

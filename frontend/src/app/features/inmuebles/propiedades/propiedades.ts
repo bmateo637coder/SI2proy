@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   standalone: true,
@@ -25,6 +26,7 @@ export class Propiedades implements OnInit {
 
   // Super Admin: empresa seleccionada para filtrar
   empresaSeleccionada: number | null = null;
+  get canManage() { return this.userRole === 2 || (this.userRole === 1 && !!this.empresaSeleccionada); }
 
   // Modal de edición
   mostrarModalEditar: boolean = false;
@@ -33,7 +35,7 @@ export class Propiedades implements OnInit {
   // Modal crear
   mostrarModalCrear: boolean = false;
 
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, public auth: AuthService) {
     const formDef = {
       id_propietario: ['', Validators.required],
       id_agente: ['', Validators.required],
@@ -42,7 +44,10 @@ export class Propiedades implements OnInit {
       precio: ['', [Validators.required, Validators.min(1)]],
       tipo_operacion: ['Venta', Validators.required],
       descripcion: [''],
-      imagen_url: ['']
+      imagen_url: [''],
+      superficie: ['', [Validators.min(1)]],
+      habitaciones: ['', [Validators.min(1), Validators.pattern(/^[0-9]+$/)]],
+      zona: ['']
     };
     this.propiedadForm = this.fb.group(formDef);
     this.editForm = this.fb.group(formDef);
@@ -53,7 +58,9 @@ export class Propiedades implements OnInit {
     this.userRole = roleStr ? parseInt(roleStr, 10) : 0;
 
     if (this.userRole === 1) {
+      this.empresaSeleccionada = this.auth.tenantId();
       this.loadEmpresas();
+      if (this.empresaSeleccionada || this.auth.allTenants()) this.onEmpresaChange(false);
     } else {
       this.loadPropiedades();
       this.loadPropietarios();
@@ -72,8 +79,13 @@ export class Propiedades implements OnInit {
       .subscribe({ next: (res) => { this.empresas = [...res]; this.cdr.detectChanges(); } });
   }
 
-  onEmpresaChange() {
-    if (this.empresaSeleccionada) {
+  onEmpresaChange(persist = true) {
+    if (persist) {
+      this.auth.selectTenant(this.empresaSeleccionada);
+      window.location.reload();
+      return;
+    }
+    if (this.empresaSeleccionada || this.auth.allTenants()) {
       this.loadPropiedades();
       this.loadPropietarios();
       this.loadAgentes();
@@ -126,6 +138,7 @@ export class Propiedades implements OnInit {
       this.mensajeError = '';
       const formData = {
         ...this.propiedadForm.value,
+        caracteristicas: this.caracteristicas(this.propiedadForm),
         id_propietario: parseInt(this.propiedadForm.value.id_propietario, 10),
         id_agente: parseInt(this.propiedadForm.value.id_agente, 10),
         precio: parseFloat(this.propiedadForm.value.precio),
@@ -203,7 +216,7 @@ export class Propiedades implements OnInit {
         error: (err) => {
           this.generandoDescripcion = false;
           console.error(err);
-          alert("Hubo un error al generar la descripción con IA.");
+          this.mensajeError = err.error?.detail || 'No se pudo generar la descripción.';
           this.cdr.detectChanges();
         }
       });
@@ -218,7 +231,12 @@ export class Propiedades implements OnInit {
       titulo: prop.titulo,
       direccion: prop.direccion,
       precio: prop.precio,
-      tipo_operacion: prop.tipo_operacion
+      tipo_operacion: prop.tipo_operacion,
+      descripcion: prop.descripcion || '',
+      imagen_url: prop.imagenes?.[0]?.url || '',
+      superficie: this.atributo(prop, ['superficie', 'metros cuadrados', 'm2', 'area', 'metros_cuadrados']),
+      habitaciones: this.atributo(prop, ['habitaciones', 'cuartos', 'dormitorios']),
+      zona: this.atributo(prop, ['zona'])
     });
     this.mensajeError = '';
     this.mostrarModalEditar = true;
@@ -229,6 +247,8 @@ export class Propiedades implements OnInit {
     if (this.editForm.valid && this.propiedadEditando) {
       const formData = {
         ...this.editForm.value,
+        caracteristicas: this.caracteristicas(this.editForm),
+        imagenes: [this.editForm.value.imagen_url, ...(this.propiedadEditando.imagenes || []).slice(1).map((img: any) => img.url)].filter(Boolean),
         id_propietario: parseInt(this.editForm.value.id_propietario, 10),
         id_agente: parseInt(this.editForm.value.id_agente, 10),
         precio: parseFloat(this.editForm.value.precio)
@@ -251,6 +271,21 @@ export class Propiedades implements OnInit {
   }
 
   // ── Cambiar estado ──
+  private normalizar(value: string): string {
+    return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+  private atributo(prop: any, names: string[]): string {
+    return prop.caracteristicas?.find((c: any) => names.includes(this.normalizar(c.nombre)))?.valor || '';
+  }
+  private caracteristicas(form: FormGroup) {
+    const fields = [['superficie', ['superficie', 'metros cuadrados', 'm2', 'area', 'metros_cuadrados']],
+      ['habitaciones', ['habitaciones', 'cuartos', 'dormitorios']], ['zona', ['zona']]] as const;
+    return fields.map(([field, names]) => {
+      const old = this.propiedadEditando?.caracteristicas?.find((c: any) => (names as readonly string[]).includes(this.normalizar(c.nombre)));
+      return { nombre: form === this.editForm && old ? old.nombre : field === 'superficie' ? 'Superficie' : field === 'habitaciones' ? 'Habitaciones' : 'Zona', valor: String(form.value[field] || '') };
+    });
+  }
+
   updateEstado(id: number, estado: string) {
     this.http.put(`${environment.apiUrl}/modulo_inmuebles/propiedades/${id}/estado`, { estado }, { headers: this.getHeaders() })
       .subscribe({ next: () => this.loadPropiedades() });

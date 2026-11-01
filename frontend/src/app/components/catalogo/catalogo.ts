@@ -16,11 +16,13 @@ export class Catalogo implements OnInit, OnDestroy {
   recomendados: any[] = [];
   private apiBase = environment.apiUrl;
   private ws: WebSocket | null = null;
-  
+  private reconnectTimer?: ReturnType<typeof setTimeout>;
+  private destroyed = false;
+
   filtroOperacion: string = '';
   filtroPrecioMin: number | null = null;
   filtroPrecioMax: number | null = null;
-  
+
   // Advanced filters
   filtroCuartos: number | null = null;
   filtroBanos: number | null = null;
@@ -31,15 +33,15 @@ export class Catalogo implements OnInit, OnDestroy {
   filtroAmueblado: boolean = false;
   filtroServicios: boolean = false;
   mostrarFiltrosAvanzados: boolean = false;
-  
+
   // Detalle Modal
   propiedadSeleccionada: any = null;
   mostrarModalDetalle: boolean = false;
-  
+
   toggleFiltrosAvanzados() {
     this.mostrarFiltrosAvanzados = !this.mostrarFiltrosAvanzados;
   }
-  
+
   abrirDetalles(prop: any) {
     this.propiedadSeleccionada = prop;
     this.mostrarModalDetalle = true;
@@ -56,7 +58,7 @@ export class Catalogo implements OnInit, OnDestroy {
     return this.apiBase + url;
   }
 
-  constructor(private http: HttpClient, private authService: AuthService, private cdr: ChangeDetectorRef) {}
+  constructor(private http: HttpClient, public authService: AuthService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.aplicarFiltros();
@@ -86,7 +88,9 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   connectWebSocket() {
-    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades`);
+    if (this.destroyed || (!this.authService.tenantId() && !this.authService.allTenants())) return;
+    const scope = this.authService.allTenants() ? 'scope=all' : `id_tenant=${this.authService.tenantId()}`;
+    this.ws = new WebSocket(`${environment.wsUrl}/ws/propiedades?${scope}`, ['raices', localStorage.getItem('token') || 'missing']);
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -107,13 +111,14 @@ export class Catalogo implements OnInit, OnDestroy {
         console.error("Error parsing WS message", e);
       }
     };
-    this.ws.onclose = () => {
-      console.log('WebSocket connection closed, reconnecting in 5s...');
-      setTimeout(() => this.connectWebSocket(), 5000);
+    this.ws.onclose = event => {
+      if (!this.destroyed && event.code !== 1008) this.reconnectTimer = setTimeout(() => this.connectWebSocket(), 5000);
     };
   }
 
   ngOnDestroy() {
+    this.destroyed = true;
+    clearTimeout(this.reconnectTimer);
     if (this.ws) {
       this.ws.onclose = null; // Prevent auto-reconnect
       this.ws.close();
@@ -125,7 +130,7 @@ export class Catalogo implements OnInit, OnDestroy {
     if (this.filtroOperacion) params.tipo_operacion = this.filtroOperacion;
     if (this.filtroPrecioMin) params.precio_min = this.filtroPrecioMin;
     if (this.filtroPrecioMax) params.precio_max = this.filtroPrecioMax;
-    
+
     // Advanced filters
     if (this.filtroCuartos) params.cuartos = this.filtroCuartos;
     if (this.filtroBanos) params.banos = this.filtroBanos;
@@ -135,7 +140,7 @@ export class Catalogo implements OnInit, OnDestroy {
     if (this.filtroZona) params.zona = this.filtroZona;
     if (this.filtroAmueblado) params.amueblado = this.filtroAmueblado;
     if (this.filtroServicios) params.servicios_basicos = this.filtroServicios;
-    
+
     let headers = new HttpHeaders();
     const user = this.authService.currentUser();
     if (user && user.id_tenant) {

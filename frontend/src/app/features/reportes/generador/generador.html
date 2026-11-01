@@ -1,4 +1,5 @@
 <div class="reportes-container">
+  <p *ngIf="errorIA" role="alert" style="color:#a11">{{ errorIA }}</p>
   <div class="header-section mb-6" style="display: flex; justify-content: space-between; align-items: flex-start;">
       <div>
           <h2 class="text-3xl font-bold">Generador de Reportes Dinámicos</h2>
@@ -32,14 +33,6 @@
                   <label class="label-muted">Fuente de Datos</label>
                   <select class="modern-input" [(ngModel)]="entidadSeleccionada" (change)="onEntidadChange()">
                       <option *ngFor="let ent of entidades" [value]="ent.value">{{ent.label}}</option>
-                  </select>
-              </div>
-
-              <div class="form-group mb-4" *ngIf="userRole === 1">
-                  <label class="label-muted text-primary" style="color: var(--primary-color);">Filtro Global (SuperAdmin)</label>
-                  <select class="modern-input" [(ngModel)]="empresaFiltro">
-                      <option value="">Todas las Empresas (SaaS)</option>
-                      <option *ngFor="let emp of empresas" [value]="emp.id_tenant">{{emp.nombre}}</option>
                   </select>
               </div>
 
@@ -131,10 +124,10 @@
       <!-- Panel Lateral (Guardados) -->
       <div class="sidebar-panel">
           <div class="luxury-card mb-4" style="background-color: var(--surface-hover);">
-            <h4 style="margin-top:0;">Guardar Estructura</h4>
+            <h4 style="margin-top:0;">Guardar Estructura</h4><p *ngIf="auth.allTenants()">Selecciona una inmobiliaria concreta para guardar una configuración. Puedes generar y exportar reportes de todas desde esta pantalla.</p>
             <p class="text-xs text-muted mb-3">Guarde estos filtros para no tener que volver a armarlos la próxima vez.</p>
             <input type="text" [(ngModel)]="nombreNuevoReporte" class="modern-input mb-2" placeholder="Nombre de este reporte">
-            <button class="btn-primary" style="width: 100%" (click)="guardarConfiguracion()">💾 Guardar Configuración</button>
+            <button class="btn-primary" style="width: 100%" [disabled]="auth.allTenants()" (click)="guardarConfiguracion()">💾 Guardar Configuración</button>
             <div *ngIf="mensaje" class="text-xs text-green-600 mt-2">{{mensaje}}</div>
           </div>
 

@@ -1,24 +1,18 @@
-databases:
-  - name: raices-db
-    plan: free
-    databaseName: raices
-
 services:
   - type: web
     name: raices-backend
     rootDir: backend
     runtime: python
-    pythonVersion: 3.12.2
     plan: free
     autoDeploy: true
-    buildCommand: apt-get update -y && apt-get install -y --no-install-recommends postgresql-client && pip install -r requirements.txt
-    startCommand: python init_db.py && uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /docs
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start_render.py
+    healthCheckPath: /api/health
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
       - key: DATABASE_URL
-        fromDatabase:
-          name: raices-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: BITACORA_FERNET_KEY
@@ -27,3 +21,7 @@ services:
         sync: false
       - key: SEED_ADMIN_PASSWORD
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash

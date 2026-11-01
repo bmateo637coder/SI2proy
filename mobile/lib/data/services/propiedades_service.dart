@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+
 import '../models/propiedad_model.dart';
 
 class PropiedadesService {
@@ -7,7 +8,7 @@ class PropiedadesService {
   final Dio _dio;
 
   Future<List<PropiedadModel>> getPropiedades() async {
-    final response = await _dio.get('/modulo_inmuebles/propiedades');
+    final response = await _dio.get('/modulo_inmuebles/propiedades/catalogo');
     final List<dynamic> data = response.data as List<dynamic>;
     return data
         .map((json) => PropiedadModel.fromJson(json as Map<String, dynamic>))

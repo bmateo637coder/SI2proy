@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+
+import '../../data/services/api_error.dart';
 import '../../data/models/cliente_model.dart';
 import '../../data/repositories/clientes_repository.dart';
 
@@ -6,6 +8,15 @@ class ClientesProvider extends ChangeNotifier {
   ClientesProvider(this._repository);
 
   final ClientesRepository _repository;
+  int _generation = 0;
+  void reset() {
+    _generation++;
+    _clientes = [];
+    _isLoading = false;
+    _errorMessage = null;
+
+    notifyListeners();
+  }
 
   List<ClienteModel> _clientes = [];
   List<ClienteModel> get clientes => _clientes;
@@ -20,17 +31,23 @@ class ClientesProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   Future<void> fetchClientes() async {
+    final generation = _generation;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _clientes = await _repository.getClientes();
+      final result = await _repository.getClientes();
+      if (generation != _generation) return;
+      _clientes = result;
     } catch (e) {
-      _errorMessage = e.toString();
+      if (generation != _generation) return;
+      _errorMessage = apiError(e);
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -44,7 +61,7 @@ class ClientesProvider extends ChangeNotifier {
       _clientes = [..._clientes, nuevo];
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = apiError(e);
       return false;
     } finally {
       _isCreating = false;

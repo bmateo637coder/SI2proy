@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { AuthService } from '../../../core/services/auth.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -17,7 +18,7 @@ export class Usuarios implements OnInit {
   mensajeError: string = '';
   mensajeExito: string = '';
   
-  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef) {
+  constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef, public auth: AuthService) {
     this.usuarioForm = this.fb.group({
       ci: ['', Validators.required],
       nombre: ['', Validators.required],

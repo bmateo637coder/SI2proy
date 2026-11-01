@@ -1,164 +1,187 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/config/api_constants.dart';
 import '../providers/propiedades_provider.dart';
+import '../widgets/property_image.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
-
   @override
-  State<CatalogoScreen> createState() => _CatalogoScreenState();
+  State<CatalogoScreen> createState() => _CatalogoState();
 }
 
-class _CatalogoScreenState extends State<CatalogoScreen> {
+class _CatalogoState extends State<CatalogoScreen> {
+  String search = '', operation = 'Todas';
+  double? minimum, maximum;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PropiedadesProvider>().fetchPropiedades();
+      if (mounted) context.read<PropiedadesProvider>().fetchPropiedades();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PropiedadesProvider>();
-
+    final items = provider.propiedades
+        .where(
+          (p) =>
+              (operation == 'Todas' || p.tipoOperacion == operation) &&
+              (minimum == null || p.precio >= minimum!) &&
+              (maximum == null || p.precio <= maximum!) &&
+              '${p.titulo} ${p.direccion} ${p.inmobiliaria}'
+                  .toLowerCase()
+                  .contains(search.toLowerCase()),
+        )
+        .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catálogo de Propiedades'),
-        centerTitle: true,
+        title: const Text('Catálogo'),
+        actions: [
+          IconButton(
+            tooltip: 'IA y analítica',
+            onPressed: () => context.push('/ia'),
+            icon: const Icon(Icons.auto_awesome),
+          ),
+          IconButton(
+            tooltip: 'Actualizar',
+            onPressed: provider.isLoading ? null : provider.fetchPropiedades,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
       ),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : provider.errorMessage != null
-              ? Center(
+      body: RefreshIndicator(
+        onRefresh: provider.fetchPropiedades,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Buscar título, zona o inmobiliaria',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (v) => setState(() => search = v),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: ['Todas', 'Venta', 'Alquiler']
+                  .map(
+                    (v) => ChoiceChip(
+                      label: Text(v),
+                      selected: operation == v,
+                      onSelected: (_) => setState(() => operation = v),
+                    ),
+                  )
+                  .toList(),
+            ),
+            ExpansionTile(
+              title: const Text('Precio USD'),
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(labelText: 'Mínimo'),
+                        onChanged: (v) =>
+                            setState(() => minimum = double.tryParse(v)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(labelText: 'Máximo'),
+                        onChanged: (v) =>
+                            setState(() => maximum = double.tryParse(v)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (provider.isLoading) const LinearProgressIndicator(),
+            if (provider.errorMessage != null) ...[
+              Text(provider.errorMessage!),
+              TextButton(
+                onPressed: () => context.push('/offline'),
+                child: const Text('Revisar descarga y sincronización'),
+              ),
+            ],
+            Text(
+              '${items.length} propiedades',
+              key: const ValueKey('catalog-count'),
+            ),
+            if (!provider.isLoading &&
+                provider.errorMessage == null &&
+                items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('No hay propiedades para esta selección.'),
+              ),
+            ...items.map((p) {
+              final raw = p.imagenes.firstOrNull?.url;
+              final url = raw == null || raw.isEmpty
+                  ? null
+                  : Uri.parse(ApiConstants.baseUrl).resolve(raw).toString();
+              return Card(
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => context.push('/propiedad-detalle', extra: p),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Error: ${provider.errorMessage}', textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => provider.fetchPropiedades(),
-                        child: const Text('Reintentar'),
+                      if (url != null)
+                        PropertyImage(
+                          url,
+                          height: 170,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox(
+                            height: 100,
+                            child: Icon(Icons.home, size: 40),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (p.inmobiliaria.isNotEmpty)
+                              Text(
+                                p.inmobiliaria,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            Text(
+                              p.titulo,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            Text(p.direccion),
+                            const SizedBox(height: 8),
+                            Text(
+                              'USD ${p.precio.toStringAsFixed(2)} · ${p.tipoOperacion}',
+                            ),
+                            Text(p.estado),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                )
-              : provider.propiedades.isEmpty
-                  ? const Center(child: Text('No hay propiedades registradas aún.'))
-                  : RefreshIndicator(
-                      onRefresh: provider.fetchPropiedades,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.propiedades.length,
-                        itemBuilder: (context, index) {
-                          final prop = provider.propiedades[index];
-                          final rawImageUrl = prop.imagenes.isNotEmpty ? prop.imagenes.first.url : null;
-                          final imageUrl = rawImageUrl == null || rawImageUrl.isEmpty
-                              ? null
-                              : (rawImageUrl.startsWith('http')
-                                  ? rawImageUrl
-                                  : '${ApiConstants.baseUrl}$rawImageUrl');
-
-                          return Card(
-                            elevation: 2,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (imageUrl != null)
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                    child: Image.network(
-                                      imageUrl,
-                                      height: 200,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => Container(
-                                        height: 200,
-                                        color: Colors.grey[200],
-                                        child: const Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Container(
-                                    height: 200,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                    ),
-                                    child: const Icon(Icons.image, size: 50, color: Colors.grey),
-                                  ),
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        prop.titulo,
-                                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        prop.direccion,
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Colors.grey[600],
-                                            ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            '\$${prop.precio.toStringAsFixed(2)} - ${prop.tipoOperacion}',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: _getColorForEstado(prop.estado).withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(8),
-                                              border: Border.all(color: _getColorForEstado(prop.estado)),
-                                            ),
-                                            child: Text(
-                                              prop.estado,
-                                              style: TextStyle(
-                                                color: _getColorForEstado(prop.estado),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
     );
-  }
-
-  Color _getColorForEstado(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'disponible':
-        return Colors.green;
-      case 'reservada':
-        return Colors.orange;
-      case 'vendida':
-        return Colors.red;
-      case 'alquilada':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
   }
 }

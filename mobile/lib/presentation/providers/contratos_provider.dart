@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+
+import '../../data/services/api_error.dart';
 import '../../data/models/contrato_model.dart';
 import '../../data/repositories/contratos_repository.dart';
 
@@ -6,6 +8,16 @@ class ContratosProvider extends ChangeNotifier {
   ContratosProvider(this._repository);
 
   final ContratosRepository _repository;
+  int _generation = 0;
+  void reset() {
+    _generation++;
+    _contratos = [];
+    _isLoading = false;
+    _errorMessage = null;
+    _detalle = null;
+    _successMessage = null;
+    notifyListeners();
+  }
 
   List<ContratoModel> _contratos = [];
   List<ContratoModel> get contratos => _contratos;
@@ -29,32 +41,45 @@ class ContratosProvider extends ChangeNotifier {
   String? get successMessage => _successMessage;
 
   Future<void> fetchContratos() async {
+    final generation = _generation;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _contratos = await _repository.getContratos();
+      final result = await _repository.getContratos();
+      if (generation != _generation) return;
+      _contratos = result;
     } catch (e) {
-      _errorMessage = e.toString();
+      if (generation != _generation) return;
+      _errorMessage = apiError(e);
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> fetchDetalle(int idContrato) async {
+    final generation = _generation;
+    _detalle = null;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _detalle = await _repository.getContratoDetalle(idContrato);
+      final result = await _repository.getContratoDetalle(idContrato);
+      if (generation != _generation) return;
+      _detalle = result;
     } catch (e) {
-      _errorMessage = e.toString();
+      if (generation != _generation) return;
+      _errorMessage = apiError(e);
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -82,10 +107,12 @@ class ContratosProvider extends ChangeNotifier {
         numCuotas: numCuotas,
       );
       _contratos = [..._contratos, creado];
-      _successMessage = 'Contrato #${creado.idContrato} creado correctamente.';
+      _successMessage = creado.pendienteSync
+          ? 'Contrato guardado en el teléfono. Pendiente de sincronizar.'
+          : 'Contrato #${creado.idContrato} creado correctamente.';
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = apiError(e);
       return false;
     } finally {
       _isSubmitting = false;
@@ -109,12 +136,14 @@ class ContratosProvider extends ChangeNotifier {
         metodoPago: metodoPago,
       );
       final recibo = result['numero_recibo'] as String? ?? '';
-      _successMessage = 'Pago registrado. Recibo: $recibo';
+      _successMessage = result['pendiente_sync'] == true
+          ? 'Pago guardado en el teléfono. Recibo provisional: $recibo. Pendiente de sincronizar.'
+          : 'Pago registrado. Recibo: $recibo';
       await fetchDetalle(idContrato);
       await fetchContratos();
       return recibo;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = apiError(e);
       return null;
     } finally {
       _isSubmitting = false;
@@ -133,7 +162,7 @@ class ContratosProvider extends ChangeNotifier {
       _successMessage = 'Contrato eliminado.';
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = apiError(e);
       return false;
     } finally {
       _isSubmitting = false;
@@ -149,7 +178,7 @@ class ContratosProvider extends ChangeNotifier {
     try {
       return await _repository.descargarComprobante(idPago);
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = apiError(e);
       return null;
     } finally {
       _isDownloadingComprobante = false;

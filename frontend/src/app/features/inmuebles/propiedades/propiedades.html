@@ -5,7 +5,7 @@
     <h2 style="color: var(--secondary-color); margin: 0; font-size: 1.8rem; font-weight: 700;">
       Gestión de Propiedades
     </h2>
-    <button *ngIf="userRole !== 1" class="btn-primary" (click)="abrirModalCrear()"
+    <button *ngIf="canManage" class="btn-primary" (click)="abrirModalCrear()"
       style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
       Nueva Propiedad
@@ -20,7 +20,7 @@
   <!-- ══════════════════════════════════════════════ -->
   <!-- SUPER ADMIN: selector de empresa              -->
   <!-- ══════════════════════════════════════════════ -->
-  <div *ngIf="userRole === 1" class="luxury-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fefce8, #fef9c3); border: 1px solid #fde68a;">
+  <div *ngIf="userRole === 1 && !auth.allTenants()" class="luxury-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #fefce8, #fef9c3); border: 1px solid #fde68a;">
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
       <div style="flex-shrink: 0;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2">
@@ -36,15 +36,15 @@
         <option [ngValue]="null" disabled>-- Seleccionar empresa --</option>
         <option *ngFor="let emp of empresas" [ngValue]="emp.id_tenant">{{ emp.nombre }}</option>
       </select>
-      <!-- SuperAdmin solo puede visualizar, no crear propiedades directamente -->
+      <!-- Contexto compartido con el selector de la barra superior -->
       <span *ngIf="empresaSeleccionada" style="font-size:0.78rem;color:#b45309;font-weight:600;background:#fef3c7;padding:0.3rem 0.75rem;border-radius:20px;">
-        👁️ Modo Lectura — Vista Global
+        Gestión de la inmobiliaria seleccionada
       </span>
     </div>
   </div>
 
   <!-- Estado vacío super admin sin empresa -->
-  <div *ngIf="userRole === 1 && !empresaSeleccionada" style="text-align:center; padding: 4rem 2rem; color: #94a3b8;">
+  <div *ngIf="userRole === 1 && !empresaSeleccionada && !auth.allTenants()" style="text-align:center; padding: 4rem 2rem; color: #94a3b8;">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" style="margin-bottom:1rem;">
       <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
     </svg>
@@ -54,7 +54,7 @@
   <!-- ══════════════════════════════════════════════ -->
   <!-- TABLA DE PROPIEDADES                          -->
   <!-- ══════════════════════════════════════════════ -->
-  <div *ngIf="userRole !== 1 || empresaSeleccionada" class="luxury-card" style="padding: 0; overflow: hidden;">
+  <div *ngIf="userRole !== 1 || empresaSeleccionada || auth.allTenants()" class="luxury-card" style="padding: 0; overflow: hidden;">
     <div style="padding: 1.5rem 1.5rem 0; display: flex; justify-content: space-between; align-items: center;">
       <h3 style="color: var(--secondary-color); font-weight: 700; margin: 0;">
         Propiedades
@@ -75,20 +75,20 @@
     <div *ngIf="propiedades.length > 0" style="overflow-x: auto;">
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr style="border-bottom: 2px solid var(--border-light); background: #fafafa;">
+          <tr style="border-bottom: 2px solid var(--border-light); background: #fafafa;"><th *ngIf="auth.allTenants()" style="padding:1rem">Inmobiliaria</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">ID</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Título</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Dirección</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Precio</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Operación</th>
             <th style="padding: 1rem 1.5rem; text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Estado</th>
-            <th *ngIf="userRole !== 1" style="padding: 1rem 1.5rem; text-align: right; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Acciones</th>
+            <th *ngIf="canManage" style="padding: 1rem 1.5rem; text-align: right; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;">Acciones</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let prop of propiedades"
             style="border-bottom: 1px solid var(--border-light); transition: background 0.15s;"
-            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+            onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'"><td *ngIf="auth.allTenants()" style="padding:1rem">{{ prop.inmobiliaria }}</td>
             <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">#{{ prop.id_propiedad }}</td>
             <td style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary-color);">{{ prop.titulo }}</td>
             <td style="padding: 1rem 1.5rem; color: var(--text-muted); font-size: 0.875rem;">{{ prop.direccion }}</td>
@@ -100,7 +100,7 @@
             </td>
             <td style="padding: 1rem 1.5rem;">
               <!-- Admin de empresa: estado editable -->
-              <select *ngIf="userRole !== 1" (change)="updateEstado(prop.id_propiedad, $any($event.target).value)"
+              <select *ngIf="canManage" (change)="updateEstado(prop.id_propiedad, $any($event.target).value)"
                 [style.color]="getEstadoColor(prop.estado)"
                 [style.background]="getEstadoBg(prop.estado)"
                 style="border: none; border-radius: 20px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 700; cursor: pointer; outline: none;">
@@ -110,7 +110,7 @@
                 <option value="Alquilada" [selected]="prop.estado === 'Alquilada'">Alquilada</option>
               </select>
               <!-- SuperAdmin: estado solo lectura -->
-              <span *ngIf="userRole === 1"
+              <span *ngIf="!canManage"
                 [style.color]="getEstadoColor(prop.estado)"
                 [style.background]="getEstadoBg(prop.estado)"
                 style="border-radius: 20px; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 700; display:inline-block;">
@@ -118,7 +118,7 @@
               </span>
             </td>
             <!-- Acciones solo para admin de empresa -->
-            <td *ngIf="userRole !== 1" style="padding: 1rem 1.5rem; text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <td *ngIf="canManage" style="padding: 1rem 1.5rem; text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
               <button (click)="abrirEditar(prop)" class="btn-secondary" title="Editar"
                 style="padding: 0.4rem 0.8rem; font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -205,6 +205,11 @@
         </div>
         <div *ngIf="subiendoImagen" style="font-size: 0.8rem; color: #3b82f6; margin-top: 5px;">Subiendo imagen... por favor espere</div>
       </div>
+      <div><label>Superficie (m²)<input type="number" min="1" formControlName="superficie" class="modern-input"></label></div>
+      <div><label>Habitaciones<input type="number" min="1" step="1" formControlName="habitaciones" class="modern-input"></label></div>
+      <div style="grid-column:span 2;"><label>Segmento de zona para analítica
+        <select formControlName="zona" class="modern-input"><option value="">Sin clasificar</option><option value="Económica">Económica</option><option value="Estándar">Estándar</option><option value="Premium">Premium</option></select>
+      </label><small>Complete estos datos para incluir la propiedad en el modelo académico de precios.</small></div>
       <div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:1rem;margin-top:0.5rem;padding-top:1rem;border-top:1px solid var(--border-light);">
         <button type="button" class="btn-secondary" (click)="mostrarModalCrear=false">Cancelar</button>
         <button type="submit" class="btn-primary" [disabled]="!propiedadForm.valid">Crear Propiedad</button>
@@ -260,6 +265,13 @@
           <option value="Anticretico">Anticrético</option>
         </select>
       </div>
+      <div><label>Superficie (m²)<input type="number" min="1" formControlName="superficie" class="modern-input"></label></div>
+      <div><label>Habitaciones<input type="number" min="1" step="1" formControlName="habitaciones" class="modern-input"></label></div>
+      <div style="grid-column:span 2;"><label>Segmento de zona para analítica
+        <select formControlName="zona" class="modern-input"><option value="">Sin clasificar</option><option value="Económica">Económica</option><option value="Estándar">Estándar</option><option value="Premium">Premium</option></select>
+      </label><small>Complete estos datos para incluir la propiedad en el modelo académico de precios.</small></div>
+      <div style="grid-column:span 2;"><label>Descripción<textarea formControlName="descripcion" class="modern-input" rows="3"></textarea></label></div>
+      <div style="grid-column:span 2;"><label>URL de la imagen principal<input formControlName="imagen_url" class="modern-input" placeholder="https://..."></label></div>
       <div style="grid-column:span 2;display:flex;justify-content:flex-end;gap:1rem;margin-top:0.5rem;padding-top:1rem;border-top:1px solid var(--border-light);">
         <button type="button" class="btn-secondary" (click)="mostrarModalEditar=false">Cancelar</button>
         <button type="submit" class="btn-primary" [disabled]="!editForm.valid">Guardar Cambios</button>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/auth_provider.dart';
 import '../providers/clientes_provider.dart';
 
@@ -23,7 +24,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ClientesProvider>();
-    final canRegister = context.watch<AuthProvider>().user?.isAdministrator ?? false;
+    final auth = context.watch<AuthProvider>();
+    final canRegister = auth.canWrite && (auth.user?.isAdministrator ?? false);
 
     return Scaffold(
       appBar: AppBar(
@@ -46,69 +48,86 @@ class _ClientesScreenState extends State<ClientesScreen> {
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Error: ${provider.errorMessage}', textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => provider.fetchClientes(),
-                        child: const Text('Reintentar'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Error: ${provider.errorMessage}',
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : provider.clientes.isEmpty
-                  ? const Center(child: Text('No hay clientes registrados aún.'))
-                  : RefreshIndicator(
-                      onRefresh: provider.fetchClientes,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: provider.clientes.length,
-                        itemBuilder: (context, index) {
-                          final cliente = provider.clientes[index];
-                          return Card(
-                            elevation: 2,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              leading: CircleAvatar(
-                                child: Text(cliente.nombre.isEmpty ? '?' : cliente.nombre[0].toUpperCase()),
-                              ),
-                              title: Text(
-                                cliente.nombre,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 4),
-                                  if (cliente.correo.isNotEmpty) Text(cliente.correo),
-                                  if (cliente.telefono.isNotEmpty) Text(cliente.telefono),
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'CI ${cliente.ciUsuario}',
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Cliente #${cliente.idCliente}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => provider.fetchClientes(),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            )
+          : provider.clientes.isEmpty
+          ? const Center(child: Text('No hay clientes registrados aún.'))
+          : RefreshIndicator(
+              onRefresh: provider.fetchClientes,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: provider.clientes.length,
+                itemBuilder: (context, index) {
+                  final cliente = provider.clientes[index];
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      leading: CircleAvatar(
+                        child: Text(
+                          cliente.nombre.isEmpty
+                              ? '?'
+                              : cliente.nombre[0].toUpperCase(),
+                        ),
+                      ),
+                      title: Text(
+                        cliente.nombre,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          if (cliente.inmobiliaria.isNotEmpty)
+                            Text(cliente.inmobiliaria),
+                          if (cliente.pendienteSync) const Text('Pendiente de sincronizar'),
+                          if (cliente.correo.isNotEmpty) Text(cliente.correo),
+                          if (cliente.telefono.isNotEmpty)
+                            Text(cliente.telefono),
+                        ],
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'CI ${cliente.ciUsuario}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            cliente.pendienteSync ? 'Registro local' : 'Cliente #${cliente.idCliente}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey),
+                          ),
+                        ],
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }

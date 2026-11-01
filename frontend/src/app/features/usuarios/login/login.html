@@ -5,11 +5,11 @@
             <p class="brand-subtitle">Portal Inmobiliario Exclusivo</p>
             <div class="gold-divider"></div>
         </div>
-        
+
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-            
-            <div *ngIf="errorMessage" class="alert-error">
-                <i class="icon-error">!</i> {{ errorMessage }}
+
+            <div *ngIf="errorMessage()" class="alert-error" role="alert">
+                <i class="icon-error">!</i> {{ errorMessage() }}
             </div>
 
             <div class="form-group">
@@ -19,7 +19,7 @@
                     Ingresa un correo válido.
                 </small>
             </div>
-            
+
             <div class="form-group">
                 <label for="password" class="luxury-label">Contraseña</label>
                 <input type="password" id="password" formControlName="password" class="modern-input" placeholder="••••••••">
@@ -27,11 +27,12 @@
                     La contraseña es obligatoria.
                 </small>
             </div>
-            
+
+            <div class="form-group"><label for="tenant" class="luxury-label">ID de inmobiliaria (si tu correo pertenece a varias empresas)</label><input id="tenant" type="number" min="1" formControlName="id_tenant" class="modern-input"></div>
             <button type="submit" class="btn-primary btn-block" [disabled]="loginForm.invalid">
                 Ingresar al Portal
             </button>
-            
+
             <div class="extra-links">
                 <a routerLink="/forgot-password" class="luxury-link">¿Olvidaste tu contraseña?</a>
             </div>

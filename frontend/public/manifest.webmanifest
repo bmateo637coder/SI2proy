@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "Raíces · Gestión inmobiliaria",
+  "short_name": "Raíces",
+  "lang": "es-BO",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#171717",
+  "theme_color": "#bfa166",
+  "description": "Catálogo, reservas y ventas inmobiliarias con operación sin conexión.",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

@@ -1,21 +1,15 @@
 class ImagenModel {
-  const ImagenModel({
-    required this.idImagen,
-    required this.url,
-  });
+  const ImagenModel({required this.idImagen, required this.url});
 
   final int idImagen;
   final String url;
 
   factory ImagenModel.fromJson(Map<String, dynamic> json) => ImagenModel(
-        idImagen: json['id_imagen'] as int? ?? 0,
-        url: json['url'] as String? ?? '',
-      );
+    idImagen: json['id_imagen'] as int? ?? 0,
+    url: json['url'] as String? ?? '',
+  );
 
-  Map<String, dynamic> toJson() => {
-        'id_imagen': idImagen,
-        'url': url,
-      };
+  Map<String, dynamic> toJson() => {'id_imagen': idImagen, 'url': url};
 }
 
 class PropiedadModel {
@@ -29,6 +23,11 @@ class PropiedadModel {
     required this.precio,
     required this.tipoOperacion,
     required this.estado,
+    this.descripcion = '',
+    this.inmobiliaria = '',
+    this.caracteristicas = const [],
+    this.latitud,
+    this.longitud,
     required this.imagenes,
   });
 
@@ -41,36 +40,53 @@ class PropiedadModel {
   final double precio;
   final String tipoOperacion;
   final String estado;
+  final String descripcion;
+  final String inmobiliaria;
+  final List<Map<String, dynamic>> caracteristicas;
+  final double? latitud;
+  final double? longitud;
   final List<ImagenModel> imagenes;
 
   factory PropiedadModel.fromJson(Map<String, dynamic> json) => PropiedadModel(
-        idPropiedad: json['id_propiedad'] as int? ?? 0,
-        idTenant: json['id_tenant'] as int? ?? 0,
-        idPropietario: json['id_propietario'] as int? ?? 0,
-        idAgente: json['id_agente'] as int? ?? 0,
-        titulo: json['titulo'] as String? ?? '',
-        direccion: json['direccion'] as String? ?? '',
-        precio: json['precio'] != null
-            ? double.tryParse(json['precio'].toString()) ?? 0.0
-            : 0.0,
-        tipoOperacion: json['tipo_operacion'] as String? ?? '',
-        estado: json['estado'] as String? ?? '',
-        imagenes: (json['imagenes'] as List<dynamic>?)
-                ?.map((e) => ImagenModel.fromJson(e as Map<String, dynamic>))
-                .toList() ??
-            const [],
-      );
+    idPropiedad: json['id_propiedad'] as int? ?? 0,
+    idTenant: json['id_tenant'] as int? ?? 0,
+    idPropietario: json['id_propietario'] as int? ?? 0,
+    idAgente: json['id_agente'] as int? ?? 0,
+    descripcion: json['descripcion']?.toString() ?? '',
+    inmobiliaria: json['inmobiliaria']?.toString() ?? '',
+    caracteristicas: (json['caracteristicas'] as List? ?? [])
+        .map((c) => Map<String, dynamic>.from(c))
+        .toList(),
+    titulo: json['titulo'] as String? ?? '',
+    direccion: json['direccion'] as String? ?? '',
+    precio: json['precio'] != null
+        ? double.tryParse(json['precio'].toString()) ?? 0.0
+        : 0.0,
+    tipoOperacion: json['tipo_operacion'] as String? ?? '',
+    estado: json['estado'] as String? ?? '',
+    latitud: json['latitud'] != null
+        ? double.tryParse(json['latitud'].toString())
+        : null,
+    longitud: json['longitud'] != null
+        ? double.tryParse(json['longitud'].toString())
+        : null,
+    imagenes:
+        (json['imagenes'] as List<dynamic>?)
+            ?.map((e) => ImagenModel.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [],
+  );
 
   Map<String, dynamic> toJson() => {
-        'id_propiedad': idPropiedad,
-        'id_tenant': idTenant,
-        'id_propietario': idPropietario,
-        'id_agente': idAgente,
-        'titulo': titulo,
-        'direccion': direccion,
-        'precio': precio,
-        'tipo_operacion': tipoOperacion,
-        'estado': estado,
-        'imagenes': imagenes.map((e) => e.toJson()).toList(),
-      };
+    'id_propiedad': idPropiedad,
+    'id_tenant': idTenant,
+    'id_propietario': idPropietario,
+    'id_agente': idAgente,
+    'titulo': titulo,
+    'direccion': direccion,
+    'precio': precio,
+    'tipo_operacion': tipoOperacion,
+    'estado': estado,
+    'imagenes': imagenes.map((e) => e.toJson()).toList(),
+  };
 }

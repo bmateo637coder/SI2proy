@@ -1,5 +1,11 @@
 # SI2proy
 
+## Evolución del segundo parcial
+
+Se incorporaron planes y sucursales SaaS, operación offline web (PWA + IndexedDB) y móvil (SQLite), sincronización idempotente, reportes por lenguaje natural y dashboard ML. La revisión, instalación, migración aditiva, pruebas y modelos ICONIX/UML están en [docs/PARCIAL2.md](docs/PARCIAL2.md). Los resultados de las verificaciones están en [docs/VALIDACION.md](docs/VALIDACION.md).
+
+Antes de usar las nuevas funciones, ejecutar `backend/migrate_parcial2.py` con la base elegida. Para desarrollo web con backend local: `npm run start:local`; para probar la PWA local: `npm run build:local` y `npm run preview`.
+
 Sistema Inmobiliario "Raíces" — monorepo con las tres partes del proyecto.
 
 ## Estructura
@@ -8,7 +14,7 @@ Sistema Inmobiliario "Raíces" — monorepo con las tres partes del proyecto.
 |------------|-------------------|------------------------------------------------|
 | `backend/` | Python + FastAPI  | API REST, autenticación JWT, PostgreSQL (SQLAlchemy) |
 | `frontend/`| Angular           | Panel web (comercial / administración)          |
-| `mobile/`  | Flutter           | Aplicación móvil (catálogo, perfil, clientes)   |
+| `mobile/`  | Flutter           | App Android: SaaS, catálogo, reportes, IA y SQLite offline   |
 
 ## Backend (`backend/`)
 
@@ -36,9 +42,9 @@ python -m venv .venv
 .venv/Scripts/python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-> Requiere una base PostgreSQL existente. `requirements.txt` incluye
-> `google-generativeai` (módulo IA, exigido al arrancar) y el servidor crea la
-> carpeta `uploads/` automáticamente.
+> Requiere una base PostgreSQL existente. La IA usa el cliente REST de Gemini;
+> configurar `GEMINI_API_KEY` para activar el proveedor. El servidor crea
+> la carpeta `uploads/` automáticamente.
 
 ### Endpoints principales
 
@@ -63,11 +69,13 @@ ng build       # producción → dist/
 
 ## Mobile (`mobile/`)
 
-App Flutter. La URL de la API se define en `lib/core/config/api_constants.dart`
+[Descargar APK Android 2.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.2.0-13/Raices-2.2.0.apk) · [Guía de uso móvil](mobile/README.md).
+
+App Flutter con selección de una o todas las inmobiliarias, reportes/IA y operaciones offline. La URL de la API se define en `lib/core/config/api_constants.dart`
 y puede sobrescribirse en build/run:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://192.168.x.x:8000
+flutter run --dart-define=API_BASE_URL=https://raices-backend-n1yy.onrender.com
 flutter build apk --dart-define=API_BASE_URL=https://<backend-publico>/
 ```
 

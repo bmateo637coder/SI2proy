@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime, date
 
@@ -7,7 +7,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, AliasChoices
 import re
 
 # Esquemas para Usuario
@@ -25,10 +25,13 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioLogin(BaseModel):
     correo: EmailStr
     password: str
+    id_tenant: Optional[int] = None
 
 class UsuarioResponse(UsuarioBase):
+    inmobiliaria: Optional[str] = None
     permisos: list[str] = [] # Se llenará dinámicamente con los códigos de permiso
-    
+    es_agente: bool = False
+
     class Config:
         from_attributes = True
 
@@ -65,7 +68,7 @@ class PermisoResponse(PermisoBase):
 # Esquemas para Empresa
 class EmpresaBase(BaseModel):
     nombre: str
-    slug: str
+    slug: str = Field(validation_alias=AliasChoices('slug', 'dominio'), min_length=1, max_length=100, pattern=r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
     plan: str = "basico"
     max_propiedades: int = 10
     estado: Optional[bool] = True
@@ -104,6 +107,7 @@ class CaracteristicaResponse(BaseModel):
         from_attributes = True
 
 class PropiedadCatalogoResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_propiedad: int
     id_tenant: int
     titulo: str
@@ -114,7 +118,7 @@ class PropiedadCatalogoResponse(BaseModel):
     estado: str
     imagenes: list[ImagenResponse] = []
     caracteristicas: list[CaracteristicaResponse] = []
-    
+
     class Config:
         from_attributes = True
 
@@ -122,20 +126,28 @@ class PropiedadCatalogoResponse(BaseModel):
 # SCHEMAS MÓDULO INMUEBLES (ADMIN)
 # ============================================================
 
+class CaracteristicaInput(BaseModel):
+    nombre: str = Field(min_length=1, max_length=100)
+    valor: str = Field(max_length=100)
+
+
 class PropiedadCreate(BaseModel):
     id_propietario: int
     id_agente: int
     titulo: str
     descripcion: Optional[str] = None
     direccion: str
-    precio: float
+    precio: float = Field(gt=0, le=9999999999.99)
     tipo_operacion: str  # 'Venta', 'Alquiler', 'Anticretico'
     imagenes: list[str] = []
+    id_sucursal: Optional[int] = None
+    caracteristicas: Optional[list[CaracteristicaInput]] = Field(default=None, max_length=50)
 
 class PropiedadEstadoUpdate(BaseModel):
     estado: str  # 'Disponible', 'Reservada', 'Vendida', 'Alquilada'
 
 class PropiedadAdminResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_propiedad: int
     id_tenant: int
     id_propietario: int
@@ -155,7 +167,13 @@ class PropiedadAdminResponse(BaseModel):
 class PropietarioCreate(BaseModel):
     ci_usuario: str
 
+class PersonaUpdate(BaseModel):
+    nombre: str = Field(min_length=1, max_length=100)
+    correo: EmailStr
+    telefono: Optional[str] = None
+
 class PropietarioResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_propietario: int
     ci_usuario: str
     id_tenant: int
@@ -167,6 +185,7 @@ class PropietarioResponse(BaseModel):
         from_attributes = True
 
 class AgenteResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_agente: int
     ci_usuario: str
     id_tenant: int
@@ -180,6 +199,7 @@ class ClienteCreate(BaseModel):
     ci_usuario: str
 
 class ClienteResponse(BaseModel):
+    inmobiliaria: Optional[str] = None
     id_cliente: int
     ci_usuario: str
     id_tenant: int
@@ -206,13 +226,14 @@ class ReporteOrden(BaseModel):
 
 class ReporteRequest(BaseModel):
     entidad: str # 'usuarios', 'propiedades'
-    columnas: list[str]
-    filtros: list[ReporteFiltro] = []
+    columnas: list[str] = Field(min_length=1, max_length=20)
+    filtros: list[ReporteFiltro] = Field(default_factory=list, max_length=20)
     orden: Optional[ReporteOrden] = None
+    limite: int = Field(default=500, ge=1, le=1000)
 
 class ReporteGuardadoCreate(BaseModel):
-    nombre: str
-    configuracion: str # JSON string of ReporteRequest
+    nombre: str = Field(min_length=1, max_length=100)
+    configuracion: str = Field(max_length=20000)
 
 class ReporteGuardadoResponse(BaseModel):
     id_reporte: int
@@ -231,13 +252,25 @@ class ContratoCreate(BaseModel):
     id_cliente: int
     id_propiedad: int
     tipo_contrato: str  # 'Venta', 'Alquiler', 'Anticretico'
-    monto_total: float
+    monto_total: float = Field(gt=0, le=9999999999.99)
     fecha_inicio: date
     fecha_fin: Optional[date] = None
-    num_cuotas: Optional[int] = None
+    num_cuotas: Optional[int] = Field(default=None, ge=1, le=360)
     observacion: Optional[str] = None
+    @field_validator('monto_total')
+    @classmethod
+    def amount_in_cents(cls, value):
+        if round(value, 2) != value:
+            raise ValueError('Use un monto con hasta dos decimales.')
+        return value
 
 class PagoCreate(BaseModel):
-    monto: float
+    monto: float = Field(gt=0, le=9999999999.99)
     metodo_pago: str  # 'Transferencia', 'Efectivo', 'QR'
     observacion: Optional[str] = None
+    @field_validator('monto')
+    @classmethod
+    def amount_in_cents(cls, value):
+        if round(value, 2) != value:
+            raise ValueError('Use un monto con hasta dos decimales.')
+        return value

@@ -1,7 +1,7 @@
 <div class="animate-fade-in p-6">
   <h2 class="text-3xl font-bold mb-6">Gestión de Usuarios</h2>
   
-  <div class="luxury-card mb-8">
+  <div *ngIf="!auth.allTenants()" class="luxury-card mb-8">
     <h3 class="text-xl mb-4">Registrar Nueva Persona</h3>
     
     <div *ngIf="mensajeError" class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" style="background-color: #fef2f2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">

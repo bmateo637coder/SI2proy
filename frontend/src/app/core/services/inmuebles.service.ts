@@ -16,6 +16,7 @@ export class InmueblesService {
   propiedades$ = new BehaviorSubject<any[]>([]);
   cargando = false;
   private ultimaCarga: number = 0;
+  private cacheScope = '';
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
@@ -30,6 +31,17 @@ export class InmueblesService {
   }
 
   cargar(force = false) {
+    const user = this.authService.currentUser();
+    const tid = this.authService.tenantId();
+    const scope = `${this.authService.allTenants() ? "all" : tid}|${user?.ci}`;
+    if (scope !== this.cacheScope) {
+      this.cacheScope = scope;
+      this.clientes$.next([]);
+      this.propiedades$.next([]);
+      this.ultimaCarga = 0;
+      this.cargando = false;
+    }
+    if (!tid && !this.authService.allTenants()) return;
     const clientes = this.clientes$.getValue();
     const propiedades = this.propiedades$.getValue();
     const fresco = this.ultimaCarga && Date.now() - this.ultimaCarga < CACHE_TTL_MS;
@@ -42,6 +54,7 @@ export class InmueblesService {
       propiedades: this.http.get<any[]>(`${this.apiBase}/modulo_inmuebles/propiedades`, { headers: this.getHeaders() }),
     }).subscribe({
       next: ({ clientes, propiedades }: { clientes: any[]; propiedades: any[] }) => {
+        if (scope !== this.cacheScope) return;
         this.clientes$.next(clientes || []);
         this.propiedades$.next((propiedades || []).filter((p: any) => ['Disponible', 'Reservada'].includes(p.estado)));
         this.ultimaCarga = Date.now();

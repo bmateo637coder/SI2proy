@@ -9,3 +9,4 @@ uploads/
 uvicorn.log
 .pytest_cache/
 .vscode/
+ml_artifacts/

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/auth_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -9,7 +10,8 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (user == null)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mi perfil'),
@@ -24,9 +26,19 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          CircleAvatar(radius: 38, child: Text(user.fullName.isEmpty ? '?' : user.fullName[0].toUpperCase())),
+          CircleAvatar(
+            radius: 38,
+            child: Text(
+              user.fullName.isEmpty ? '?' : user.fullName[0].toUpperCase(),
+            ),
+          ),
           const SizedBox(height: 16),
-          Center(child: Text(user.fullName, style: Theme.of(context).textTheme.headlineSmall)),
+          Center(
+            child: Text(
+              user.fullName,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ),
           Center(child: Text(user.email)),
           const SizedBox(height: 16),
           Wrap(
@@ -75,6 +87,30 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome),
+            title: const Text('IA y analítica'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/ia'),
+          ),
+          if (user.idRol == 1 || user.canOperateOffline)
+            ListTile(
+              leading: const Icon(Icons.offline_bolt),
+              title: const Text('Operaciones offline'),
+              onTap: () => context.push('/offline'),
+            ),
+          if (user.canSeeUsuarios)
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Usuarios'),
+              onTap: () => context.push('/usuarios'),
+            ),
+          if (user.canSeeRoles)
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings),
+              title: const Text('Roles y permisos'),
+              onTap: () => context.push('/roles'),
+            ),
           Text('Permisos', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           if (user.permisos.isEmpty)
@@ -84,24 +120,32 @@ class ProfileScreen extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: user.permisos
-                  .map((p) => Chip(
-                        label: Text(p),
-                        visualDensity: VisualDensity.compact,
-                      ))
+                  .map(
+                    (p) => Chip(
+                      label: Text(p),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
                   .toList(),
             ),
           if (user.roles.isNotEmpty) ...[
             const SizedBox(height: 20),
             Text('Roles', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            ...user.roles.map((role) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: const Icon(Icons.admin_panel_settings_outlined),
-                    title: Text(role.name),
-                    subtitle: Text(role.permissions.isEmpty ? 'Sin permisos' : role.permissions.join(' · ')),
+            ...user.roles.map(
+              (role) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_outlined),
+                  title: Text(role.name),
+                  subtitle: Text(
+                    role.permissions.isEmpty
+                        ? 'Sin permisos'
+                        : role.permissions.join(' · '),
                   ),
-                )),
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -116,9 +160,6 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      label: Text(label),
-      visualDensity: VisualDensity.compact,
-    );
+    return Chip(label: Text(label), visualDensity: VisualDensity.compact);
   }
 }

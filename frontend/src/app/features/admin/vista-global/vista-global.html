@@ -1,0 +1,43 @@
+<section class="global-page">
+  <header class="global-header"><div><p class="eyebrow">Administración SaaS</p><h1>Todas las inmobiliarias</h1>
+    <p>Consulta la información consolidada y compara los registros de cada empresa.</p></div>
+    <button class="btn-secondary" (click)="exportSummary()" [disabled]="!resumen()">Exportar resumen (CSV)</button></header>
+  <p class="context-note">Vista de consulta. Para crear, editar u operar, selecciona una inmobiliaria concreta en la barra superior o usa «Abrir inmobiliaria».</p>
+  <p *ngIf="loadingSummary()" role="status">Cargando resumen de las inmobiliarias…</p>
+  <div *ngIf="summaryError()" role="alert" class="error">{{ summaryError() }} <button (click)="loadSummary()">Reintentar resumen</button></div>
+  <ng-container *ngIf="resumen() as summary">
+    <div class="totals"><div><strong>{{ summary.inmobiliarias }}</strong><span>Inmobiliarias</span></div>
+      <div *ngFor="let tab of entidades"><strong>{{ summary.totales[tab.key] }}</strong><span>{{ tab.label }}</span></div></div>
+    <h2>Resumen por inmobiliaria</h2>
+    <div class="companies"><article *ngFor="let company of summary.empresas" class="company-card">
+      <h3>{{ company.nombre }}</h3><p class="plan">{{ company.plan | titlecase }} · {{ company.suscripcion }}<span *ngIf="!company.activa"> · Empresa suspendida</span></p>
+      <dl><div *ngFor="let tab of entidades"><dt>{{ tab.label }}</dt><dd>{{ company.conteos[tab.key] }}</dd></div></dl>
+      <div class="actions"><button class="btn-secondary" (click)="filtrarEmpresa(company.id_tenant)">Ver registros</button>
+        <button class="btn-primary" (click)="abrirEmpresa(company.id_tenant)">Abrir inmobiliaria</button></div>
+    </article></div>
+  </ng-container>
+  <h2>Información de todas las empresas</h2>
+  <nav class="tabs" aria-label="Tipo de información"><button *ngFor="let tab of entidades" [class.active]="entidad === tab.key"
+    [attr.aria-pressed]="entidad === tab.key" (click)="cambiarEntidad(tab.key)">{{ tab.label }}</button></nav>
+  <form class="filters" (ngSubmit)="loadRows(true)">
+    <label>Inmobiliaria del listado<select [(ngModel)]="empresa" name="empresa" (ngModelChange)="loadRows(true)">
+      <option [ngValue]="null">Todas las inmobiliarias</option><option *ngFor="let c of resumen()?.empresas" [ngValue]="c.id_tenant">{{ c.nombre }}</option></select></label>
+    <label>Buscar<input [(ngModel)]="buscar" name="buscar" maxlength="150" placeholder="Nombre, dirección, operación o empresa"></label>
+    <button type="submit" class="btn-primary">Buscar</button><button type="button" class="btn-secondary" (click)="limpiar()">Limpiar filtros</button>
+  </form>
+  <div class="list-header"><h3>{{ label }}</h3><button class="btn-secondary" (click)="exportPage()" [disabled]="busy() || !rows().length">Exportar página (CSV)</button></div>
+  <p *ngIf="busy()" role="status">Cargando registros…</p>
+  <div *ngIf="error()" role="alert" class="error">{{ error() }} <button (click)="loadRows()">Reintentar</button></div>
+  <div *ngIf="!busy() && !error()" class="table-scroll"><table><thead><tr><th>Inmobiliaria</th><th *ngFor="let c of columnas">{{ c.label }}</th><th *ngIf="entidad === 'propiedades'">Detalle</th></tr></thead>
+    <tbody><tr *ngFor="let row of rows()"><td class="company-name">{{ row['inmobiliaria'] }}</td><td *ngFor="let c of columnas">{{ valor(row, c) }}</td>
+      <td *ngIf="entidad === 'propiedades'"><button class="btn-secondary" (click)="detalle = row">Ver detalle</button></td></tr>
+      <tr *ngIf="!rows().length"><td [attr.colspan]="columnas.length + 2">No hay registros para estos filtros.</td></tr></tbody></table></div>
+  <div class="pagination" *ngIf="!busy() && !error()"><span>{{ total() ? offset + 1 : 0 }}–{{ hasta }} de {{ total() }} registros</span>
+    <div><button (click)="pagina(-1)" [disabled]="offset === 0">Anterior</button><button (click)="pagina(1)" [disabled]="hasta >= total()">Siguiente</button></div></div>
+  <div *ngIf="detalle as p" class="modal-backdrop" (click)="detalle = null"><article role="dialog" aria-modal="true" aria-label="Detalle de propiedad" class="property-detail" (click)="$event.stopPropagation()">
+    <button class="close" (click)="detalle = null" aria-label="Cerrar detalle">×</button><p class="eyebrow">{{ p['inmobiliaria'] }}</p><h2>{{ p['titulo'] }}</h2>
+    <img *ngIf="p['imagen']" [src]="imageUrl(p['imagen'])" [alt]="p['titulo']"><p>{{ p['direccion'] }}</p><p>{{ p['tipo_operacion'] }} · {{ p['estado'] }}</p>
+    <p>{{ p['descripcion'] }}</p><dl><div *ngFor="let c of p['caracteristicas']"><dt>{{ c.nombre }}</dt><dd>{{ c.valor }}</dd></div></dl>
+    <button class="btn-primary" (click)="abrirEmpresa(p['id_tenant'])">Abrir inmobiliaria</button>
+  </article></div>
+</section>

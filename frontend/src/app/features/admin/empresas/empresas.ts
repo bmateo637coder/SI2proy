@@ -20,7 +20,7 @@ export class Empresas implements OnInit {
   constructor(private http: HttpClient, private fb: FormBuilder, private cdr: ChangeDetectorRef) {
     this.empresaForm = this.fb.group({
       nombre: ['', Validators.required],
-      dominio: [''],
+      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)]],
       admin_ci: ['', Validators.required],
       admin_nombre: ['', Validators.required],
       admin_correo: ['', [Validators.required, Validators.email]],
@@ -70,9 +70,9 @@ export class Empresas implements OnInit {
         });
     }
   }
-  
+
   resetPassword(idEmpresa: number) {
-      if (confirm('¿Está seguro de que desea restablecer la contraseña del administrador a "12345"?')) {
+      if (confirm('¿Restablecer la contraseña del administrador al valor configurado en el servidor?')) {
           this.http.put(`${environment.apiUrl}/admin/empresas/${idEmpresa}/reset-admin-password`, {}, { headers: this.getHeaders() })
             .subscribe({
                 next: (res: any) => {

@@ -5,9 +5,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 import schemas
-from auth import get_current_user
+from auth import get_current_user, is_all_tenants, scope_query
 from database import models
 from database.database import get_db
 
@@ -18,7 +19,8 @@ METODOS_PAGO = ("Transferencia", "Efectivo", "QR")
 
 
 def _es_operativo(user: models.Usuario) -> bool:
-    return user.id_rol in ROLES_OPERATIVOS
+    codes = {p.codigo for p in user.rol.permisos} if user.rol else set()
+    return is_all_tenants(user) or bool(user.id_tenant and (user.id_rol in (1, 2) or user.agente or "API:OPERACIONES" in codes))
 
 
 def _serializar_cuota(cuota: models.Cuota) -> dict:
@@ -58,7 +60,7 @@ def _serializar_contrato(contrato: models.Contrato, detalle: bool = False) -> di
 
     data = {
         "id_contrato": contrato.id_contrato,
-        "id_tenant": contrato.id_tenant,
+        "id_tenant": contrato.id_tenant, "inmobiliaria": contrato.tenant.nombre,
         "id_cliente": contrato.id_cliente,
         "cliente": _nombre_usuario(contrato.cliente),
         "id_propiedad": contrato.id_propiedad,
@@ -98,9 +100,7 @@ def listar_contratos(
     if not _es_operativo(current_user):
         raise HTTPException(status_code=403, detail="Sin permisos para operar la gestión contractual.")
 
-    contratos = db.query(models.Contrato).filter(
-        models.Contrato.id_tenant == current_user.id_tenant
-    ).order_by(models.Contrato.id_contrato.desc()).all()
+    contratos = scope_query(db.query(models.Contrato), current_user, models.Contrato.id_tenant).order_by(models.Contrato.id_contrato.desc()).all()
 
     resultados = [_serializar_contrato(c) for c in contratos]
     if estado:
@@ -130,9 +130,13 @@ def crear_contrato(
     propiedad = db.query(models.Propiedad).filter(
         models.Propiedad.id_propiedad == body.id_propiedad,
         models.Propiedad.id_tenant == current_user.id_tenant,
-    ).first()
+    ).with_for_update().first()
     if not propiedad:
         raise HTTPException(status_code=404, detail="Propiedad no encontrada en esta empresa.")
+    if propiedad.estado != "Disponible" or propiedad.tipo_operacion != body.tipo_contrato:
+        raise HTTPException(409, "La propiedad no está disponible para este tipo de contrato.")
+    if body.fecha_fin and body.fecha_fin < body.fecha_inicio:
+        raise HTTPException(422, "La fecha final debe ser posterior al inicio.")
 
     if body.monto_total <= 0:
         raise HTTPException(status_code=400, detail="El monto total debe ser mayor a 0.")
@@ -145,6 +149,9 @@ def crear_contrato(
     else:
         num_cuotas = 1
 
+    total_centavos = round(body.monto_total * 100)
+    if total_centavos < num_cuotas:
+        raise HTTPException(422, 'El monto no permite cuotas de al menos un centavo; reduzca el número de cuotas.')
     contrato = models.Contrato(
         id_tenant=current_user.id_tenant,
         id_cliente=cliente.id_cliente,
@@ -158,11 +165,9 @@ def crear_contrato(
     db.add(contrato)
     db.flush()
 
-    base_cuota = round(body.monto_total / num_cuotas, 2)
+    base_centavos, restantes = divmod(total_centavos, num_cuotas)
     for i in range(1, num_cuotas + 1):
-        monto = base_cuota
-        if i == num_cuotas:
-            monto = round(body.monto_total - base_cuota * (num_cuotas - 1), 2)
+        monto = (base_centavos + (1 if i <= restantes else 0)) / 100
         db.add(models.Cuota(
             id_contrato=contrato.id_contrato,
             numero_cuota=i,
@@ -173,6 +178,7 @@ def crear_contrato(
 
     if propiedad.estado == "Disponible":
         propiedad.estado = "Reservada"
+        propiedad.version += 1
 
     db.commit()
     db.refresh(contrato)
@@ -188,10 +194,7 @@ def detalle_contrato(
     if not _es_operativo(current_user):
         raise HTTPException(status_code=403, detail="Sin permisos para operar la gestión contractual.")
 
-    contrato = db.query(models.Contrato).filter(
-        models.Contrato.id_contrato == id_contrato,
-        models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    contrato = scope_query(db.query(models.Contrato), current_user, models.Contrato.id_tenant).filter(models.Contrato.id_contrato == id_contrato).first()
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato no encontrado.")
     return _serializar_contrato(contrato, detalle=True)
@@ -215,10 +218,12 @@ def registrar_pago(
     contrato = db.query(models.Contrato).filter(
         models.Contrato.id_contrato == id_contrato,
         models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    ).with_for_update().first()
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato no encontrado.")
 
+    # Bloquea también la propiedad: sincronización offline comparte este bloqueo.
+    db.query(models.Propiedad).filter_by(id_propiedad=contrato.id_propiedad).with_for_update().one()
     saldo = _serializar_contrato(contrato)["saldo_pendiente"]
     if body.monto > saldo + 0.001:
         raise HTTPException(status_code=400, detail=f"El monto excede el saldo pendiente ({saldo}).")
@@ -238,7 +243,9 @@ def registrar_pago(
         key=lambda q: q.numero_cuota,
     )
     cubiertas: list[int] = []
-    restante = round(body.monto, 2)
+    # Usa pagos acumulados: dos abonos parciales deben completar una cuota.
+    restante = round(float(db.query(func.sum(models.Pago.monto)).filter_by(id_contrato=contrato.id_contrato).scalar() or 0), 2)
+    restante -= sum(float(q.monto) for q in contrato.cuotas if q.estado == "Pagada")
     for cuota in cuotas:
         if restante <= 0.001:
             break
@@ -249,13 +256,12 @@ def registrar_pago(
             restante = round(restante - monto_cuota, 2)
             cubiertas.append(cuota.id_cuota)
 
-    db.commit()
-    db.refresh(contrato)
-
-    if _serializar_contrato(contrato)["estado"] == "Pagado" and contrato.tipo_contrato == "Venta":
+    if saldo - body.monto <= 0.001 and contrato.tipo_contrato == "Venta":
         if contrato.propiedad.estado != "Vendida":
             contrato.propiedad.estado = "Vendida"
-            db.commit()
+            contrato.propiedad.version += 1
+    db.commit()
+    db.refresh(contrato)
 
     return {
         "id_pago": pago.id_pago,
@@ -377,10 +383,7 @@ def comprobante_pago(
     if not _es_operativo(current_user):
         raise HTTPException(status_code=403, detail="Sin permisos para operar la gestión contractual.")
 
-    pago = db.query(models.Pago).join(models.Contrato).filter(
-        models.Pago.id_pago == id_pago,
-        models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    pago = scope_query(db.query(models.Pago).join(models.Contrato), current_user, models.Contrato.id_tenant).filter(models.Pago.id_pago == id_pago).first()
     if not pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado.")
 
@@ -402,10 +405,7 @@ def eliminar_contrato(
     if current_user.id_rol not in (1, 2):
         raise HTTPException(status_code=403, detail="Solo Super Admin o Administrador pueden eliminar contratos.")
 
-    contrato = db.query(models.Contrato).filter(
-        models.Contrato.id_contrato == id_contrato,
-        models.Contrato.id_tenant == current_user.id_tenant,
-    ).first()
+    contrato = scope_query(db.query(models.Contrato), current_user, models.Contrato.id_tenant).filter(models.Contrato.id_contrato == id_contrato).first()
     if not contrato:
         raise HTTPException(status_code=404, detail="Contrato no encontrado.")
     if contrato.pagos:

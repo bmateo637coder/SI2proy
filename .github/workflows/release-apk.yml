@@ -1,64 +1,151 @@
 name: Build APK Release
-
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Etiqueta (tag) del Release (vacío = apk_demo_<run_número>)'
+        description: 'Etiqueta de versión (vacío = mobile-2.2.0-<ejecución>)'
+        required: false
+        default: ''
+      artifact_run:
+        description: 'Recuperar carga de un APK verificado: ID de ejecución de origen (vacío = compilar)'
+        required: false
+        default: ''
+      release_id:
+        description: 'ID de borrador de Release para recuperar la carga sin recompilar'
         required: false
         default: ''
   push:
-    tags: ['v*']
-
+    tags: ['mobile-v*']
 permissions:
   contents: write
-
+  actions: read
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  build-apk:
+  android-test:
+    if: inputs.artifact_run == ''
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.47.4
-
-      - name: Validar versión de Flutter
+          cache: true
+      - run: flutter pub get
         working-directory: mobile
-        run: flutter --version
-
-      - name: Obtener dependencias
+      - run: flutter analyze --no-fatal-infos
         working-directory: mobile
-        run: flutter pub get
-
-      - name: Build APK release
+      - run: flutter test --no-pub
+        working-directory: mobile
+      - name: Activar aceleración KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Probar app y SQLite nativo en Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: cd mobile && flutter test integration_test -d emulator-5554
+  build-apk:
+    needs: android-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.4
+          cache: true
+      - run: flutter pub get
+        working-directory: mobile
+      - name: Configurar firma de distribución
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PATH: ${{ runner.temp }}/raices-release.jks
+        run: |
+          test -n "$KEYSTORE"
+          printf '%s' "$KEYSTORE" | base64 --decode > "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+      - name: Compilar APK de producción firmado
         working-directory: mobile
         env:
           PROD_API_URL: ${{ vars.PROD_API_URL }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$PROD_API_URL" ]; then
-            echo "::error::Variable PROD_API_URL no definida (Settings > Variables). Se usa la URL por defecto."
-            flutter build apk --release
-          else
-            flutter build apk --release --dart-define=API_BASE_URL=$PROD_API_URL
-          fi
-
-      - name: Obtener etiqueta del Release
-        id: tag
-        env:
-          INPUT_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
-          RUN_NO: ${{ github.run_number }}
+          test -n "$ANDROID_KEYSTORE_PASSWORD" && test -n "$ANDROID_KEY_ALIAS" && test -n "$ANDROID_KEY_PASSWORD"
+          flutter build apk --release --build-number=$((2200 + ${{ github.run_number }})) --dart-define=API_BASE_URL=${PROD_API_URL:-https://raices-backend-n1yy.onrender.com}
+      - name: Preparar descarga y verificar firma
         run: |
-          if [ -n "$INPUT_TAG" ]; then
-            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=apk_demo_${RUN_NO}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publicar APK como GitHub Release
+          cp mobile/build/app/outputs/flutter-apk/app-release.apk Raices-2.2.0.apk
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$SIGNER" verify --verbose --print-certs Raices-2.2.0.apk
+          sha256sum Raices-2.2.0.apk > Raices-2.2.0.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Raices-Android-2.2.0
+          path: |
+            Raices-2.2.0.apk
+            Raices-2.2.0.apk.sha256
+      - name: Publicar descarga
+        if: env.RELEASE_TOKEN != '' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         uses: softprops/action-gh-release@v2
         with:
-          files: mobile/build/app/outputs/flutter-apk/app-release.apk
-          generate_release_notes: true
-          tag_name: ${{ steps.tag.outputs.tag }}
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+          target_commitish: ${{ github.sha }}
+          tag_name: ${{ inputs.tag || format('mobile-2.2.0-{0}', github.run_number) }}
+          name: 'Raíces Android 2.2.0'
+          body: |
+            Aplicación Android conectada al backend de producción.
+
+            - Alcance SaaS: una inmobiliaria o todas en catálogo, clientes, contratos, reportes e IA.
+            - Reportes dinámicos, guardados, voz y exportaciones PDF, Excel, CSV y HTML.
+            - IA: reportes en lenguaje natural, analítica convencional, chat, descripciones, recomendaciones y predicciones académicas.
+            - Offline: descarga por usuario/inmobiliaria, reservas y ventas en efectivo en SQLite, recuperación tras reinicio y sincronización idempotente.
+
+            Al iniciar sesión se descarga automáticamente la información autorizada. Después puedes iniciar sesión sin red, consultar el catálogo y generar/exportar reportes, crear contratos, pagos y guardar configuraciones. Los cambios se sincronizan y los conflictos quedan pendientes de revisión. La IA generativa requiere conexión; sin red hay cálculos y herramientas locales identificados como tales. El superadministrador SaaS puede usarla en cualquier empresa o en todas; las cuentas de las inmobiliarias conservan los límites de su plan.
+
+            Verificaciones: análisis de Dart, pruebas Flutter, integración en emulador Android con SQLite nativo y firma del APK.
+          files: |
+            Raices-2.2.0.apk
+            Raices-2.2.0.apk.sha256
+      - name: Publicación desde rama de trabajo
+        if: env.RELEASE_TOKEN == '' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
+        run: |
+          echo 'APK firmado y SHA-256 disponibles en el artefacto Raices-Android-2.2.0.'
+          echo 'GitHub exige permiso Workflows para publicar desde una rama que modifica workflows.'
+          echo 'Publicar con el acceso local autorizado: python scripts/publish_mobile_release.py ${{ github.run_id }}'
+  upload-existing:
+    if: inputs.artifact_run != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Recuperar carga de APK verificado sin recompilar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.artifact_run }}
+          RELEASE_ID: ${{ inputs.release_id }}
+        run: python scripts/publish_mobile_release.py "$SOURCE_RUN" --release-id "$RELEASE_ID" --upload-only

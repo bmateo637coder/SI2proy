@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP, Numeric, Date, Text, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP, Numeric, Date, Text, Boolean, UniqueConstraint, JSON, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database.database import Base
@@ -29,7 +29,7 @@ class Rol(Base):
     id_rol = Column(Integer, primary_key=True, index=True)
     id_tenant = Column(Integer, ForeignKey("tenant.id_tenant", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
     nombre = Column(String(50), nullable=False)
-    
+
     tenant = relationship("Tenant", back_populates="roles")
     usuarios = relationship("Usuario", back_populates="rol")
     permisos = relationship("Permiso", secondary="rol_permiso", back_populates="roles")
@@ -40,7 +40,7 @@ class Permiso(Base):
     codigo = Column(String(50), unique=True, nullable=False)
     descripcion = Column(String(255))
     tipo = Column(String(50), nullable=False)
-    
+
     roles = relationship("Rol", secondary="rol_permiso", back_populates="permisos")
 
 class RolPermiso(Base):
@@ -57,7 +57,7 @@ class Usuario(Base):
     telefono = Column(String(20))
     id_rol = Column(Integer, ForeignKey("rol.id_rol"))
     password_hash = Column(String(255), nullable=False)
-    
+
     tenant = relationship("Tenant", back_populates="usuarios")
     rol = relationship("Rol", back_populates="usuarios")
     bitacoras = relationship("Bitacora", back_populates="usuario")
@@ -76,7 +76,7 @@ class Bitacora(Base):
     ci_usuario = Column(String(20), ForeignKey("usuario.ci", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     accion = Column(String(255), nullable=False)
     fecha_hora = Column(TIMESTAMP, server_default=func.current_timestamp())
-    
+
     usuario = relationship("Usuario", back_populates="bitacoras")
 
 class Propietario(Base):
@@ -84,7 +84,7 @@ class Propietario(Base):
     id_propietario = Column(Integer, primary_key=True, index=True)
     ci_usuario = Column(String(20), ForeignKey("usuario.ci", onupdate="CASCADE", ondelete="CASCADE"), unique=True, nullable=False)
     id_tenant = Column(Integer, ForeignKey("tenant.id_tenant", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    
+
     tenant = relationship("Tenant", back_populates="propietarios")
     usuario = relationship("Usuario", back_populates="propietario")
     propiedades = relationship("Propiedad", back_populates="propietario")
@@ -94,7 +94,7 @@ class Agente(Base):
     id_agente = Column(Integer, primary_key=True, index=True)
     ci_usuario = Column(String(20), ForeignKey("usuario.ci", onupdate="CASCADE", ondelete="CASCADE"), unique=True, nullable=False)
     id_tenant = Column(Integer, ForeignKey("tenant.id_tenant", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    
+
     tenant = relationship("Tenant", back_populates="agentes")
     usuario = relationship("Usuario", back_populates="agente")
     propiedades = relationship("Propiedad", back_populates="agente")
@@ -106,7 +106,7 @@ class Cliente(Base):
     id_cliente = Column(Integer, primary_key=True, index=True)
     ci_usuario = Column(String(20), ForeignKey("usuario.ci", onupdate="CASCADE", ondelete="CASCADE"), unique=True, nullable=False)
     id_tenant = Column(Integer, ForeignKey("tenant.id_tenant", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    
+
     tenant = relationship("Tenant", back_populates="clientes")
     usuario = relationship("Usuario", back_populates="cliente")
     visitas = relationship("Visita", back_populates="cliente")
@@ -124,7 +124,9 @@ class Propiedad(Base):
     precio = Column(Numeric(12, 2), nullable=False)
     tipo_operacion = Column(String(20), nullable=False) # 'Venta', 'Alquiler', 'Anticretico'
     estado = Column(String(20), default='Disponible') # 'Disponible', 'Reservada', 'Vendida', 'Alquilada'
-    
+    id_sucursal = Column(Integer, ForeignKey("sucursal.id_sucursal"), nullable=True, index=True)
+    version = Column(Integer, nullable=False, default=1, server_default="1")
+
     tenant = relationship("Tenant", back_populates="propiedades")
     propietario = relationship("Propietario", back_populates="propiedades")
     agente = relationship("Agente", back_populates="propiedades")
@@ -138,7 +140,7 @@ class Imagen(Base):
     id_imagen = Column(Integer, primary_key=True, index=True)
     id_propiedad = Column(Integer, ForeignKey("propiedad.id_propiedad", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     url = Column(String(255), nullable=False)
-    
+
     propiedad = relationship("Propiedad", back_populates="imagenes")
 
 class Caracteristica(Base):
@@ -147,7 +149,7 @@ class Caracteristica(Base):
     id_propiedad = Column(Integer, ForeignKey("propiedad.id_propiedad", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     nombre = Column(String(100), nullable=False)
     valor = Column(String(100), nullable=False)
-    
+
     propiedad = relationship("Propiedad", back_populates="caracteristicas")
 
 class Visita(Base):
@@ -160,7 +162,7 @@ class Visita(Base):
     fecha_hora = Column(TIMESTAMP, nullable=False)
     comentario = Column(Text)
     estado = Column(String(20), default='Programada') # 'Programada', 'Realizada', 'Cancelada'
-    
+
     tenant = relationship("Tenant", back_populates="visitas")
     cliente = relationship("Cliente", back_populates="visitas")
     propiedad = relationship("Propiedad", back_populates="visitas")
@@ -177,13 +179,69 @@ class Contrato(Base):
     monto_total = Column(Numeric(12, 2), nullable=False)
     fecha_inicio = Column(Date, nullable=False)
     fecha_fin = Column(Date)
-    
+
     tenant = relationship("Tenant", back_populates="contratos")
     cliente = relationship("Cliente", back_populates="contratos")
     propiedad = relationship("Propiedad", back_populates="contratos")
     agente = relationship("Agente", back_populates="contratos")
     pagos = relationship("Pago", back_populates="contrato")
     cuotas = relationship("Cuota", back_populates="contrato", cascade="all, delete-orphan")
+
+
+class Plan(Base):
+    __tablename__ = "plan_saas"
+    codigo = Column(String(30), primary_key=True)
+    nombre = Column(String(80), nullable=False)
+    max_sucursales = Column(Integer, nullable=False)
+    reportes_ia = Column(Boolean, nullable=False, default=False)
+    __table_args__ = (CheckConstraint("max_sucursales > 0"),)
+
+
+class Suscripcion(Base):
+    __tablename__ = "suscripcion_saas"
+    id_tenant = Column(Integer, ForeignKey("tenant.id_tenant"), primary_key=True)
+    codigo_plan = Column(String(30), ForeignKey("plan_saas.codigo"), nullable=False)
+    inicio = Column(Date, nullable=False)
+    vencimiento = Column(Date, nullable=False)
+    estado = Column(String(20), nullable=False, default="activa")
+    plan = relationship("Plan")
+
+
+class Sucursal(Base):
+    __tablename__ = "sucursal"
+    id_sucursal = Column(Integer, primary_key=True)
+    id_tenant = Column(Integer, ForeignKey("tenant.id_tenant"), nullable=False, index=True)
+    nombre = Column(String(100), nullable=False)
+    direccion = Column(String(255), nullable=False, default="")
+    activa = Column(Boolean, nullable=False, default=True)
+    __table_args__ = (UniqueConstraint("id_tenant", "nombre"),)
+
+
+class UsuarioSucursal(Base):
+    __tablename__ = "usuario_sucursal"
+    ci_usuario = Column(String(20), ForeignKey("usuario.ci"), primary_key=True)
+    id_sucursal = Column(Integer, ForeignKey("sucursal.id_sucursal"), primary_key=True)
+
+
+class OperacionOffline(Base):
+    """Comprobante durable de cada intento procesado; no se borra al sincronizar."""
+    __tablename__ = "operacion_offline"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String(36), nullable=False)
+    id_tenant = Column(Integer, ForeignKey("tenant.id_tenant"), nullable=False, index=True)
+    id_sucursal = Column(Integer, ForeignKey("sucursal.id_sucursal"), nullable=False)
+    ci_usuario = Column(String(20), ForeignKey("usuario.ci"), nullable=False)
+    id_cliente = Column(Integer, ForeignKey("cliente.id_cliente"), nullable=False)
+    id_propiedad = Column(Integer, ForeignKey("propiedad.id_propiedad"), nullable=False)
+    tipo = Column(String(30), nullable=False)
+    payload_hash = Column(String(64), nullable=False)
+    datos = Column(JSON, nullable=False)
+    estado = Column(String(20), nullable=False)
+    motivo = Column(String(255))
+    id_contrato = Column(Integer, ForeignKey("contrato.id_contrato"))
+    registrado_en = Column(TIMESTAMP(timezone=True), nullable=False)
+    procesado_en = Column(TIMESTAMP(timezone=True), server_default=func.current_timestamp())
+    __table_args__ = (UniqueConstraint("id_tenant", "uuid", name="uq_offline_tenant_uuid"),)
 
 class Cuota(Base):
     __tablename__ = "cuota"
@@ -205,7 +263,7 @@ class Pago(Base):
     fecha_pago = Column(TIMESTAMP, server_default=func.current_timestamp())
     metodo_pago = Column(String(50), nullable=False) # 'Transferencia', 'Efectivo', 'QR'
     numero_recibo = Column(String(50))
-    
+
     contrato = relationship("Contrato", back_populates="pagos")
 
 class ReporteGuardado(Base):
@@ -219,3 +277,17 @@ class ReporteGuardado(Base):
 
     tenant = relationship("Tenant")
     usuario = relationship("Usuario")
+
+
+class CambioReplica(Base):
+    """Confirmación atómica de cambios móviles; UUID conserva su significado al reintentar."""
+    __tablename__ = "cambio_replica"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String(36), nullable=False)
+    id_tenant = Column(Integer, ForeignKey("tenant.id_tenant"), nullable=False)
+    ci_usuario = Column(String(20), ForeignKey("usuario.ci"), nullable=False)
+    payload_hash = Column(String(64), nullable=False)
+    estado = Column(String(20), nullable=False)
+    resultado = Column(JSON, nullable=False)
+    procesado_en = Column(TIMESTAMP(timezone=True), server_default=func.current_timestamp())
+    __table_args__ = (UniqueConstraint("id_tenant", "uuid", name="uq_replica_tenant_uuid"),)

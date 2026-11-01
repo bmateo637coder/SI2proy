@@ -3,15 +3,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
   SecureStorageService([FlutterSecureStorage? storage])
-      : _storage = storage ?? const FlutterSecureStorage(
-          aOptions: AndroidOptions(encryptedSharedPreferences: true),
-        );
+    : _storage =
+          storage ??
+          const FlutterSecureStorage(
+            aOptions: AndroidOptions(encryptedSharedPreferences: true),
+          );
 
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _tenantIdKey = 'tenant_id';
+  static const _profileKey = 'offline_profile';
+  static const _companiesKey = 'companies_cache';
   final FlutterSecureStorage _storage;
-  
+
   // In-memory fallback for web over HTTP where WebCrypto is not available
   final Map<String, String> _webFallback = {};
 
@@ -42,7 +46,9 @@ class SecureStorageService {
     if (kIsWeb) {
       _webFallback.clear();
     } else {
-      await _storage.deleteAll();
+      for (final key in [_accessTokenKey, _refreshTokenKey, _tenantIdKey, _profileKey, _companiesKey]) {
+        await _storage.delete(key: key);
+      }
     }
   }
 
@@ -58,4 +64,27 @@ class SecureStorageService {
       await _storage.write(key: _tenantIdKey, value: tenantId);
     }
   }
+
+  Future<void> saveProfile(String profile) async {
+    if (kIsWeb) {
+      _webFallback[_profileKey] = profile;
+    } else {
+      await _storage.write(key: _profileKey, value: profile);
+    }
+  }
+
+  Future<String?> readProfile() async {
+    return kIsWeb ? _webFallback[_profileKey] : _storage.read(key: _profileKey);
+  }
+
+  Future<void> saveCompanies(String value) async {
+    if (kIsWeb) {
+      _webFallback[_companiesKey] = value;
+    } else {
+      await _storage.write(key: _companiesKey, value: value);
+    }
+  }
+
+  Future<String?> readCompanies() async =>
+      kIsWeb ? _webFallback[_companiesKey] : _storage.read(key: _companiesKey);
 }

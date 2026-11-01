@@ -12,26 +12,31 @@ import { Catalogo } from './components/catalogo/catalogo';
 import { Usuarios } from './features/usuarios/usuarios/usuarios';
 import { Bitacora } from './features/admin/bitacora/bitacora';
 import { Empresas } from './features/admin/empresas/empresas';
-import { GeneradorReportes } from './features/reportes/generador/generador';
 import { Backup } from './features/admin/backup/backup';
 import { Contratos } from './features/gestion-contractual/contratos/contratos';
 
 import { permissionGuard } from './core/guards/permission.guard';
+import { sessionGuard, staffGuard, superAdminGuard } from './core/guards/session.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: Login },
   { path: 'forgot-password', component: ForgotPassword },
-  { 
-    path: 'dashboard', 
+  {
+    path: 'dashboard',
     component: Layout,
+    canActivate: [sessionGuard],
     children: [
+      { path: 'vista-global', canActivate: [superAdminGuard], loadComponent: () => import('./features/admin/vista-global/vista-global').then(m => m.VistaGlobalPage) },
+      { path: 'offline', canActivate: [staffGuard], loadComponent: () => import('./features/offline/offline').then(m => m.OfflinePage) },
+      { path: 'analitica', canActivate: [staffGuard], loadComponent: () => import('./features/analitica/analitica').then(m => m.AnaliticaPage) },
+      { path: 'plan', canActivate: [staffGuard], loadComponent: () => import('./features/saas/saas').then(m => m.SaasPage) },
       { path: 'catalogo', component: Catalogo },
       { path: 'profile', component: Profile },
       { path: 'empresas', component: Empresas, canActivate: [permissionGuard('UI:MENU_EMPRESAS')] },
       { path: 'usuarios', component: Usuarios, canActivate: [permissionGuard('UI:MENU_USUARIOS')] },
       { path: 'roles', component: Roles, canActivate: [permissionGuard('UI:MENU_ROLES')] },
-      { path: 'reportes', component: GeneradorReportes },
+      { path: 'reportes', loadComponent: () => import('./features/reportes/generador/generador').then(m => m.GeneradorReportes) },
       { path: 'backup', component: Backup },
       { path: 'bitacora', component: Bitacora, canActivate: [permissionGuard('UI:MENU_BITACORA')] },
       { path: 'clientes', component: Clientes, canActivate: [permissionGuard('UI:MENU_CLIENTES')] },

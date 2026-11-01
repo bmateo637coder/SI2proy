@@ -39,7 +39,7 @@
           <span *ngIf="!imageUrl(r.imagen)" style="color: var(--text-muted); font-size: 0.85rem;">Sin imagen</span>
         </div>
         <div style="padding: 1rem;">
-          <h4 style="margin: 0 0 0.3rem; color: var(--secondary-color); font-size: 1rem;">{{ r.titulo }}</h4>
+          <h4 style="margin: 0 0 0.3rem; color: var(--secondary-color); font-size: 1rem;">{{ r.titulo }}</h4><p *ngIf="authService.allTenants()">{{ r.inmobiliaria }}</p>
           <p style="margin: 0 0 0.6rem; font-size: 0.8rem; color: var(--text-muted);">$us {{ r.precio | number: '1.2-2' }} · {{ r.tipo_operacion }}</p>
           <span style="background: #ecfdf5; color: #15803d; padding: 0.2rem 0.6rem; border-radius: 999px; font-weight: 600; font-size: 0.75rem;">{{ r.estado }}</span>
         </div>
@@ -157,7 +157,7 @@
       <!-- Información -->
       <div style="padding: 2rem; flex: 1; display: flex; flex-direction: column;">
         <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--secondary-color); line-height: 1.3;">
-            {{prop.titulo}}
+            <small *ngIf="authService.allTenants()" style="display:block;font-size:.8rem;color:#856824">{{ prop.inmobiliaria }}</small>{{prop.titulo}}
         </h3>
         <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; flex: 1;">
             {{prop.direccion}}
@@ -198,7 +198,7 @@
       </div>
       
       <div style="padding: 2.5rem;">
-        <h2 style="font-size: 2.5rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 0.5rem;">{{propiedadSeleccionada.titulo}}</h2>
+        <h2 style="font-size: 2.5rem; font-weight: 700; color: var(--secondary-color); margin-bottom: 0.5rem;">{{propiedadSeleccionada.titulo}}</h2><p *ngIf="authService.allTenants()">{{ propiedadSeleccionada.inmobiliaria }}</p>
         <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2rem;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: text-bottom; margin-right: 5px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
           {{propiedadSeleccionada.direccion}}

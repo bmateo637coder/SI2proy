@@ -1,0 +1,50 @@
+@startuml
+left to right direction
+actor "Superadministrador" as Super
+actor "Administrador de inmobiliaria" as Admin
+actor "Agente autorizado" as Agent
+actor "Proveedor IA" as AI
+rectangle "Raíces · Parcial 2" {
+  usecase "Registrar empresa\ny administrador" as UC1
+  usecase "Configurar planes" as UC2
+  usecase "Administrar suscripción" as UC3
+  usecase "Gestionar sucursales\ny asignaciones" as UC4
+  usecase "Descargar copia autorizada\n(automática en móvil)" as UC5
+  usecase "Registrar reserva o venta\nen dispositivo" as UC6
+  usecase "Sincronizar pendientes" as UC7
+  usecase "Validar tenant, sucursal,\nversión y disponibilidad" as UC8
+  usecase "Consultar resultado\ny resolver conflicto" as UC9
+  usecase "Consultar reporte\nconvencional" as UC10
+  usecase "Solicitar reporte\npor texto o voz" as UC11
+  usecase "Exportar PDF, Excel,\nCSV o HTML" as UC12
+  usecase "Consultar dashboard ML" as UC13
+  usecase "Cancelar reserva\ndentro del plazo" as UC14
+  usecase "Entrar sin conexión\ncon cuenta validada" as UC15
+  usecase "Registrar contratos\ny pagos locales" as UC16
+  usecase "Calcular reportes\ncon la copia local" as UC17
+}
+Super --> UC1
+Super --> UC2
+Super --|> Admin
+Admin --> UC3
+Admin --> UC4
+Admin --|> Agent
+Agent --> UC5
+Agent --> UC6
+Agent --> UC7
+Agent --> UC9
+Agent --> UC10
+Agent --> UC11
+Agent --> UC13
+Agent --> UC14
+Agent --> UC15
+Agent --> UC16
+Agent --> UC17
+UC12 ..> UC17 : <<extend>>
+UC7 ..> UC8 : <<include>>
+UC11 ..> UC10 : <<include>>
+UC12 ..> UC10 : <<extend>>
+AI --> UC11
+note bottom of UC11 : Profesional; intérprete local\nexplícito si no hay clave IA.
+note bottom of UC15 : El primer acceso requiere Internet.\nLa contraseña se verifica en almacenamiento seguro.
+@enduml
