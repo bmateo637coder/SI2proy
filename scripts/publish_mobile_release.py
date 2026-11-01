@@ -120,7 +120,7 @@ def main():
 - SaaS: una o todas las inmobiliarias en catálogo, clientes, contratos y reportes.
 - Reportes dinámicos con filtros, configuraciones y exportaciones PDF, Excel, CSV y HTML.
 - IA: reportes por texto/voz, analítica, chat, descripciones, recomendaciones y predicciones académicas.
-- Offline con SQLite: catálogo por cuenta/empresa, reservas y ventas en efectivo, recuperación tras reinicio y sincronización sin duplicados.
+- Offline con SQLite: descarga completa automática, login local, catálogo, clientes, contratos, pagos y reportes en las pantallas habituales; reservas y ventas en efectivo; recuperación tras reinicio, dependencias y conflictos sin sobrescrituras ni duplicados.
 
 El superadministrador SaaS puede consultar la IA de cualquier inmobiliaria sin adoptar su plan. Las cuentas de las inmobiliarias mantienen los límites de su suscripción. La IA necesita conexión.
 
@@ -128,7 +128,7 @@ La copia autorizada se descarga automáticamente al iniciar sesión. Sin Interne
 
 Código del APK: {run['head_sha']}.
 Pruebas Android y firma aprobadas: {run['html_url']}.
-La publicación automática de esa ejecución fue rechazada por los permisos del token de Actions. Este APK se publicó desde su artefacto verificado usando el acceso autorizado al repositorio, sin recompilar ni cambiar el archivo.
+El workflow conserva el artefacto firmado en la rama de trabajo. Este APK se publica desde ese artefacto verificado usando el acceso autorizado al repositorio, sin recompilar ni cambiar el archivo.
 '''
     if release is None:
         if args.upload_only:

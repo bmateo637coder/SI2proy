@@ -4,7 +4,7 @@ Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** genera `Raices-2.2.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública está en [GitHub Releases](https://github.com/bmateo637coder/SI2proy/releases). No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-2.2.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 2.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.2.0-13/Raices-2.2.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-2.2.0-13)). No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
 

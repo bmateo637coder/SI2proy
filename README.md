@@ -69,7 +69,7 @@ ng build       # producción → dist/
 
 ## Mobile (`mobile/`)
 
-[Descargar APK Android 2.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.1.0-8/Raices-2.1.0.apk) · [Guía de uso móvil](mobile/README.md).
+[Descargar APK Android 2.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.2.0-13/Raices-2.2.0.apk) · [Guía de uso móvil](mobile/README.md).
 
 App Flutter con selección de una o todas las inmobiliarias, reportes/IA y operaciones offline. La URL de la API se define en `lib/core/config/api_constants.dart`
 y puede sobrescribirse en build/run:

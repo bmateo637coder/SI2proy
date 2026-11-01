@@ -1,0 +1,68 @@
+@startuml
+title Móvil 2.2 · Copia automática y pantallas habituales sin red
+actor "Usuario autorizado" as User
+boundary "Login / Catálogo / Contratos / Reportes" as UI
+control "AuthProvider / OfflineIdentity" as Auth
+database "Almacenamiento seguro" as Secure
+control "ReplicaInterceptor / ReplicaStore" as Local
+database "SQLite: bundle / outbox / cached_response" as SQLite
+control "ReplicaController" as Coordinator
+control "API autenticada / replica.py" as API
+database PostgreSQL as DB
+
+User -> UI : iniciar sesión con conexión
+UI -> Auth : validar cuenta en servidor
+Auth -> Secure : verificador PBKDF2 con sal, perfil y token
+Auth --> UI : publicar sesión lista
+Coordinator -> API : GET /api/replica/datos (alcance autorizado)
+API -> DB : consultar datos completos, cuotas y pagos
+DB --> API : registros sin hashes de contraseña
+API --> Coordinator : copia completa + huellas
+Coordinator -> SQLite : reemplazar copia atómicamente
+note right of Coordinator : Descarga fotos sin credenciales de API.\nSe repite al abrir/reanudar y actualiza periódicamente.
+
+alt teléfono sin conexión
+  User -> UI : volver a iniciar sesión
+  UI -> Auth : verificar contraseña local
+  Auth -> Secure : comprobar verificador y límite de intentos
+  Auth --> UI : acceso a datos ya descargados
+end
+
+User -> UI : consultar catálogo / generar reporte
+UI -> Local : petición habitual
+Local -> SQLite : leer copia y superponer pendientes
+Local --> UI : datos / reporte y exportación locales
+note over UI, Local : Los cálculos locales y recibos provisionales se identifican.\nGemini y servicios externos requieren Internet.
+
+User -> UI : guardar contrato / pago / configuración
+UI -> Local : propuesta comercial
+Local -> Local : validar datos y representar cambio
+Local -> SQLite : guardar UUID inmutable, huella y dependencias
+Local --> UI : pendiente de sincronizar
+
+== Regresa Internet, con app abierta o al reanudar ==
+Coordinator -> API : validar identidad y permisos actuales
+loop por cada cambio pendiente
+  Coordinator -> SQLite : recuperar payload original y UUID
+  Coordinator -> API : POST /api/replica/cambios
+  API -> DB : bloquear tenant y registro; buscar UUID
+  alt UUID ya procesado
+    DB --> API : comprobante previo
+  else cambia la huella del servidor
+    API -> DB : registrar conflicto sin sobrescribir
+  else propuesta válida
+    API -> DB : resolver dependencias y aplicar reglas existentes
+    API -> DB : COMMIT: datos de negocio + CambioReplica
+  end
+  API --> Coordinator : confirmación / conflicto / rechazo
+  alt llega respuesta
+    Coordinator -> SQLite : conservar resultado y propuesta
+  else se pierde la respuesta
+    Coordinator -> SQLite : pendiente con el mismo UUID
+  end
+end
+Coordinator -> API : descargar nueva copia completa
+Coordinator -> SQLite : integrar confirmaciones atómicamente
+Coordinator --> UI : aviso de pendientes y conflictos
+User -> UI : comparar propuesta y servidor; descartar o registrar nuevo cambio
+@enduml

@@ -31,14 +31,15 @@ tabla y en PDF, Excel, CSV y HTML. Los reportes convencionales y generativos
 conservan los grupos separados por inmobiliaria, y la analítica identifica la
 empresa de cada predicción. El superadministrador puede consultar la plataforma
 completa; las cuentas de empresa conservan los permisos de su suscripción.
-El modo offline, el guardado de configuraciones y las operaciones de escritura
-requieren una inmobiliaria concreta para evitar asignaciones ambiguas.
+Las consultas offline móviles también admiten todas las inmobiliarias. El guardado
+de configuraciones y las operaciones de escritura requieren una inmobiliaria concreta
+para evitar asignaciones ambiguas.
 
 La selección viaja como `X-Tenant-ID`. El servidor valida la empresa y crea un
 contexto temporal por petición; no modifica el usuario ni sus credenciales. Una cuenta
 de inmobiliaria no puede usar este encabezado para acceder a otra empresa. El cambio
 de empresa reinicia formularios y cachés; las operaciones offline permanecen separadas
-por empresa y usuario. Un 401 cierra la sesión y explica que hay que autenticarse de nuevo.
+por empresa y usuario. En la web, un 401 exige iniciar sesión de nuevo. El móvil conserva la copia local y solicita validar la sesión antes de sincronizar.
 
 ## Reportes
 

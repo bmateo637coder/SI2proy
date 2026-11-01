@@ -45,6 +45,13 @@ class OperacionOffline { +uuid: UUID
 +motivo: String
 +registrado_en: DateTime
 +procesado_en: DateTime }
+class CambioReplica { +uuid: UUID
++id_tenant: Integer
++ci_usuario: String
++payload_hash: String
++estado: String
++resultado: JSON
++procesado_en: DateTime }
 Tenant "1" -- "*" Usuario
 Usuario "*" -- "1" Rol
 Rol "*" -- "*" Permiso
@@ -66,10 +73,13 @@ Propiedad "1" -- "*" Contrato
 Contrato "1" -- "*" Pago
 Contrato "1" *-- "*" Cuota
 Tenant "1" -- "*" OperacionOffline
+Tenant "1" -- "*" CambioReplica
+Usuario "1" -- "*" CambioReplica
 Sucursal "1" -- "*" OperacionOffline
 Usuario "1" -- "*" OperacionOffline
 Propiedad "1" -- "*" OperacionOffline
 Cliente "1" -- "*" OperacionOffline
 OperacionOffline "0..1" -- "0..1" Contrato : venta confirmada
 note bottom of OperacionOffline : UNIQUE(id_tenant, uuid)\nUUID + hash inmutable; estados durables.
+note bottom of CambioReplica : UNIQUE(id_tenant, uuid)\nMutación y comprobante en la misma transacción.\nDependencias y huellas se validan antes de escribir.
 @enduml
