@@ -149,6 +149,9 @@ def crear_contrato(
     else:
         num_cuotas = 1
 
+    total_centavos = round(body.monto_total * 100)
+    if total_centavos < num_cuotas:
+        raise HTTPException(422, 'El monto no permite cuotas de al menos un centavo; reduzca el número de cuotas.')
     contrato = models.Contrato(
         id_tenant=current_user.id_tenant,
         id_cliente=cliente.id_cliente,
@@ -162,11 +165,9 @@ def crear_contrato(
     db.add(contrato)
     db.flush()
 
-    base_cuota = round(body.monto_total / num_cuotas, 2)
+    base_centavos, restantes = divmod(total_centavos, num_cuotas)
     for i in range(1, num_cuotas + 1):
-        monto = base_cuota
-        if i == num_cuotas:
-            monto = round(body.monto_total - base_cuota * (num_cuotas - 1), 2)
+        monto = (base_centavos + (1 if i <= restantes else 0)) / 100
         db.add(models.Cuota(
             id_contrato=contrato.id_contrato,
             numero_cuota=i,

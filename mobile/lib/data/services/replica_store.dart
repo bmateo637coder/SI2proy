@@ -48,6 +48,21 @@ class ReplicaStore extends ChangeNotifier {
   );
   static Map<String, dynamic> clone(Map value) =>
       Map<String, dynamic>.from(jsonDecode(jsonEncode(value)));
+  static int installments(Map values) {
+    if (values['num_cuotas'] != null) return values['num_cuotas'] as int;
+    final start = LocalReports.day(values['fecha_inicio']),
+        end = LocalReports.day(values['fecha_fin']);
+    if (values['tipo_contrato'] == 'Alquiler' &&
+        start != null &&
+        end != null &&
+        end.isAfter(start))
+      return ((end.year - start.year) * 12 + end.month - start.month).clamp(
+        1,
+        36000,
+      );
+    return 1;
+  }
+
   Future<Map<String, dynamic>?> raw({String? forAccount}) async {
     final key = forAccount ?? account;
     if (key == null) return null;
@@ -337,8 +352,10 @@ class ReplicaStore extends ChangeNotifier {
         final client = contacts
             .where((c) => c['id_cliente'] == values['id_cliente'])
             .firstOrNull;
-        final count = values['num_cuotas'] as int? ?? 1;
+        final count = installments(values);
         final total = num.tryParse('${values['monto_total']}') ?? 0;
+        final cents = (total * 100).round(),
+            base = (total * 100).round() ~/ count;
         contracts.add(
           confirmed ??
               {
@@ -360,10 +377,7 @@ class ReplicaStore extends ChangeNotifier {
                   (i) => {
                     'id_cuota': -(i + 1),
                     'numero_cuota': i + 1,
-                    'monto': i == count - 1
-                        ? total -
-                              (total / count * 100).round() / 100 * (count - 1)
-                        : (total / count * 100).round() / 100,
+                    'monto': (base + (i < cents % count ? 1 : 0)) / 100,
                     'fecha_vencimiento': DateTime.parse(values['fecha_inicio'])
                         .add(Duration(days: 30 * (i + 1)))
                         .toIso8601String()
@@ -393,15 +407,16 @@ class ReplicaStore extends ChangeNotifier {
                 },
           );
           contract['pagos'] = payments;
-          final paid = payments.fold<num>(
+          final paid = payments.fold<int>(
             0,
-            (n, p) => n + (num.tryParse('${p['monto']}') ?? 0),
+            (n, p) => n + ((num.tryParse('${p['monto']}') ?? 0) * 100).round(),
           );
           contract['saldo_pendiente'] =
-              ((num.tryParse('${contract['monto_total']}') ?? 0) - paid).clamp(
-                0,
-                double.infinity,
-              );
+              ((((num.tryParse('${contract['monto_total']}') ?? 0) * 100)
+                          .round() -
+                      paid)
+                  .clamp(0, 999999999999)) /
+              100;
           contract['estado'] = contract['saldo_pendiente'] == 0
               ? 'Pagado'
               : 'Activo';
@@ -409,8 +424,9 @@ class ReplicaStore extends ChangeNotifier {
           var remainder = paid;
           var done = 0;
           for (final quota in contract['cuotas'] as List? ?? []) {
-            final amount = num.tryParse('${quota['monto']}') ?? 0;
-            if (remainder + 0.001 >= amount) {
+            final amount = ((num.tryParse('${quota['monto']}') ?? 0) * 100)
+                .round();
+            if (remainder >= amount) {
               quota['estado'] = 'Pagada';
               remainder -= amount;
               done++;
@@ -572,6 +588,20 @@ class ReplicaStore extends ChangeNotifier {
     }
     final localId = -(DateTime.now().microsecondsSinceEpoch);
     final preview = await view(tenant: tenant);
+    if (spec.type == 'cliente.crear') {
+      if (!LocalReports.rows(
+        preview,
+        'usuarios',
+      ).any((u) => u['ci'] == data['ci_usuario']))
+        throw StateError(
+          'El CI debe corresponder a un usuario descargado de esta inmobiliaria.',
+        );
+      if (LocalReports.rows(
+        preview,
+        'clientes',
+      ).any((u) => u['ci_usuario'] == data['ci_usuario']))
+        throw StateError('Este usuario ya está registrado como cliente.');
+    }
     if (spec.type == 'pago.crear') {
       final c = LocalReports.rows(
         preview,
@@ -579,6 +609,8 @@ class ReplicaStore extends ChangeNotifier {
       ).where((c) => c['id_contrato'] == spec.id).firstOrNull;
       final amount = num.tryParse('${data['monto']}') ?? 0;
       if (c == null ||
+          !amount.isFinite ||
+          num.parse(amount.toStringAsFixed(2)) != amount ||
           amount <= 0 ||
           amount > (num.tryParse('${c['saldo_pendiente']}') ?? 0) + 0.001)
         throw StateError(
@@ -586,6 +618,28 @@ class ReplicaStore extends ChangeNotifier {
         );
     }
     if (spec.type == 'contrato.crear') {
+      final amount = num.tryParse('${data['monto_total']}');
+      final count = installments(data);
+      if (amount == null ||
+          !amount.isFinite ||
+          num.parse(amount.toStringAsFixed(2)) != amount ||
+          amount <= 0 ||
+          amount > 9999999999.99 ||
+          count < 1 ||
+          count > 360 ||
+          (amount * 100).round() < count)
+        throw StateError(
+          'Revisa el monto positivo y el número de cuotas (1 a 360).',
+        );
+      final start = LocalReports.day(data['fecha_inicio']);
+      final end = LocalReports.day(data['fecha_fin']);
+      if (start == null || end != null && end.isBefore(start))
+        throw StateError('Revisa las fechas del contrato.');
+      if (!LocalReports.rows(
+        preview,
+        'clientes',
+      ).any((c) => c['id_cliente'] == data['id_cliente']))
+        throw StateError('El cliente no está disponible en esta inmobiliaria.');
       final p = LocalReports.rows(
         preview,
         'propiedades',
@@ -598,6 +652,8 @@ class ReplicaStore extends ChangeNotifier {
         );
     }
     final db = await database;
+    // Comprueba que la propuesta se puede representar antes de escribir la cola durable.
+    apply(clone(preview), body, localId, null);
     if (key != account)
       throw StateError('Cambió la cuenta. Vuelve a abrir el formulario.');
     await db.insert('outbox', {

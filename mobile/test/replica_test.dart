@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:inmobiliaria_mobile/data/services/offline_identity.dart';
+import 'package:inmobiliaria_mobile/data/services/local_reports.dart';
 import 'package:inmobiliaria_mobile/data/services/replica_store.dart';
 import 'package:inmobiliaria_mobile/data/services/replica_controller.dart';
 import 'package:inmobiliaria_mobile/data/services/offline_service.dart';
@@ -160,6 +161,70 @@ void main() {
       (await store.view(tenant: 2))['contratos'].single['saldo_pendiente'],
       750,
     );
+  });
+  test('Reportes locales interpretan meses, sucursal, tipo y estado sin omitir filtros', () async {
+    final spec = LocalReports.naturalSpec(
+      'Ventas de febrero de 2024 en sucursal 2',
+    );
+    expect(spec['desde'], '2024-02-01');
+    expect(spec['hasta'], '2024-02-29');
+    expect(spec['id_sucursal'], 2);
+    expect(spec['tipo_contrato'], 'Venta');
+    final available = LocalReports.naturalSpec(
+      'Cartera de propiedades disponibles',
+    );
+    expect(available['estado'], 'Disponible');
+    expect(
+      () => LocalReports.naturalSpec('Ventas de enero y febrero'),
+      throwsStateError,
+    );
+    expect(
+      () =>
+          LocalReports.naturalSpec('Ventas desde 2026-02-31 hasta 2026-03-01'),
+      throwsStateError,
+    );
+    expect(
+      () => LocalReports.conventional({}, {
+        'tipo': 'ventas_sucursal',
+        'estado': 'Vendida',
+      }, false),
+      throwsStateError,
+    );
+  });
+  test('Errores locales no contaminan SQLite y los pagos fraccionados cierran el saldo en centavos', () async {
+    await auth.selectTenant(2);
+    store.online = false;
+    final body = {
+      'id_cliente': 2,
+      'id_propiedad': 2,
+      'tipo_contrato': 'Venta',
+      'monto_total': 0.3,
+      'fecha_inicio': '2026-11-01',
+      'num_cuotas': 1,
+    };
+    await expectLater(
+      dio.post(
+        '/gestion_contractual/contratos',
+        data: {...body, 'num_cuotas': -2},
+      ),
+      throwsA(isA<DioException>()),
+    );
+    expect(await store.operations(), isEmpty);
+    final c = (await dio.post(
+      '/gestion_contractual/contratos',
+      data: body,
+    )).data;
+    for (final amount in [0.1, 0.2])
+      await dio.post(
+        '/gestion_contractual/contratos/${c['id_contrato']}/pagos',
+        data: {'monto': amount, 'metodo_pago': 'Efectivo'},
+      );
+    final detail = (await dio.get(
+      '/gestion_contractual/contratos/${c['id_contrato']}',
+    )).data;
+    expect(detail['saldo_pendiente'], 0);
+    expect(detail['estado'], 'Pagado');
+    expect(detail['cuotas_pagadas'], 1);
   });
   test('Reservas locales afectan catálogo y reportes; cancelación queda guardada sin red', () async {
     final legacy = controller.legacy;

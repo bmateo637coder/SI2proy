@@ -89,3 +89,26 @@ def test_new_property_dependency_can_be_contracted_without_an_intermediate_downl
     assert saved_contract['estado'] == 'confirmada', saved_contract
     with factory() as db:
         assert db.get(m.Contrato, saved_contract['data']['id_contrato']).id_propiedad == saved['data']['id_propiedad']
+
+
+def test_installments_are_positive_and_add_up_in_cents(api):
+    client, factory = api
+    snapshot = client.get('/api/replica/datos', headers=headers()).json()
+    op = change(tipo='contrato.crear', base=snapshot['huellas']['propiedad:1'], datos={
+        'id_cliente': 1, 'id_propiedad': 1, 'tipo_contrato': 'Venta', 'monto_total': 1,
+        'fecha_inicio': '2026-11-01', 'num_cuotas': 99})
+    saved = client.post('/api/replica/cambios', json=op, headers=headers()).json()
+    assert saved['estado'] == 'confirmada', saved
+    with factory() as db:
+        amounts = [q.monto for q in db.query(m.Cuota).all()]
+        assert min(amounts) > 0 and sum(amounts) == 1
+    op = change(tipo='contrato.crear', base=snapshot['huellas']['propiedad:2'], datos={
+        'id_cliente': 1, 'id_propiedad': 2, 'tipo_contrato': 'Venta', 'monto_total': 0.01,
+        'fecha_inicio': '2026-11-01', 'num_cuotas': 2})
+    assert client.post('/api/replica/cambios', json=op, headers=headers()).json()['estado'] == 'rechazada'
+    with factory() as db:
+        assert db.query(m.Contrato).count() == 1
+    invalid = change(tipo='contrato.crear', base=snapshot['huellas']['propiedad:2'], datos={
+        'id_cliente': 1, 'id_propiedad': 2, 'tipo_contrato': 'Venta', 'monto_total': 0.001,
+        'fecha_inicio': '2026-11-01'})
+    assert client.post('/api/replica/cambios', json=invalid, headers=headers()).json()['estado'] == 'rechazada'

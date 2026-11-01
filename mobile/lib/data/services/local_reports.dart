@@ -1,6 +1,14 @@
 import 'dart:convert';
 
 class LocalReports {
+  static DateTime? day(Object? value) {
+    if (value == null) return null;
+    final parsed = DateTime.tryParse('$value');
+    if (parsed == null || parsed.toIso8601String().split('T').first != '$value')
+      throw StateError('Usa una fecha válida con formato YYYY-MM-DD.');
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
   static const columns = {
     'propiedades': [
       'id_propiedad',
@@ -104,8 +112,22 @@ class LocalReports {
       'ingresos_semana',
     ].contains(kind))
       throw StateError('Tipo de reporte no soportado.');
-    final from = DateTime.tryParse(spec['desde']?.toString() ?? ''),
-        to = DateTime.tryParse(spec['hasta']?.toString() ?? '');
+    final from = day(spec['desde']), to = day(spec['hasta']);
+    final limit = (spec['limite'] as num?)?.toInt() ?? 100;
+    if (limit < 1 || limit > 500)
+      throw StateError('El límite debe estar entre 1 y 500.');
+    if (kind != 'cartera_estado' && spec['estado'] != null)
+      throw StateError('El estado de cartera no se aplica a este reporte.');
+    if (kind == 'reservas_sucursal' && spec['tipo_contrato'] != null)
+      throw StateError(
+        'Para reservas usa fecha y sucursal; el tipo de contrato no se aplica.',
+      );
+    if (spec['id_sucursal'] != null &&
+        !rows(
+          data,
+          'sucursales',
+        ).any((b) => b['id_sucursal'] == spec['id_sucursal']))
+      throw StateError('La sucursal no está disponible en esta selección.');
     if (from != null && to != null && from.isAfter(to))
       throw StateError('Rango de fechas invertido.');
     if (kind == 'cartera_estado' && (from != null || to != null))
@@ -224,19 +246,38 @@ class LocalReports {
       result = result.map((r) => [...r.take(r.length - 2), r.last]).toList();
     if (kind == 'ranking_agentes')
       result.sort((a, b) => (b.last as num).compareTo(a.last as num));
+    final truncated = result.length > limit;
+    result = result
+        .take(limit)
+        .map(
+          (r) =>
+              r.map((v) => v is double ? (v * 100).round() / 100 : v).toList(),
+        )
+        .toList();
     return {
       'titulo': title,
       'columnas': [if (all) 'Inmobiliaria', ...cols],
       'filas': result,
       'interprete': 'calculo_local',
       'origen': 'local',
+      'truncado': truncated,
       'resumen': 'Calculado en el teléfono con la copia local y los cambios pendientes.',
       'filtros': spec,
     };
   }
 
   static Map<String, dynamic> naturalSpec(String text) {
-    final t = text.toLowerCase();
+    var t = text.toLowerCase();
+    for (final pair in {
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ñ': 'n',
+    }.entries) {
+      t = t.replaceAll(pair.key, pair.value);
+    }
     final type = t.contains('reserva')
         ? 'reservas_sucursal'
         : t.contains('agente')
@@ -245,7 +286,7 @@ class LocalReports {
         ? 'ingresos_semana'
         : RegExp('cartera|propiedad|inmueble|disponib|estado').hasMatch(t)
         ? 'cartera_estado'
-        : RegExp('venta|contrato|alquiler').hasMatch(t)
+        : RegExp('venta|contrato|alquiler|anticretico').hasMatch(t)
         ? 'ventas_sucursal'
         : null;
     if (type == null)
@@ -256,10 +297,85 @@ class LocalReports {
         .allMatches(t)
         .map((m) => m[0]!)
         .toList();
-    return {
-      'tipo': type,
-      if (dates.isNotEmpty) 'desde': dates.first,
-      if (dates.isNotEmpty) 'hasta': dates.last,
-    };
+    final spec = <String, dynamic>{'tipo': type};
+    final bolivia = DateTime.now().toUtc().subtract(const Duration(hours: 4));
+    final today = DateTime(bolivia.year, bolivia.month, bolivia.day);
+    String iso(DateTime d) => d.toIso8601String().split('T').first;
+    if (dates.isNotEmpty) {
+      spec['desde'] = iso(day(dates.first)!);
+      spec['hasta'] = iso(day(dates.last)!);
+    } else if (t.contains('este mes')) {
+      spec['desde'] = iso(DateTime(today.year, today.month, 1));
+      spec['hasta'] = iso(today);
+    } else if (t.contains('este ano')) {
+      spec['desde'] = iso(DateTime(today.year, 1, 1));
+      spec['hasta'] = iso(today);
+    } else if (t.contains('ultimos tres meses') ||
+        t.contains('ultimo trimestre')) {
+      spec['desde'] = iso(today.subtract(const Duration(days: 90)));
+      spec['hasta'] = iso(today);
+    } else {
+      const months = [
+        'enero',
+        'febrero',
+        'marzo',
+        'abril',
+        'mayo',
+        'junio',
+        'julio',
+        'agosto',
+        'septiembre',
+        'octubre',
+        'noviembre',
+        'diciembre',
+      ];
+      final found = months.indexed
+          .where((e) => t.contains(e.$2))
+          .map((e) => e.$1 + 1)
+          .toList();
+      if (found.length > 1)
+        throw StateError(
+          'Para varios meses indica un rango YYYY-MM-DD a YYYY-MM-DD.',
+        );
+      if (found.isNotEmpty) {
+        final year =
+            int.tryParse(RegExp(r'\b20\d{2}\b').firstMatch(t)?[0] ?? '') ??
+            today.year;
+        spec['desde'] = iso(DateTime(year, found.single, 1));
+        spec['hasta'] = iso(DateTime(year, found.single + 1, 0));
+      }
+    }
+    final branch = RegExp(r'sucursal\s*(?:#|id\s*)?(\d+)').firstMatch(t);
+    if (branch != null) {
+      spec['id_sucursal'] = int.parse(branch[1]!);
+    } else if (RegExp(r'sucursal\s+(?!durante|este|del|de\b|en\b|por\b)[a-z]+')
+        .hasMatch(t))
+      throw StateError(
+        'Indica el número de sucursal, por ejemplo: sucursal 1.',
+      );
+    for (final pair in {
+      'alquiler': 'Alquiler',
+      'anticretico': 'Anticretico',
+      'venta': 'Venta',
+    }.entries) {
+      if (t.contains(pair.key)) {
+        spec['tipo_contrato'] = pair.value;
+        break;
+      }
+    }
+    for (final pair in {
+      'disponib': 'Disponible',
+      'vendida': 'Vendida',
+      'alquilada': 'Alquilada',
+      'reservada': 'Reservada',
+    }.entries) {
+      if (t.contains(pair.key)) {
+        spec['estado'] = pair.value;
+        break;
+      }
+    }
+    final top = RegExp(r'(?:top|primeros|mejores)\s*(\d+)').firstMatch(t);
+    if (top != null) spec['limite'] = int.parse(top[1]!);
+    return spec;
   }
 }

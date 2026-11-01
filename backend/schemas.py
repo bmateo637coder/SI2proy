@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime, date
 
@@ -257,8 +257,20 @@ class ContratoCreate(BaseModel):
     fecha_fin: Optional[date] = None
     num_cuotas: Optional[int] = Field(default=None, ge=1, le=360)
     observacion: Optional[str] = None
+    @field_validator('monto_total')
+    @classmethod
+    def amount_in_cents(cls, value):
+        if round(value, 2) != value:
+            raise ValueError('Use un monto con hasta dos decimales.')
+        return value
 
 class PagoCreate(BaseModel):
     monto: float = Field(gt=0, le=9999999999.99)
     metodo_pago: str  # 'Transferencia', 'Efectivo', 'QR'
     observacion: Optional[str] = None
+    @field_validator('monto')
+    @classmethod
+    def amount_in_cents(cls, value):
+        if round(value, 2) != value:
+            raise ValueError('Use un monto con hasta dos decimales.')
+        return value
