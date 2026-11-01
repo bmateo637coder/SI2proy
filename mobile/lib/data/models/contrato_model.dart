@@ -48,6 +48,7 @@ class CuotaModel {
 
 class ContratoModel {
   const ContratoModel({
+    this.pendienteSync = false,
     required this.idContrato,
     this.inmobiliaria = '',
     required this.idTenant,
@@ -70,6 +71,7 @@ class ContratoModel {
   });
 
   final int idContrato;
+  final bool pendienteSync;
   final String inmobiliaria;
   final int idTenant;
   final int idCliente;
@@ -90,6 +92,7 @@ class ContratoModel {
   final List<CuotaModel> cuotas;
 
   factory ContratoModel.fromJson(Map<String, dynamic> json) => ContratoModel(
+    pendienteSync: json['pendiente_sync'] == true,
     inmobiliaria: json['inmobiliaria']?.toString() ?? '',
     idContrato: (json['id_contrato'] as num?)?.toInt() ?? 0,
     idTenant: (json['id_tenant'] as num?)?.toInt() ?? 0,

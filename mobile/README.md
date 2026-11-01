@@ -1,10 +1,10 @@
-# Raíces para Android · 2.1.0
+# Raíces para Android · 2.2.0
 
 Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** genera `Raices-2.1.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública está en [GitHub Releases](https://github.com/bmateo637coder/SI2proy/releases). No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-2.2.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública está en [GitHub Releases](https://github.com/bmateo637coder/SI2proy/releases). No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
 
@@ -16,14 +16,21 @@ La IA generativa requiere conexión. El superadministrador SaaS puede usarla tan
 
 ## Uso offline
 
-1. Iniciar sesión con conexión y seleccionar una inmobiliaria.
-2. Abrir **Offline** y pulsar **Descargar catálogo**. Se guardan propiedades, clientes, sucursales y versiones en SQLite.
-3. Sin conexión, abrir Offline para consultar la descarga y registrar reservas o ventas en efectivo para los clientes descargados. Estas operaciones permanecen pendientes hasta la confirmación del servidor.
-4. Al recuperar conexión, pulsar **Sincronizar**. También se reintenta al abrir esa pantalla, volver a la app o cada 30 segundos mientras la pantalla está abierta. Si venció la sesión, iniciar sesión otra vez con la misma cuenta y sincronizar desde la inmobiliaria correspondiente.
+1. Iniciar sesión una vez con Internet. La app descarga automáticamente la información autorizada: propiedades completas, clientes, contratos, cuotas, pagos, usuarios sin contraseñas, sucursales y reportes guardados. El superadministrador descarga todas sus inmobiliarias. Las fotos se preparan en segundo plano y su estado se muestra en Sincronización.
+2. Después, sin Internet, usar las pantallas habituales de Catálogo, Clientes, Contratos, Reportes e IA y analítica. También se puede cerrar sesión y volver a entrar con la cuenta y contraseña previamente verificadas en ese teléfono. El primer acceso de una cuenta nueva requiere conexión.
+3. Crear clientes a partir de los usuarios descargados, contratos, pagos, configuraciones de reportes, reservas y ventas en efectivo. Los cambios se conservan en SQLite, aparecen en las consultas locales y se identifican como pendientes. Los recibos locales son provisionales hasta que el servidor confirme el pago.
+4. Al restablecerse Internet, la app sincroniza al abrirse, volver a primer plano y cada 15 segundos mientras está abierta. La copia completa se renueva aproximadamente cada minuto. Si venció la sesión, usar **Validar sesión para sincronizar**; los datos y propuestas permanecen guardados.
+5. Pulsar el indicador superior para abrir **Sincronización**: última copia, fotos, pendientes, confirmaciones y conflictos. Se muestran la propuesta y los datos actuales del servidor. Se puede conservar el servidor descartando la propuesta, o revisar y registrar un cambio nuevo. Nunca se fuerzan sobrescrituras de datos que cambiaron en otro dispositivo.
 
-Las descargas y operaciones quedan separadas por API, usuario e inmobiliaria. Cerrar la app o cerrar sesión conserva las operaciones locales; otra cuenta no las ve. Cambiar de inmobiliaria no traslada las operaciones a otra empresa. Cada operación conserva su UUID durante los reintentos, incluso si el servidor confirmó una venta y se perdió la respuesta. El servidor valida precio, versión, disponibilidad, sucursal y suscripción, y devuelve confirmación o conflicto. Una reserva confirmada se puede cancelar con conexión desde el historial local.
+Los reportes dinámicos y los cinco reportes convencionales se calculan y exportan en el teléfono; funcionan para una o todas las inmobiliarias e incluyen los movimientos locales pendientes con esa advertencia. Las reservas confirmadas y las pendientes se distinguen en columnas separadas. Las configuraciones guardadas también se sincronizan.
 
-Si una inmobiliaria no tiene clientes registrados, debe registrarse un cliente con conexión antes de descargar y operar. La IA no se ejecuta sin conexión.
+Las herramientas locales de texto interpretan solicitudes de cartera, ventas, ingresos, agentes y reservas. El chat local informa sobre la copia descargada, las descripciones usan plantillas y las recomendaciones usan el catálogo local. Se identifican como herramientas locales: Gemini, la prueba real del proveedor y el entrenamiento de modelos requieren Internet. Las predicciones descargadas pueden consultarse como resultados anteriores. El reconocimiento de voz depende de que el teléfono tenga un servicio de dictado disponible sin red; siempre se puede escribir.
+
+Las descargas y colas se separan por API, cuenta, permisos e inmobiliaria. Cerrar la app o cerrar sesión conserva propuestas, pero otra cuenta no puede consultarlas. La contraseña no se guarda: el acceso local usa un verificador PBKDF2 con sal aleatoria en almacenamiento seguro, con límite de intentos. Antes de subir cambios se verifica la identidad y autorización actuales del servidor. El respaldo automático de Android está desactivado para los datos privados.
+
+Cada cambio conserva su UUID y contenido durante los reintentos. El servidor registra el resultado en la misma transacción que la operación, detecta cambios de precio, disponibilidad, datos del contrato y pagos; resuelve los identificadores temporales de registros creados offline y evita duplicados aunque se pierda una respuesta. Una cancelación de reserva se puede solicitar sin conexión: la propiedad se libera cuando el servidor confirme el plazo y que no existen movimientos posteriores.
+
+La copia local representa la última descarga completa más las propuestas de este teléfono; no puede conocer cambios de otros dispositivos mientras no haya conexión. El mapa base, el registro inicial de cuentas, los cambios de contraseña y los servicios externos requieren Internet. Las propuestas comerciales solo son definitivas después de sincronizar.
 
 ## Desarrollo y validación
 
@@ -33,7 +40,7 @@ Requiere Flutter 3.47.4 / Dart 3.13 y Android SDK con Java 17.
 flutter pub get
 flutter analyze --no-fatal-infos
 flutter test
-flutter test integration_test/app_flow_test.dart -d <dispositivo-android>
+flutter test integration_test -d <dispositivo-android>
 flutter run --dart-define=API_BASE_URL=https://raices-backend-n1yy.onrender.com
 ```
 

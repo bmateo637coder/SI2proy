@@ -6,9 +6,44 @@ import 'dart:convert';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/services/secure_storage_service.dart';
+import '../../data/services/offline_identity.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider(this._repository, this._storage);
+  AuthProvider(
+    this._repository,
+    this._storage, {
+    OfflineIdentity? offlineIdentity,
+  }) : _offlineIdentity = offlineIdentity ?? OfflineIdentity();
+  final OfflineIdentity _offlineIdentity;
+  bool needsOnlineLogin = false;
+  Future<void> sessionExpired() async {
+    needsOnlineLogin = true;
+    localSession = true;
+    notifyListeners();
+  }
+
+  Future<void> validateServerProfile(Map<String, dynamic> value) async {
+    final verified = UserModel.fromJson(value);
+    if (_user == null || verified.ci != _user!.ci)
+      throw StateError('La identidad del servidor no corresponde a la sesión.');
+    final changed =
+        jsonEncode(verified.toJson()) != jsonEncode(_user!.toJson());
+    _user = verified;
+    await _storage.saveProfile(jsonEncode(verified.toJson()));
+    if (changed) {
+      await _restoreScope();
+      onScopeChanged?.call();
+    }
+    await _offlineIdentity.refreshProfile(
+      verified.email,
+      verified.toJson(),
+      companies,
+    );
+    if (changed || localSession) {
+      localSession = false;
+      notifyListeners();
+    }
+  }
 
   final AuthRepository _repository;
   final SecureStorageService _storage;
@@ -96,6 +131,7 @@ class AuthProvider extends ChangeNotifier {
       }
       await _restoreScope();
       localSession = false;
+      needsOnlineLogin = false;
       if (isSuperAdmin) await loadCompanies();
       notifyListeners();
     } on DioException catch (error) {
@@ -121,6 +157,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> signIn(String email, String password) async {
+    _user = null;
     _setLoading(true);
     _errorMessage = null;
     try {
@@ -155,9 +192,55 @@ class AuthProvider extends ChangeNotifier {
       await _restoreScope();
       localSession = false;
       if (isSuperAdmin) await loadCompanies();
+      needsOnlineLogin = false;
+      await _offlineIdentity.remember(
+        email,
+        password,
+        _user!.toJson(),
+        tokens.accessToken,
+        companies,
+      );
       onScopeChanged?.call();
       return _user != null;
     } catch (error) {
+      if (error is DioException &&
+          (error.response == null ||
+              (error.response!.statusCode ?? 0) >= 500)) {
+        try {
+          final saved = await _offlineIdentity.unlock(email, password);
+          if (saved == null)
+            throw StateError(
+              'Acceso local no disponible o contraseña incorrecta. Inicia sesión una vez con Internet.',
+            );
+          _user = UserModel.fromJson(
+            Map<String, dynamic>.from(saved['profile']),
+          );
+          companies = (saved['companies'] as List)
+              .map((c) => Map<String, dynamic>.from(c))
+              .toList();
+          await _storage.saveTokens(
+            accessToken: saved['token'],
+            refreshToken: '',
+          );
+          await _storage.saveProfile(jsonEncode(saved['profile']));
+          await _storage.saveCompanies(jsonEncode(companies));
+          await _restoreScope();
+          localSession = true;
+          needsOnlineLogin = false;
+          onScopeChanged?.call();
+          return true;
+        } catch (localError) {
+          _errorMessage = localError is StateError
+              ? '${localError.message}'
+              : 'No se pudo verificar el acceso local.';
+          _user = null;
+          await _storage.clear();
+          return false;
+        }
+      }
+      if (error is DioException &&
+          [401, 403].contains(error.response?.statusCode))
+        await _offlineIdentity.revoke(email);
       _user = null;
       await _storage.clear();
       if (error is DioException) {
@@ -209,6 +292,7 @@ class AuthProvider extends ChangeNotifier {
     selectedTenant = null;
     companies = [];
     localSession = false;
+    needsOnlineLogin = false;
     onScopeChanged?.call();
     if (notify) notifyListeners();
   }
@@ -236,6 +320,7 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     try {
       await _repository.changePassword(newPassword);
+      await _offlineIdentity.revoke(_user!.email);
       return true;
     } catch (error) {
       _errorMessage = error is DioException

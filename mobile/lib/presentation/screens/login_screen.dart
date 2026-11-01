@@ -29,7 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailController.text.trim(),
           _passwordController.text,
         );
-    if (!mounted || success) return;
+    if (!mounted) return;
+    if (success) { context.go('/catalogo'); return; }
     final message = context.read<AuthProvider>().errorMessage;
     if (message != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -57,6 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     Text('Accede a tu plataforma inmobiliaria',
                         style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height:8),
+                    const Text('Sin Internet puedes entrar con una cuenta que ya hayas validado en este teléfono. La primera vez necesitas conexión.'),
                     const SizedBox(height: 32),
                     TextFormField(
                       controller: _emailController,

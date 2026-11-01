@@ -126,6 +126,8 @@ class _ReportesState extends State<ReportesDinamicosScreen> {
       generated = true;
       message = result['truncado'] == true
           ? 'Se muestran los primeros 500 registros. Usa filtros para acotar el reporte.'
+          : result['origen'] == 'local'
+          ? 'Calculado con la copia local y los cambios pendientes de sincronizar.'
           : '';
     });
   }
@@ -152,7 +154,9 @@ class _ReportesState extends State<ReportesDinamicosScreen> {
         );
       final locales = await speech.locales();
       if (!mounted) return;
-      final spanish = locales.where((l) => l.localeId.startsWith('es')).firstOrNull;
+      final spanish = locales
+          .where((l) => l.localeId.startsWith('es'))
+          .firstOrNull;
       await speech.listen(
         listenOptions: SpeechListenOptions(localeId: spanish?.localeId),
         onResult: (result) {

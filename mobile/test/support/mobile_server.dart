@@ -8,6 +8,45 @@ class MobileServer implements HttpClientAdapter {
   bool offline = false, loseReceipt = false;
   final requests = <RequestOptions>[];
   final accepted = <String>{};
+  bool replicaConflict = false;
+  final replicaReceipts = <String, Map<String, dynamic>>{};
+  final replicaContracts = <Map<String, dynamic>>[];
+  final replicaReports = <Map<String, dynamic>>[];
+  Map<String, dynamic> replicaBundle() => {
+    'ci_usuario': profile['ci'],
+    'id_tenant': null,
+    'alcance': 'todas',
+    'completo': true,
+    'descargado_en': DateTime.now().toUtc().toIso8601String(),
+    'datos': {
+      'propiedades': [property(1), property(2)],
+      'contratos': replicaContracts,
+      'clientes': [
+        for (final tid in [1, 2])
+          {
+            'id_cliente': tid,
+            'id_tenant': tid,
+            'nombre': 'Cliente de prueba',
+            'ci': 'cliente-$tid',
+            'correo': 'cliente$tid@example.test',
+            'telefono': '123',
+            'inmobiliaria': tid == 1 ? 'Raíces' : 'Horizonte',
+          },
+      ],
+      'usuarios': [],
+      'propietarios': [],
+      'agentes': [],
+      'reservas': [],
+      'reportes': replicaReports,
+      'planes': [],
+      'roles': [],
+      'sucursales': [
+        for (final tid in [1, 2])
+          {'id_sucursal': tid, 'id_tenant': tid, 'nombre': 'Matriz'},
+      ],
+    },
+    'huellas': {'propiedad:1': 'a' * 64, 'propiedad:2': 'b' * 64},
+  };
   static const profile = {
     'ci': 'saas-test',
     'nombre': 'Superadministrador',
@@ -60,7 +99,68 @@ class MobileServer implements HttpClientAdapter {
     final data = options.data is String
         ? jsonDecode(options.data)
         : options.data;
+    if (options.path.startsWith('/api/offline/reservas/') &&
+        options.path.endsWith('/cancelar'))
+      return json({
+        'uuid': options.path.split('/')[4],
+        'estado': 'cancelada',
+        'motivo': 'Reserva cancelada.',
+      });
     switch (options.path) {
+      case '/api/health':
+        return json({'status': 'ok'});
+      case '/api/analitica/dashboard':
+        return json({
+          'modelo': {'estado': 'datos_insuficientes'},
+          'predicciones': [],
+        });
+      case '/api/replica/datos':
+        return json(replicaBundle());
+      case '/api/replica/cambios':
+        final id = data['uuid'] as String;
+        var result = replicaReceipts[id];
+        if (result == null) {
+          final values = Map<String, dynamic>.from(data['datos']);
+          final tid = data['id_tenant'];
+          final contract = {
+            ...values,
+            'id_contrato': 100 + replicaContracts.length,
+            'id_tenant': tid,
+            'inmobiliaria': tid == 1 ? 'Raíces' : 'Horizonte',
+            'cliente': 'Cliente de prueba',
+            'propiedad': 'Casa $tid',
+            'estado': 'Activo',
+            'saldo_pendiente': values['monto_total'],
+            'pagos': [],
+            'cuotas': [],
+          };
+          if (!replicaConflict && data['tipo'] == 'contrato.crear')
+            replicaContracts.add(contract);
+          final report = {
+            ...values,
+            'id_reporte': replicaReports.length + 1,
+            'id_tenant': tid,
+          };
+          if (!replicaConflict && data['tipo'] == 'reporte.guardar')
+            replicaReports.add(report);
+          result = {
+            'uuid': id,
+            'estado': replicaConflict ? 'conflicto' : 'confirmada',
+            'data': data['tipo'] == 'contrato.crear' ? contract : report,
+            'huellas': {},
+            if (replicaConflict) 'motivo': 'Otro usuario cambió el precio.',
+            if (replicaConflict) 'servidor': {...property(tid), 'precio': 1500},
+          };
+          replicaReceipts[id] = result;
+        }
+        if (loseReceipt) {
+          loseReceipt = false;
+          throw DioException.connectionError(
+            requestOptions: options,
+            reason: 'Respuesta perdida después de confirmar',
+          );
+        }
+        return json(result);
       case '/login':
         return json({
           'access_token': 'test-only-token',

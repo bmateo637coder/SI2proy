@@ -277,3 +277,17 @@ class ReporteGuardado(Base):
 
     tenant = relationship("Tenant")
     usuario = relationship("Usuario")
+
+
+class CambioReplica(Base):
+    """Confirmación atómica de cambios móviles; UUID conserva su significado al reintentar."""
+    __tablename__ = "cambio_replica"
+    id = Column(Integer, primary_key=True)
+    uuid = Column(String(36), nullable=False)
+    id_tenant = Column(Integer, ForeignKey("tenant.id_tenant"), nullable=False)
+    ci_usuario = Column(String(20), ForeignKey("usuario.ci"), nullable=False)
+    payload_hash = Column(String(64), nullable=False)
+    estado = Column(String(20), nullable=False)
+    resultado = Column(JSON, nullable=False)
+    procesado_en = Column(TIMESTAMP(timezone=True), server_default=func.current_timestamp())
+    __table_args__ = (UniqueConstraint("id_tenant", "uuid", name="uq_replica_tenant_uuid"),)

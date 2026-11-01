@@ -46,7 +46,9 @@ class SecureStorageService {
     if (kIsWeb) {
       _webFallback.clear();
     } else {
-      await _storage.deleteAll();
+      for (final key in [_accessTokenKey, _refreshTokenKey, _tenantIdKey, _profileKey, _companiesKey]) {
+        await _storage.delete(key: key);
+      }
     }
   }
 

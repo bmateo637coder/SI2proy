@@ -53,6 +53,8 @@ app.include_router(offline.router)
 app.include_router(reportes_generativos.router)
 app.include_router(analitica_ml.router)
 app.include_router(vista_global.router)
+import replica
+app.include_router(replica.router)
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 

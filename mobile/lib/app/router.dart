@@ -22,6 +22,7 @@ import '../presentation/screens/propiedad_detalle_screen.dart';
 import '../presentation/screens/offline_screen.dart';
 import '../presentation/screens/ia_screen.dart';
 import '../presentation/widgets/company_scope.dart';
+import '../presentation/screens/sync_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorCatKey = GlobalKey<NavigatorState>(debugLabel: 'catalogo');
@@ -63,6 +64,8 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
     return null;
   },
   routes: [
+    GoRoute(path:'/sincronizacion', builder:(_,_)=>const SyncScreen()),
+    GoRoute(path:'/validar-sesion', builder:(_,_)=>const LoginScreen()),
     GoRoute(
       path: '/ia',
       builder: (_, _) => ScopedScreen(builder: (_) => const IaScreen()),

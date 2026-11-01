@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/config/api_constants.dart';
 import '../providers/propiedades_provider.dart';
+import '../widgets/property_image.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
@@ -112,7 +113,7 @@ class _CatalogoState extends State<CatalogoScreen> {
               Text(provider.errorMessage!),
               TextButton(
                 onPressed: () => context.push('/offline'),
-                child: const Text('Ver catálogo descargado en Offline'),
+                child: const Text('Revisar descarga y sincronización'),
               ),
             ],
             Text(
@@ -139,7 +140,7 @@ class _CatalogoState extends State<CatalogoScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (url != null)
-                        Image.network(
+                        PropertyImage(
                           url,
                           height: 170,
                           fit: BoxFit.cover,

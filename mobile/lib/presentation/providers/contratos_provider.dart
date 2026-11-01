@@ -107,7 +107,9 @@ class ContratosProvider extends ChangeNotifier {
         numCuotas: numCuotas,
       );
       _contratos = [..._contratos, creado];
-      _successMessage = 'Contrato #${creado.idContrato} creado correctamente.';
+      _successMessage = creado.pendienteSync
+          ? 'Contrato guardado en el teléfono. Pendiente de sincronizar.'
+          : 'Contrato #${creado.idContrato} creado correctamente.';
       return true;
     } catch (e) {
       _errorMessage = apiError(e);
@@ -134,7 +136,9 @@ class ContratosProvider extends ChangeNotifier {
         metodoPago: metodoPago,
       );
       final recibo = result['numero_recibo'] as String? ?? '';
-      _successMessage = 'Pago registrado. Recibo: $recibo';
+      _successMessage = result['pendiente_sync'] == true
+          ? 'Pago guardado en el teléfono. Recibo provisional: $recibo. Pendiente de sincronizar.'
+          : 'Pago registrado. Recibo: $recibo';
       await fetchDetalle(idContrato);
       await fetchContratos();
       return recibo;

@@ -1,5 +1,6 @@
 class ClienteModel {
   const ClienteModel({
+    this.pendienteSync = false,
     required this.idCliente,
     required this.ciUsuario,
     required this.idTenant,
@@ -10,6 +11,7 @@ class ClienteModel {
   });
 
   final int idCliente;
+  final bool pendienteSync;
   final String ciUsuario;
   final int idTenant;
   final String nombre;
@@ -18,6 +20,7 @@ class ClienteModel {
   final String inmobiliaria;
 
   factory ClienteModel.fromJson(Map<String, dynamic> json) => ClienteModel(
+    pendienteSync: json['pendiente_sync'] == true,
     inmobiliaria: json['inmobiliaria']?.toString() ?? '',
     idCliente: json['id_cliente'] as int? ?? 0,
     ciUsuario: json['ci_usuario'] as String? ?? '',

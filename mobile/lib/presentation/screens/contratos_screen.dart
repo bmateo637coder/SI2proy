@@ -223,7 +223,7 @@ class _ContratosScreenState extends State<ContratosScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Chip(
-                                        label: Text(c.estado),
+                                        label: Text(c.pendienteSync ? '${c.estado} · local' : c.estado),
                                         labelStyle: TextStyle(
                                           color: _colorEstado(c.estado),
                                           fontWeight: FontWeight.bold,

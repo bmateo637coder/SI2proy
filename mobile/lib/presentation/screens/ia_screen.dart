@@ -200,6 +200,13 @@ class _IaState extends State<IaScreen> {
       body: Column(
         children: [
           const CompanyScope(),
+          if (status?['sin_conexion'] == true)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                'Modo local: reportes, reglas de texto, plantillas y consultas sobre los datos descargados. Gemini y el entrenamiento de modelos necesitan Internet. Las predicciones guardadas corresponden a su última actualización.',
+              ),
+            ),
           if (busy) const LinearProgressIndicator(),
           if (message.isNotEmpty)
             Padding(

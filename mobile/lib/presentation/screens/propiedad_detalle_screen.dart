@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/config/api_constants.dart';
 import '../../data/models/propiedad_model.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/property_image.dart';
 
 class PropiedadDetalleScreen extends StatelessWidget {
   const PropiedadDetalleScreen({super.key, required this.propiedad});
@@ -18,7 +19,7 @@ class PropiedadDetalleScreen extends StatelessWidget {
         for (final image in propiedad.imagenes)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Image.network(
+            child: PropertyImage(
               Uri.parse(ApiConstants.baseUrl).resolve(image.url).toString(),
               height: 230,
               fit: BoxFit.cover,

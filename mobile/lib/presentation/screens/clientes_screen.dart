@@ -101,6 +101,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           const SizedBox(height: 4),
                           if (cliente.inmobiliaria.isNotEmpty)
                             Text(cliente.inmobiliaria),
+                          if (cliente.pendienteSync) const Text('Pendiente de sincronizar'),
                           if (cliente.correo.isNotEmpty) Text(cliente.correo),
                           if (cliente.telefono.isNotEmpty)
                             Text(cliente.telefono),
@@ -116,7 +117,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Cliente #${cliente.idCliente}',
+                            cliente.pendienteSync ? 'Registro local' : 'Cliente #${cliente.idCliente}',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: Colors.grey),
                           ),

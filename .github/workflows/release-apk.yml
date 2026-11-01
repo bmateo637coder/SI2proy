@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Etiqueta de versión (vacío = mobile-2.1.0-<ejecución>)'
+        description: 'Etiqueta de versión (vacío = mobile-2.2.0-<ejecución>)'
         required: false
         default: ''
       artifact_run:
@@ -56,7 +56,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          script: cd mobile && flutter test integration_test/app_flow_test.dart -d emulator-5554
+          script: cd mobile && flutter test integration_test -d emulator-5554
   build-apk:
     needs: android-test
     runs-on: ubuntu-latest
@@ -93,27 +93,27 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           test -n "$ANDROID_KEYSTORE_PASSWORD" && test -n "$ANDROID_KEY_ALIAS" && test -n "$ANDROID_KEY_PASSWORD"
-          flutter build apk --release --build-number=$((2000 + ${{ github.run_number }})) --dart-define=API_BASE_URL=${PROD_API_URL:-https://raices-backend-n1yy.onrender.com}
+          flutter build apk --release --build-number=$((2200 + ${{ github.run_number }})) --dart-define=API_BASE_URL=${PROD_API_URL:-https://raices-backend-n1yy.onrender.com}
       - name: Preparar descarga y verificar firma
         run: |
-          cp mobile/build/app/outputs/flutter-apk/app-release.apk Raices-2.1.0.apk
+          cp mobile/build/app/outputs/flutter-apk/app-release.apk Raices-2.2.0.apk
           SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
-          "$SIGNER" verify --verbose --print-certs Raices-2.1.0.apk
-          sha256sum Raices-2.1.0.apk > Raices-2.1.0.apk.sha256
+          "$SIGNER" verify --verbose --print-certs Raices-2.2.0.apk
+          sha256sum Raices-2.2.0.apk > Raices-2.2.0.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: Raices-Android-2.1.0
+          name: Raices-Android-2.2.0
           path: |
-            Raices-2.1.0.apk
-            Raices-2.1.0.apk.sha256
+            Raices-2.2.0.apk
+            Raices-2.2.0.apk.sha256
       - name: Publicar descarga
         if: env.RELEASE_TOKEN != '' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
           target_commitish: ${{ github.sha }}
-          tag_name: ${{ inputs.tag || format('mobile-2.1.0-{0}', github.run_number) }}
-          name: 'Raíces Android 2.1.0'
+          tag_name: ${{ inputs.tag || format('mobile-2.2.0-{0}', github.run_number) }}
+          name: 'Raíces Android 2.2.0'
           body: |
             Aplicación Android conectada al backend de producción.
 
@@ -122,16 +122,16 @@ jobs:
             - IA: reportes en lenguaje natural, analítica convencional, chat, descripciones, recomendaciones y predicciones académicas.
             - Offline: descarga por usuario/inmobiliaria, reservas y ventas en efectivo en SQLite, recuperación tras reinicio y sincronización idempotente.
 
-            Para operar offline, inicia sesión con conexión, selecciona una inmobiliaria y pulsa «Descargar catálogo» en Offline. La IA requiere conexión. El superadministrador SaaS puede usarla en cualquier empresa o en todas; las cuentas de las inmobiliarias conservan los límites de su plan.
+            Al iniciar sesión se descarga automáticamente la información autorizada. Después puedes iniciar sesión sin red, consultar el catálogo y generar/exportar reportes, crear contratos, pagos y guardar configuraciones. Los cambios se sincronizan y los conflictos quedan pendientes de revisión. La IA generativa requiere conexión; sin red hay cálculos y herramientas locales identificados como tales. El superadministrador SaaS puede usarla en cualquier empresa o en todas; las cuentas de las inmobiliarias conservan los límites de su plan.
 
             Verificaciones: análisis de Dart, pruebas Flutter, integración en emulador Android con SQLite nativo y firma del APK.
           files: |
-            Raices-2.1.0.apk
-            Raices-2.1.0.apk.sha256
+            Raices-2.2.0.apk
+            Raices-2.2.0.apk.sha256
       - name: Publicación desde rama de trabajo
         if: env.RELEASE_TOKEN == '' && github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
         run: |
-          echo 'APK firmado y SHA-256 disponibles en el artefacto Raices-Android-2.1.0.'
+          echo 'APK firmado y SHA-256 disponibles en el artefacto Raices-Android-2.2.0.'
           echo 'GitHub exige permiso Workflows para publicar desde una rama que modifica workflows.'
           echo 'Publicar con el acceso local autorizado: python scripts/publish_mobile_release.py ${{ github.run_id }}'
   upload-existing:

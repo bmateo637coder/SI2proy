@@ -83,13 +83,6 @@ class MainScreen extends StatelessWidget {
         child: Column(
           children: [
             const CompanyScope(),
-            if (context.watch<AuthProvider>().localSession)
-              const MaterialBanner(
-                content: Text(
-                  'Sesión local: abre Offline para consultar el catálogo descargado.',
-                ),
-                actions: [SizedBox.shrink()],
-              ),
             Expanded(child: navigationShell),
           ],
         ),

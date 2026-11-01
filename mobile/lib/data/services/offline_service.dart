@@ -15,6 +15,7 @@ class OfflineService {
   Database? _database;
   Future<Database>? _opening;
   bool syncing = false;
+  void Function()? onChanged;
 
   void requireOperator(UserModel user) {
     if (!user.canOperateOffline) {
@@ -36,7 +37,13 @@ class OfflineService {
     final db = await openDatabase(
       databasePath ??
           path.join(await getDatabasesPath(), 'raices_offline_v1.db'),
-      version: 1,
+      version: 2,
+      onUpgrade: (db, old, _) async {
+        if (old < 2)
+          await db.execute(
+            'ALTER TABLE operation ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0',
+          );
+      },
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await db.execute(
@@ -52,7 +59,7 @@ class OfflineService {
           'CREATE TABLE property (scope TEXT NOT NULL, id INTEGER NOT NULL, branch_id INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(scope,id), FOREIGN KEY(scope,branch_id) REFERENCES branch(scope,id))',
         );
         await db.execute(
-          'CREATE TABLE operation (scope TEXT NOT NULL, uuid TEXT NOT NULL, property_id INTEGER NOT NULL, client_id INTEGER NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, message TEXT, result TEXT, PRIMARY KEY(scope,uuid), FOREIGN KEY(scope,property_id) REFERENCES property(scope,id), FOREIGN KEY(scope,client_id) REFERENCES client(scope,id))',
+          'CREATE TABLE operation (scope TEXT NOT NULL, uuid TEXT NOT NULL, property_id INTEGER NOT NULL, client_id INTEGER NOT NULL, payload TEXT NOT NULL, status TEXT NOT NULL, message TEXT, result TEXT, cancel_requested INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(scope,uuid), FOREIGN KEY(scope,property_id) REFERENCES property(scope,id), FOREIGN KEY(scope,client_id) REFERENCES client(scope,id))',
         );
         await db.execute(
           'CREATE INDEX operation_pending ON operation(scope,status)',
@@ -253,6 +260,7 @@ class OfflineService {
         'status': 'local',
       });
     });
+    onChanged?.call();
   }
 
   Future<void> synchronize(UserModel user) async {
@@ -315,6 +323,53 @@ class OfflineService {
           break;
         }
       }
+      final cancellations = await db.query(
+        'operation',
+        where: "scope = ? AND cancel_requested = 1 AND status = 'confirmada'",
+        whereArgs: [scope(user)],
+      );
+      for (final op in cancellations) {
+        try {
+          final r = await dio.put<Map<String, dynamic>>(
+            '/api/offline/reservas/${op['uuid']}/cancelar',
+            options: Options(extra: {'tenantId': user.idTenant}),
+          );
+          if (r.data?['uuid'] != op['uuid'] || r.data?['estado'] != 'cancelada')
+            throw StateError('Cancelación sin confirmar.');
+          await db.update(
+            'operation',
+            {
+              'status': 'cancelada',
+              'cancel_requested': 0,
+              'message': r.data?['motivo'],
+              'result': jsonEncode(r.data),
+            },
+            where: 'scope = ? AND uuid = ?',
+            whereArgs: [scope(user), op['uuid']],
+          );
+        } on DioException catch (error) {
+          final terminal = [
+            400,
+            403,
+            404,
+            409,
+            422,
+          ].contains(error.response?.statusCode);
+          await db.update(
+            'operation',
+            {
+              'status': terminal ? 'conflicto' : 'confirmada',
+              'cancel_requested': terminal ? 0 : 1,
+              'message': terminal
+                  ? '${(error.response?.data as Map?)?['detail'] ?? 'Cancelación rechazada.'}'
+                  : 'Cancelación guardada. Se reintentará al recuperar conexión.',
+            },
+            where: 'scope = ? AND uuid = ?',
+            whereArgs: [scope(user), op['uuid']],
+          );
+          if (!terminal) break;
+        }
+      }
     } finally {
       syncing = false;
     }
@@ -322,24 +377,16 @@ class OfflineService {
 
   Future<void> cancel(UserModel user, String uuid) async {
     requireOperator(user);
-    final response = await dio.put<Map<String, dynamic>>(
-      '/api/offline/reservas/$uuid/cancelar',
-      options: Options(extra: {'tenantId': user.idTenant}),
-    );
-    final result = response.data!;
-    if (result['uuid'] != uuid || result['estado'] != 'cancelada') {
-      throw StateError('Cancelación sin confirmar.');
-    }
     final db = await database;
     await db.update(
       'operation',
       {
-        'status': 'cancelada',
-        'message': result['motivo'],
-        'result': jsonEncode(result),
+        'cancel_requested': 1,
+        'message': 'Cancelación pendiente. La propiedad se liberará cuando el servidor confirme el plazo y la disponibilidad.',
       },
-      where: 'scope = ? AND uuid = ?',
+      where: "scope = ? AND uuid = ? AND status = 'confirmada'",
       whereArgs: [scope(user), uuid],
     );
+    onChanged?.call();
   }
 }

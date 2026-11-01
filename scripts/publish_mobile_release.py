@@ -84,7 +84,7 @@ def main():
     if native['conclusion'] != 'success' or not required <= successful:
         raise RuntimeError('Faltan pruebas Android o la verificación de firma. No se publicará el APK.')
     artifacts = request(f'actions/runs/{args.run_id}/artifacts')['artifacts']
-    artifact = next(a for a in artifacts if a['name'] == 'Raices-Android-2.1.0' and not a['expired'])
+    artifact = next(a for a in artifacts if a['name'] == 'Raices-Android-2.2.0' and not a['expired'])
     if artifact['workflow_run']['head_sha'] != run['head_sha']:
         raise RuntimeError('El artefacto no coincide con el código comprobado.')
     archive = request(f"actions/artifacts/{artifact['id']}/zip", raw=True)
@@ -95,7 +95,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     archive_path = out / 'verified-actions-artifact.zip'
     archive_path.write_bytes(archive)
-    names = ['Raices-2.1.0.apk', 'Raices-2.1.0.apk.sha256']
+    names = ['Raices-2.2.0.apk', 'Raices-2.2.0.apk.sha256']
     with ZipFile(archive_path) as zip_file:
         for name in names:
             info = zip_file.getinfo(name)
@@ -107,7 +107,7 @@ def main():
     with apk.open('rb') as handle:
         if hashlib.file_digest(handle, 'sha256').hexdigest() != expected:
             raise RuntimeError('El SHA-256 del APK no coincide con el verificado por CI.')
-    tag = args.tag or f"mobile-2.1.0-{run['run_number']}"
+    tag = args.tag or f"mobile-2.2.0-{run['run_number']}"
     existing_tag = optional('git/ref/tags/' + quote(tag, safe=''))
     if existing_tag and existing_tag['object']['sha'] != run['head_sha']:
         raise RuntimeError('La etiqueta ya corresponde a otro commit; se conserva sin modificarla.')
@@ -115,7 +115,7 @@ def main():
         (r for r in request('releases?per_page=30') if r['tag_name'] == tag), None)
     if release and release['target_commitish'] != run['head_sha']:
         raise RuntimeError('La versión existente corresponde a otro commit; se conserva sin modificarla.')
-    notes = f'''Raíces Android 2.1.0, conectada al backend de producción.
+    notes = f'''Raíces Android 2.2.0, conectada al backend de producción.
 
 - SaaS: una o todas las inmobiliarias en catálogo, clientes, contratos y reportes.
 - Reportes dinámicos con filtros, configuraciones y exportaciones PDF, Excel, CSV y HTML.
@@ -124,7 +124,7 @@ def main():
 
 El superadministrador SaaS puede consultar la IA de cualquier inmobiliaria sin adoptar su plan. Las cuentas de las inmobiliarias mantienen los límites de su suscripción. La IA necesita conexión.
 
-Para operar offline: inicia sesión con conexión, selecciona una inmobiliaria y pulsa Offline → Descargar catálogo. Las operaciones locales requieren confirmación posterior del servidor.
+La copia autorizada se descarga automáticamente al iniciar sesión. Sin Internet puedes entrar con una cuenta previamente validada, consultar las pantallas habituales, calcular y exportar reportes, registrar contratos y pagos, guardar reportes y registrar reservas o ventas en efectivo. Al volver la conexión se sincronizan las propuestas con el mismo UUID. Los conflictos conservan los datos del servidor y se muestran para revisión. Las herramientas locales se identifican; Gemini requiere Internet.
 
 Código del APK: {run['head_sha']}.
 Pruebas Android y firma aprobadas: {run['html_url']}.
@@ -134,7 +134,7 @@ La publicación automática de esa ejecución fue rechazada por los permisos del
         if args.upload_only:
             raise RuntimeError('Primero prepara un borrador con una credencial autorizada para Workflows.')
         release = request('releases', 'POST', {'tag_name': tag, 'target_commitish': run['head_sha'],
-            'name': 'Raíces Android 2.1.0', 'body': notes, 'draft': True, 'prerelease': False})
+            'name': 'Raíces Android 2.2.0', 'body': notes, 'draft': True, 'prerelease': False})
     if args.prepare_only:
         print(json.dumps({'release_id':release['id'],'tag':tag,'sha256':expected}))
         return
