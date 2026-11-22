@@ -1,5 +1,7 @@
 # Integración web y Android — 22 de noviembre de 2026
 
+La actualización posterior **Android 3.1.0**, con centro de trabajo y administración nativa, tiene su [matriz y evidencia vigente](PARIDAD_MOVIL_3_1.md). El documento siguiente conserva el historial de integración 3.0, recuperación de la base y despliegue inicial del sprint.
+
 Rama: `feat/sprint4-integracion-web-movil`. [PR de revisión](https://github.com/bmateo637coder/SI2proy/pull/2). La matriz de funcionalidades y sus pantallas está en [SPRINT4_INTEGRACION.md](SPRINT4_INTEGRACION.md).
 
 ## Evidencia automática

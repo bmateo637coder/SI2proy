@@ -1,14 +1,16 @@
-# Raíces para Android · 3.0.0
+# Raíces para Android · 3.1.0
 
 Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** genera `Raices-3.0.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.0.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.0.0-18/Raices-3.0.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.0.0-18)). No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-3.1.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.1.0-29/Raices-3.1.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.1.0-29)). Conserva la firma anterior: instalar encima de la versión existente, sin desinstalar ni borrar los datos. No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
 
-La versión 3.0 incorpora **Servicios**: favoritos y alertas, búsqueda semántica, recomendaciones y feedback, mantenimiento con fotos y costos, comisiones, promociones, estado de cuenta, dashboard gerencial, mapa de ventas y reporte ejecutivo. La matriz de casos de uso está en [SPRINT4_INTEGRACION.md](../docs/SPRINT4_INTEGRACION.md).
+Abre **Todo** en la barra superior o el menú lateral **☰** para entrar al **Centro de trabajo**. Las funciones están agrupadas y tienen buscador sin tildes, con resultados visibles al abrir el teclado y botón para limpiar la consulta. Desde aquí se gestionan propiedades y fotos, clientes, propietarios, agentes, usuarios, roles/permisos, inmobiliarias, sucursales, planes y suscripciones; también la vista global, bitácora y respaldos. La correspondencia con las pantallas web está en [PARIDAD_MOVIL_3_1.md](../docs/PARIDAD_MOVIL_3_1.md).
+
+**Servicios** reúne favoritos y alertas, búsqueda semántica, recomendaciones y feedback, mantenimiento con fotos y costos, comisiones, promociones, estado de cuenta, dashboard gerencial, mapa de ventas y reporte ejecutivo PDF/CSV. La matriz de casos de uso está en [SPRINT4_INTEGRACION.md](../docs/SPRINT4_INTEGRACION.md).
 
 Para recibir avisos abre **Servicios → Notificaciones → Activar avisos** y acepta el permiso. Android consulta la bandeja aproximadamente cada 15 minutos en segundo plano y cada 45 segundos con la app abierta; el ahorro de batería puede retrasarlo. No requiere crear una cuenta Firebase. La integración FCM específica queda opcional. Los comprobantes PDF se pueden descargar y compartir; Gmail SMTP requiere credenciales y un alojamiento que permita esos puertos, bloqueados en Render gratuito.
 
@@ -35,6 +37,8 @@ Las descargas y colas se separan por API, cuenta, permisos e inmobiliaria. Cerra
 Cada cambio conserva su UUID y contenido durante los reintentos. El servidor registra el resultado en la misma transacción que la operación, detecta cambios de precio, disponibilidad, datos del contrato y pagos; resuelve los identificadores temporales de registros creados offline y evita duplicados aunque se pierda una respuesta. Una cancelación de reserva se puede solicitar sin conexión: la propiedad se libera cuando el servidor confirme el plazo y que no existen movimientos posteriores.
 
 La copia local representa la última descarga completa más las propuestas de este teléfono; no puede conocer cambios de otros dispositivos mientras no haya conexión. El mapa base, el registro inicial de cuentas, los cambios de contraseña y los servicios externos requieren Internet. Las propuestas comerciales solo son definitivas después de sincronizar.
+
+Las listas administrativas autorizadas también se preparan para consulta. Crear o cambiar propiedades administrativas, cuentas, permisos, empresas, planes y restaurar SQL requiere conexión; estas acciones no se encolan como si el servidor las hubiera confirmado. Para registrar cambios de una empresa, seleccionarla en el selector superior. Después de actualizar la app, abrirla una vez con Internet y revisar **Sincronización** antes de trabajar sin red.
 
 ## Desarrollo y validación
 

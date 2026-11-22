@@ -132,7 +132,9 @@ def main():
 - IA: reportes por texto/voz, analítica, chat, descripciones, recomendaciones y predicciones académicas.
 - Offline con SQLite: descarga completa automática, login local, catálogo, clientes, contratos, pagos y reportes en las pantallas habituales; reservas y ventas en efectivo; recuperación tras reinicio, dependencias y conflictos sin sobrescrituras ni duplicados.
 
-El superadministrador SaaS puede consultar la IA de cualquier inmobiliaria sin adoptar su plan. Las cuentas de las inmobiliarias mantienen los límites de su suscripción. La IA necesita conexión.
+El superadministrador SaaS puede consultar la IA de cualquier inmobiliaria sin adoptar su plan. Las cuentas de las inmobiliarias mantienen los límites de su suscripción. La IA generativa necesita conexión.
+
+Las nuevas listas administrativas también se descargan para consulta. Cambiar propiedades administrativas, usuarios, roles, empresas, planes o restaurar SQL requiere conexión; estas operaciones no se encolan como si hubieran sido confirmadas. Selecciona una inmobiliaria concreta para registrar cambios de esa empresa.
 
 La copia autorizada se descarga automáticamente al iniciar sesión. Sin Internet puedes entrar con una cuenta previamente validada, consultar las pantallas habituales, calcular y exportar reportes, registrar contratos y pagos, guardar reportes y registrar reservas o ventas en efectivo. Al volver la conexión se sincronizan las propuestas con el mismo UUID. Los conflictos conservan los datos del servidor y se muestran para revisión. Las herramientas locales se identifican; Gemini requiere Internet.
 
