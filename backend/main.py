@@ -120,7 +120,7 @@ def read_root():
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "version": app.version, "commit": os.getenv("RENDER_GIT_COMMIT", "local")[:12],
-            "features": ["saas", "offline", "analitica", "tenant_scope_all"]}
+            "features": ["saas", "offline", "analitica", "tenant_scope_all", "sprint4"]}
 
 # ==========================================
 # ENDPOINTS DE AUTENTICACIÓN (SPRINT 0)

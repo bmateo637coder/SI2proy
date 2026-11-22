@@ -31,12 +31,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Preparar respaldo cifrado de auditoria
+        if: inputs.operation == 'deploy'
+        run: pip install 'cryptography>=43,<47'
       - name: Comprobar o actualizar el servicio existente de Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           PROD_API_URL: ${{ vars.PROD_API_URL }}
           DEPLOY_OPERATION: ${{ inputs.operation }}
         run: python backend/scripts/deploy_render.py "$DEPLOY_OPERATION"
+
+      - name: Conservar respaldo cifrado de auditoria
+        if: always() && inputs.operation == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-cifrada-pre-deploy
+          path: audit-pre-deploy.fernet
+          if-no-files-found: ignore
+          retention-days: 7
 
   build-deploy:
     needs: render

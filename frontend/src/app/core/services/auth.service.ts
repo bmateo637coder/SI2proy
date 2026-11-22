@@ -80,6 +80,12 @@ export class AuthService {
   }
 
   logout(reason?: string) {
+    const registration=localStorage.getItem('push_registration');
+    const token=localStorage.getItem('token');
+    if(registration&&token) {
+      void fetch(this.apiUrl+'/api/notificaciones/tokens/'+encodeURIComponent(registration), {method:'DELETE',headers:{Authorization:'Bearer '+token},keepalive:true}).catch(()=>{});
+      localStorage.removeItem('push_registration');
+    }
     this.clearSession();
     this.router.navigate(['/login'], { queryParams: reason ? { reason } : {} });
   }

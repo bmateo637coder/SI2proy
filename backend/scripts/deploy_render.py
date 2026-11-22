@@ -1,5 +1,7 @@
 """Actualizar el servicio existente desde Actions sin imprimir credenciales."""
 import argparse
+import ast
+from pathlib import Path
 import json
 import os
 import re
@@ -98,7 +100,7 @@ def verify_health(url, commit=None, attempts=12):
             if valid and (not commit or (deployed and commit.startswith(deployed))):
                 with urlopen(url + "/openapi.json", timeout=45) as response:
                     paths = json.load(response)["paths"]
-                if {"/api/offline/sincronizar", "/api/saas/suscripcion", "/admin/vista-global/resumen"}.issubset(paths):
+                if {"/api/offline/sincronizar", "/api/saas/suscripcion", "/admin/vista-global/resumen", "/api/gerencia/dashboard", "/api/servicios/sync", "/api/visitas"}.issubset(paths):
                     print("API verificada: " + json.dumps(health), flush=True)
                     return
         except (HTTPError, URLError, TimeoutError, ValueError):
@@ -108,12 +110,46 @@ def verify_health(url, commit=None, attempts=12):
     raise SystemExit("La API publica aun no confirma la version y rutas requeridas.")
 
 
+def audit_session(service, url):
+    env = {r['envVar']['key']: r['envVar']['value'] for r in api(f"services/{service['id']}/env-vars?limit=100")}
+    key = env.get('BITACORA_FERNET_KEY')
+    if not key: raise SystemExit('No se encontro la clave para conservar la auditoria.')
+    source = ast.parse(Path('backend/init_db.py').read_text(encoding='utf-8'))
+    credentials = next(ast.literal_eval(n.value) for n in ast.walk(source) if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'usuarios' for t in n.targets))
+    admin = next(row for row in credentials if row[2] == 1)
+    payload = {'correo': admin[4], 'password': admin[6]}
+    def call(path, body=None, token=None):
+        headers = {'Content-Type':'application/json'}
+        if token: headers['Authorization'] = 'Bearer ' + token
+        request = Request(url+path, data=json.dumps(body).encode() if body is not None else None, headers=headers)
+        for attempt in range(4):
+            try:
+                with urlopen(request, timeout=90) as response: return json.load(response)
+            except (HTTPError, URLError, TimeoutError):
+                if attempt == 3: raise SystemExit('No se pudo preservar o recuperar la auditoria. Se detiene la operacion sin imprimir credenciales.') from None
+                time.sleep(10)
+    token = call('/login', payload)['access_token']
+    return key, lambda path, body=None: call(path, body, token)
+
+
+def backup_audit(service, url):
+    from cryptography.fernet import Fernet
+    key, call = audit_session(service, url)
+    rows = call('/admin/bitacora?' + urlencode({'dev_key':key}))
+    if not isinstance(rows, list): raise SystemExit('Respuesta de bitacora inesperada.')
+    encrypted = Fernet(key.encode()).encrypt(json.dumps(rows, ensure_ascii=False).encode())
+    Path('audit-pre-deploy.fernet').write_bytes(encrypted)
+    print(f'Bitacora respaldada y cifrada: {len(rows)} registros.', flush=True)
+    return [{k:r[k] for k in ('ip','usuario','accion','fecha_hora')} for r in rows if all(k in r for k in ('ip','usuario','accion','fecha_hora'))]
+
+
 def deploy(service, url):
     branch = os.environ["GITHUB_REF_NAME"]
     commit = os.environ["GITHUB_SHA"]
-    if branch not in {"feat/parcial2-saas-offline-analitica", "main"}:
+    if branch not in {"feat/parcial2-saas-offline-analitica", "feat/sprint4-integracion-web-movil", "main"}:
         raise SystemExit("Seleccionar la rama del parcial 2 o main para actualizar produccion.")
     service_id = service["id"]
+    audit = backup_audit(service, url)
     # Solo se actualiza Python: las credenciales y DATABASE_URL se conservan.
     api(f"services/{service_id}/env-vars/PYTHON_VERSION", "PUT", {"value": "3.12.10"})
     api(f"services/{service_id}", "PATCH", {
@@ -133,6 +169,10 @@ def deploy(service, url):
             previous = status
         if status == "live":
             verify_health(url, commit)
+            if audit:
+                key, call = audit_session(service, url)
+                result = call('/admin/bitacora/importar', {'dev_key':key, 'registros':audit})
+                print('Auditoria recuperada: ' + str(result['importados']) + ' registros.', flush=True)
             summary = os.environ.get("GITHUB_STEP_SUMMARY")
             if summary:
                 with open(summary, "a", encoding="utf8") as file:
