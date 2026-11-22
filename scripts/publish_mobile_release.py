@@ -117,6 +117,11 @@ def main():
         raise RuntimeError('La versión existente corresponde a otro commit; se conserva sin modificarla.')
     notes = f'''Raíces Android 3.1.0, conectada al backend de producción.
 
+- Nuevo centro de trabajo con buscador y menú por áreas para acceder a todas las funciones.
+- Administración nativa de propiedades y fotos, propietarios, agentes, clientes, usuarios, roles/permisos, empresas, planes, suscripciones y sucursales.
+- Vista global SaaS, bitácora con llave y descarga/restauración de respaldos SQL.
+- Agenda con creación de visitas; mantenimiento con responsable, categoría, urgencia, contratista y costos consolidados; dashboard ampliado y reporte ejecutivo PDF/CSV.
+
 - Favoritos, alertas, búsqueda semántica y feedback personalizado.
 - Mantenimiento con fotos, costos y contratista; comisiones y promociones.
 - Dashboard gerencial, mapa de ventas y reporte ejecutivo.

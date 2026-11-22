@@ -41,6 +41,7 @@ class WorkspaceAuth extends AuthProvider {
 }
 
 class WorkspaceAdapter implements HttpClientAdapter {
+  bool reject = true;
   final writes = <RequestOptions>[];
   @override
   Future<ResponseBody> fetch(
@@ -50,8 +51,10 @@ class WorkspaceAdapter implements HttpClientAdapter {
   ) async {
     writes.add(options);
     return ResponseBody.fromString(
-      jsonEncode({'ok': true}),
-      200,
+      jsonEncode(
+        reject ? {'detail': 'Este correo ya está registrado'} : {'ok': true},
+      ),
+      reject ? 409 : 200,
       headers: {
         Headers.contentTypeHeader: ['application/json'],
       },
@@ -64,7 +67,10 @@ class WorkspaceAdapter implements HttpClientAdapter {
 
 class WorkspaceService extends Sprint4Service {
   WorkspaceService(Dio d, AuthProvider a)
-    : super(d, a, ReplicaStore(user: () => a.user));
+    : super(d, a, ReplicaStore(user: () => a.user)) {
+    timer?.cancel();
+    timer = null;
+  }
   @override
   Future<void> refresh() async {}
   @override
@@ -87,6 +93,10 @@ class WorkspaceService extends Sprint4Service {
 }
 
 void main() {
+  test('La búsqueda de funciones encuentra textos sin escribir tildes', () {
+    expect(workspaceSearch('Bitácora y Búsqueda'), contains('bitacora'));
+    expect(workspaceSearch('Bitácora y Búsqueda'), contains('busqueda'));
+  });
   test('SaaS reaches all web administrative modules; customers do not get staff menus', () {
     final root = UserModel.fromJson({
       'ci': 'super',
@@ -170,7 +180,13 @@ void main() {
       await tester.ensureVisible(find.text('Guardar cambios'));
       await tester.tap(find.text('Guardar cambios'));
       await tester.pumpAndSettle();
-      expect(adapter.writes.where((r) => r.method == 'POST').length, 1);
+      expect(find.text('Este correo ya está registrado'), findsOneWidget);
+      expect(find.text('Registrar usuario'), findsOneWidget);
+      adapter.reject = false;
+      await tester.ensureVisible(find.text('Guardar cambios'));
+      await tester.tap(find.text('Guardar cambios'));
+      await tester.pumpAndSettle();
+      expect(adapter.writes.where((r) => r.method == 'POST').length, 2);
       final payload = adapter.writes.last.data as Map;
       expect(payload['id_tenant'], 1);
       expect(payload['id_rol'], 3);

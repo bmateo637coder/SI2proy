@@ -20,9 +20,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final auth = context.watch<AuthProvider>();
     final modules = workspaceModules(auth.user)
         .where(
-          (m) => '${m.title} ${m.subtitle} ${m.group}'.toLowerCase().contains(
-            query.toLowerCase(),
-          ),
+          (m) =>
+              workspaceSearch('${m.title} ${m.subtitle} ${m.group}')
+                  .contains(workspaceSearch(query)),
         )
         .toList();
     final groups = modules.map((m) => m.group).toSet();

@@ -2,6 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/user_model.dart';
 
+String workspaceSearch(String value) {
+  var result = value.toLowerCase();
+  for (final entry in {
+    'á': 'a',
+    'é': 'e',
+    'í': 'i',
+    'ó': 'o',
+    'ú': 'u',
+    'ü': 'u',
+    'ñ': 'n',
+  }.entries) {
+    result = result.replaceAll(entry.key, entry.value);
+  }
+  return result;
+}
+
 class WorkspaceModule {
   const WorkspaceModule(
     this.title,

@@ -15,6 +15,8 @@ import '../../../data/services/sprint4_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/company_scope.dart';
 import '../../widgets/workspace_form.dart';
+import '../../widgets/property_image.dart';
+import '../../widgets/workspace_modules.dart';
 
 class ManagementScreenTitles {
   static bool allowed(String module, UserModel? user) => switch (module) {
@@ -156,6 +158,12 @@ class _ManagementScreenState extends State<ManagementScreen> {
     Map<String, dynamic> initial = const {},
   }) async {
     final scope = auth.scopeKey;
+    if (auth.allTenants && !['empresas', 'roles', 'planes'].contains(module)) {
+      setState(
+        () => error = 'Selecciona una inmobiliaria concreta arriba antes de abrir el formulario.',
+      );
+      return;
+    }
     await workspaceForm(context, title, fields, (v) async {
       if (scope != auth.scopeKey)
         throw StateError(
@@ -400,7 +408,17 @@ class _ManagementScreenState extends State<ManagementScreen> {
         final updated = <String, String>{...attrs};
         for (final f in fields.entries) {
           updated.remove(f.value);
-          if (v[f.key]!.isNotEmpty) updated[f.value] = v[f.key]!;
+          if (v[f.key]!.isNotEmpty)
+            updated[f.value] =
+                [
+                  'superficie',
+                  'habitaciones',
+                  'banos',
+                  'latitud',
+                  'longitud',
+                ].contains(f.key)
+                ? v[f.key]!.replaceAll(',', '.')
+                : v[f.key]!;
         }
         await request(
           row == null ? 'POST' : 'PUT',
@@ -807,6 +825,24 @@ class _ManagementScreenState extends State<ManagementScreen> {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (module == 'propiedades') ...[
+              if ((row['imagenes'] as List? ?? []).isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: PropertyImage(
+                        Uri.parse(context.read<Dio>().options.baseUrl)
+                            .resolve(
+                              '${row['imagenes'][0] is Map ? row['imagenes'][0]['url'] : row['imagenes'][0]}',
+                            )
+                            .toString(),
+                        height: 170,
+                      ),
+                    ),
+                  ),
+                ),
               Text(
                 '${row['tipo_operacion']} · ${row['precio']} · ${row['estado']}',
               ),
@@ -1008,7 +1044,8 @@ class _ManagementScreenState extends State<ManagementScreen> {
               .whereType<Map>()
               .where(
                 (r) =>
-                    jsonEncode(r).toLowerCase().contains(query.toLowerCase()),
+                    workspaceSearch(jsonEncode(r))
+                        .contains(workspaceSearch(query)),
               )
               .toList()
         : <Map>[];
