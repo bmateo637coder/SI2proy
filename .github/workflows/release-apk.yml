@@ -57,6 +57,15 @@ jobs:
           target: google_apis
           disable-animations: true
           script: cd mobile && bash scripts/test_android_ci.sh
+      - name: Conservar diagnóstico Android
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-diagnostics
+          path: |
+            /tmp/raices-android-tests.log
+            /tmp/raices-android-logcat.log
+            mobile/build/app/outputs/flutter-apk/app-debug.apk
   build-apk:
     needs: android-test
     runs-on: ubuntu-latest
