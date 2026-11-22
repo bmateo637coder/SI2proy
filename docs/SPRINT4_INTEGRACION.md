@@ -2,7 +2,7 @@
 
 La numeración de esta matriz corresponde a la imagen entregada por el equipo. El documento de 267 páginas contiene otras revisiones de la numeración; no deben confundirse con la tabla CU-22 a CU-37.
 
-Los directorios de entrega `SI2-Backend-feature-anticretico-y-contrato-venta` y `SI2-Frontend-feature-anticretico-y-contrato-venta` están fuera del repositorio. La integración conserva el esquema publicado, cuya clave de usuario es el CI, la selección SaaS de todas las inmobiliarias y la réplica offline anterior. Los módulos de fidelización, mantenimiento, clasificación y bandeja se adaptaron desde esas entregas; no se reemplazó la base ni se ejecutaron semillas.
+Los directorios de entrega `SI2-Backend-feature-anticretico-y-contrato-venta` y `SI2-Frontend-feature-anticretico-y-contrato-venta` están fuera del repositorio. La integración conserva el esquema publicado, cuya clave de usuario es el CI, la selección SaaS de todas las inmobiliarias y la réplica offline anterior. Los módulos de fidelización, mantenimiento, clasificación y bandeja se adaptaron desde esas entregas. La recuperación posterior de producción está documentada en [VALIDACION_SPRINT4.md](VALIDACION_SPRINT4.md), y la carga de demostración solicitada en [DATOS_DEMO_SPRINT4.md](DATOS_DEMO_SPRINT4.md).
 
 | Caso | Función | Web | Flutter Android |
 |---|---|---|---|

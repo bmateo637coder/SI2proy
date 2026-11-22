@@ -44,6 +44,8 @@ No se crearon ventas, pagos ni incidentes ficticios para aparentar actividad en 
 
 ## Límites externos
 
+La carga posterior de demostración amplió los datos a 31 propiedades y 16 contratos. Conteos y comprobaciones: [DATOS_DEMO_SPRINT4.md](DATOS_DEMO_SPRINT4.md).
+
 - Avisos web: aceptar el permiso en Servicios → Notificaciones. Las claves VAPID se generan automáticamente; no se necesita Firebase.
 - Android: activar avisos y aceptar el permiso. Consulta la bandeja aproximadamente cada 15 minutos en segundo plano y cada 45 segundos con la app abierta; Android puede retrasarla. Esta alternativa no acredita CU-27 específicamente mediante FCM. La integración FCM sigue disponible de forma opcional con credenciales del propietario.
 - Gmail SMTP no está configurado ni se ha probado el envío real. Render gratuito bloquea los puertos SMTP habituales. Los comprobantes PDF se descargan y comparten; SMTP necesita cuenta emisora y alojamiento compatible.
