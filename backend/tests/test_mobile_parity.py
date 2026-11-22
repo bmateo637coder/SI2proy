@@ -76,3 +76,16 @@ def test_people_delete_preserves_linked_property_and_visit_history(api):
     deleted = client.delete('/modulo_inmuebles/clientes/1', headers=headers())
     assert deleted.status_code == 409, deleted.text
     assert any(c['id_cliente'] == 1 for c in client.get('/modulo_inmuebles/clientes', headers=headers()).json())
+
+
+def test_property_form_exposes_branch_and_can_change_it(api):
+    client, _ = api
+    row = client.get('/modulo_inmuebles/propiedades', headers=headers()).json()[0]
+    assert row['id_sucursal'] == 1
+    branch = client.post('/api/saas/sucursales', headers=headers(), json={'nombre': 'Segunda sede', 'direccion': 'Prueba', 'activa': True})
+    assert branch.status_code == 201, branch.text
+    body = {k: row[k] for k in ('id_propietario', 'id_agente', 'titulo', 'descripcion', 'direccion', 'precio', 'tipo_operacion')}
+    body['id_sucursal'] = branch.json()['id_sucursal']
+    updated = client.put(f'/modulo_inmuebles/propiedades/{row["id_propiedad"]}', headers=headers(), json=body)
+    assert updated.status_code == 200, updated.text
+    assert updated.json()['id_sucursal'] == branch.json()['id_sucursal']

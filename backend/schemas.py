@@ -155,6 +155,7 @@ class PropiedadAdminResponse(BaseModel):
     id_tenant: int
     id_propietario: int
     id_agente: int
+    id_sucursal: Optional[int] = None
     titulo: str
     descripcion: Optional[str] = None
     direccion: str
