@@ -185,3 +185,21 @@ def test_webpush_generates_stable_keys_and_encrypts_real_payload(api, monkeypatc
     assert 'authorization' in {k.lower() for k in deliveries[0][2]}
     assert b'notificaciones activadas' not in deliveries[0][1]
     assert client.post('/api/notificaciones/prueba', headers=headers('client2', 2)).json()['push_enviado'] is False
+
+
+def test_daily_backup_does_not_block_api_event_loop(monkeypatch):
+    import asyncio
+    import threading
+    import scheduler
+    release = threading.Event()
+    monkeypatch.setattr(scheduler, '_backup_diario', lambda: release.wait(2))
+    monkeypatch.setattr(scheduler, '_registrar_vencimientos', lambda: None)
+    async def scenario():
+        work = asyncio.create_task(scheduler._ejecutar_tareas())
+        try:
+            await asyncio.sleep(0.05)
+            assert not work.done(), 'La tarea diaria debe permitir que la API atienda otras solicitudes.'
+        finally:
+            release.set()
+            await asyncio.wait_for(work, timeout=3)
+    asyncio.run(scenario())

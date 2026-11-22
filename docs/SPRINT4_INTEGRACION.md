@@ -11,7 +11,7 @@ Los directorios de entrega `SI2-Backend-feature-anticretico-y-contrato-venta` y 
 | CU-24 | Descripción comercial | Propiedades / Servicios | Asistente e IA |
 | CU-25 | Promociones y descuentos | Promociones / nuevo contrato | Promociones / nuevo contrato |
 | CU-26 | Comprobante por Gmail | Servicios → Estado de cuenta | Mi cuenta → comprobante |
-| CU-27 | Push FCM | Activación web y bandeja | Activación Android y bandeja |
+| CU-27 | Notificaciones | Web Push VAPID sin cuentas externas y bandeja | Avisos periódicos nativos sin Firebase; integración FCM opcional |
 | CU-28 | Estado de cuenta | Servicios → Estado de cuenta | Mi cuenta |
 | CU-29 | Comisiones | Comisiones | Comisiones |
 | CU-30 | Incidencias con fotos | Mantenimiento | Mantenimiento |
@@ -32,12 +32,21 @@ Los directorios de entrega `SI2-Backend-feature-anticretico-y-contrato-venta` y 
 - Los favoritos y el feedback pertenecen a la cuenta. Las valoraciones bajas excluyen el inmueble de las próximas recomendaciones; las positivas aportan al perfil de preferencias.
 - Las fotos se guardan en PostgreSQL y se devuelven como imágenes en los datos autorizados; sobreviven a un despliegue en Render.
 - Los cambios nuevos usan recibos por UUID en la misma transacción de negocio. Web usa IndexedDB; Android, SQLite. La revisión de conflictos permite descartar la propuesta o volver a proponerla contra la versión mostrada. Si vuelve a cambiar el servidor, se vuelve a detectar el conflicto.
-- Push utiliza una bandeja persistente y un trabajo periódico que entrega después de confirmar los datos en la base. El registro de prueba diferencia un mensaje guardado de un envío aceptado por FCM.
+- Push web utiliza VAPID con claves cifradas generadas automáticamente y una bandeja persistente. El trabajo entrega después de confirmar los datos. Android consulta la bandeja aproximadamente cada 15 minutos en segundo plano y cada 45 segundos con la app activa; no se presenta esta consulta como FCM inmediato. La credencial Android solo permite leer la bandeja propia y se revoca al cambiar de cuenta o cerrar sesión.
 - La cotización predictiva usa el modelo académico existente cuando hay superficie, habitaciones y segmento compatibles. Si faltan, se informa que no se generó una estimación. No se presenta el precio publicado como una predicción.
 - Gemini se utiliza para las funciones generativas cuando está disponible. Las plantillas, respuestas guardadas y filtros locales indican su origen. Los filtros offline son básicos; no sustituyen una interpretación generativa.
 
 ## Configuración y validación externa
 
-Gmail y FCM requieren las credenciales del propietario. No se puede acreditar una entrega real hasta configurarlos y probar con un destinatario y dispositivo reales. Ver [CONFIGURAR_FIREBASE_GMAIL.md](CONFIGURAR_FIREBASE_GMAIL.md).
+Los avisos habituales no necesitan configurar cuentas externas. Gmail y la integración específica FCM sí requieren las credenciales del propietario. La recepción final debe comprobarse aceptando el permiso del navegador o teléfono; la aceptación del proveedor no demuestra por sí sola que apareció en pantalla. Ver [CONFIGURAR_FIREBASE_GMAIL.md](CONFIGURAR_FIREBASE_GMAIL.md).
 
 La primera descarga, la administración de suscripciones, la entrega de correos/push y Gemini requieren Internet. El mapa base depende del proveedor cartográfico; el ranking por zonas permanece disponible con los datos descargados.
+
+
+## Correcciones adicionales
+
+- Agendar una visita persiste realmente el turno y notifica al cliente y al agente; detecta disponibilidad y choques de agenda. Las propuestas offline se validan al sincronizar.
+- Las comisiones liquidadas impiden eliminar su contrato.
+- La bitácora se conserva cifrada en PostgreSQL. El despliegue respalda el historial anterior cifrado y lo importa con control de duplicados.
+- Pruebas de integración de dominio: aislamiento por cuenta e inmobiliaria, alertas sin duplicados, mantenimiento con fotos/costos, promociones, ventas por zona, reportes PDF, visitas, recibos UUID, conflicto de versiones y auditoría persistente.
+- Avisos: pruebas de credenciales limitadas y revocación; Web Push comprueba firma VAPID y cifrado del mensaje real antes de simular la respuesta del proveedor. Esa prueba no acredita recepción en un navegador del usuario.

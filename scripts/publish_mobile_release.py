@@ -120,7 +120,8 @@ def main():
 - Favoritos, alertas, búsqueda semántica y feedback personalizado.
 - Mantenimiento con fotos, costos y contratista; comisiones y promociones.
 - Dashboard gerencial, mapa de ventas y reporte ejecutivo.
-- Bandeja persistente y activación FCM; comprobantes SMTP (requieren configurar las cuentas del propietario).
+- Avisos automáticos Android sin Firebase: consulta periódica de la bandeja en segundo plano, permiso del sistema y credencial limitada a cada cuenta. Android puede retrasarlos por ahorro de batería; no es entrega FCM inmediata.
+- Web Push sin cuentas adicionales. La integración FCM específica y Gmail SMTP requieren credenciales del propietario.
 - SaaS: una o todas las inmobiliarias en catálogo, clientes, contratos y reportes.
 - Reportes dinámicos con filtros, configuraciones y exportaciones PDF, Excel, CSV y HTML.
 - IA: reportes por texto/voz, analítica, chat, descripciones, recomendaciones y predicciones académicas.

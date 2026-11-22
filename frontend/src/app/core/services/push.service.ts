@@ -13,7 +13,7 @@ export class PushService {
   if(!registration.active)await new Promise<void>((resolve,reject)=>{
    const worker=registration.installing||registration.waiting;
    if(!worker)return reject(new Error('No se pudo activar el servicio de avisos.'));
-   const timer=setTimeout(()=>reject(new Error('El servicio de avisos tard? demasiado. Vuelve a intentarlo.')),20000);
+   const timer=setTimeout(()=>reject(new Error('El servicio de avisos tardó demasiado. Vuelve a intentarlo.')),20000);
    worker.addEventListener('statechange',()=>{if(worker.state==='activated'){clearTimeout(timer);resolve();}});
   });
   const bytes=Uint8Array.from(atob(config.clave_publica.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-config.clave_publica.length%4)%4)),c=>c.charCodeAt(0));

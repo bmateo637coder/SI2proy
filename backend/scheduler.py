@@ -72,9 +72,9 @@ def _backup_diario():
 
 
 async def _ejecutar_tareas():
-    _backup_diario()
+    await asyncio.to_thread(_backup_diario)
     try:
-        _registrar_vencimientos()
+        await asyncio.to_thread(_registrar_vencimientos)
     except Exception as e:
         print(f"Error registrando vencimientos: {e}")
 

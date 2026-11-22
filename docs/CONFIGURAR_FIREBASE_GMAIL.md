@@ -6,7 +6,7 @@
 - **Android:** Servicios → Notificaciones → Activar avisos. Acepta el permiso. La app consulta la bandeja en primer plano y programa una tarea nativa cada 15 minutos aproximadamente en segundo plano. Android puede retrasarla por ahorro de batería; forzar la detención desde Ajustes la suspende hasta volver a abrir la app. Esta alternativa es consulta periódica, no entrega FCM inmediata.
 - Pulsa **Enviar prueba** y comprueba que aparece en las notificaciones del sistema. Cerrar sesión cancela los avisos del teléfono y la suscripción del navegador.
 - Cada dispositivo Android obtiene una credencial revocable que solo permite leer la bandeja propia, con caducidad de 90 días y renovación al activar/reabrir la app con sesión en línea. Se guarda cifrada mediante Android Keystore.
-- La bandeja de la aplicación se conserva aunque se rechace el permiso o no haya Internet. La entrega de mensajes nuevos requiere conexión y que el backend está activo.
+- La bandeja de la aplicación se conserva aunque se rechace el permiso o no haya Internet. La entrega de mensajes nuevos requiere conexión y que el backend esté activo.
 
 Firebase queda como integración opcional para entrega FCM en Android. La sección siguiente sirve si el docente exige demostrar específicamente FCM. Gmail sí requiere una cuenta emisora y su contraseña de aplicación.
 
@@ -14,6 +14,8 @@ Firebase queda como integración opcional para entrega FCM en Android. La secci�
 Estas variables se guardan en Render → servicio de backend → **Environment**. No se agregan a GitHub ni a los archivos públicos. La aplicación muestra qué integraciones faltan sin afirmar que se envió un mensaje.
 
 ## Gmail
+
+El servicio publicado usa Render gratuito, que [bloquea las salidas SMTP en los puertos 25, 465 y 587](https://render.com/docs/free). Las variables siguientes sirven para un backend local o un alojamiento que permita SMTP; por sí solas no habilitan Gmail en Render gratuito. Puedes descargar y compartir el PDF del comprobante. El envío por Gmail mediante HTTPS sería otra integración con autorización de la cuenta emisora.
 
 1. Abre tu cuenta de Google y activa la verificación en dos pasos.
 2. Crea una contraseña de aplicación en https://myaccount.google.com/apppasswords.
