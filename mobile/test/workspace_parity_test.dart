@@ -103,7 +103,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetViewInsets);
-    final auth = WorkspaceAuth(Dio());
+    final auth = WorkspaceAuth(Dio())..selectedTenant = 0;
     addTearDown(auth.dispose);
     await tester.pumpWidget(
       ChangeNotifierProvider<AuthProvider>.value(
@@ -119,6 +119,14 @@ void main() {
     expect(find.text('Bitácora'), findsOneWidget);
     expect(tester.getBottomRight(find.text('Bitácora')).dy, lessThan(440));
     expect(find.text('Tu inmobiliaria, a la mano'), findsNothing);
+    await tester.enterText(
+      find.byKey(const ValueKey('workspace-search')),
+      'propiedades',
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Gestionar propiedades'), 100);
+    expect(find.text('Gestionar propiedades'), findsOneWidget);
+    expect(find.text('Bitácora'), findsNothing);
   });
   test('La búsqueda de funciones encuentra textos sin escribir tildes', () {
     expect(workspaceSearch('Bitácora y Búsqueda'), contains('bitacora'));

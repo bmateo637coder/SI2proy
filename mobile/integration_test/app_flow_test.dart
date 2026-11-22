@@ -99,16 +99,20 @@ void main() {
         find.byKey(const ValueKey('workspace-search')),
         'bitacora',
       );
-      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
       expect(find.text('Bitácora'), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('workspace-search')),
         'propiedades',
       );
-      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Gestionar propiedades'));
+      await tester.scrollUntilVisible(
+        find.text('Gestionar propiedades'),
+        100,
+        scrollable: vertical.last,
+      );
       await tester.tap(find.text('Gestionar propiedades'));
       await tester.pumpAndSettle();
       expect(find.text('Gestión de propiedades'), findsOneWidget);
