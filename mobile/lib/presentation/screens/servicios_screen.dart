@@ -69,7 +69,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
         'Alertas': '/api/alertas',
         'Recomendaciones': '/api/recomendaciones',
         'Mi cuenta': '/api/mi-cuenta',
-      'Visitas': '/api/visitas',
+        'Visitas': '/api/visitas',
         'Mantenimiento': '/api/mantenimiento',
         'Gerencia': '/api/gerencia/dashboard',
         'Mapa de ventas': '/api/analitica/zonas',
@@ -547,14 +547,42 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
               ),
           ]),
       ],
-      if(section=='Visitas' && data is List)...[
-        if((data as List).isEmpty)const Text('No hay visitas en este alcance.'),
-        for(final v in data)card('${v['propiedad']??"Visita pendiente"}',[
-          Text('${v['fecha_hora']} · ${v['estado']}'),Text('Cliente: ${v['cliente']??"Por confirmar"} · Agente: ${v['agente']??"Por confirmar"}'),
-          if(['Programada','Confirmada'].contains(v['estado']))Wrap(children:[
-            if(staff)button('Confirmar',()=>mutate('PUT','/api/visitas/${v['id_visita']}',{'estado':'Confirmada'})),
-            if(staff)button('Realizada',()=>mutate('PUT','/api/visitas/${v['id_visita']}',{'estado':'Realizada'})),
-            button('Cancelar',()=>mutate('PUT','/api/visitas/${v['id_visita']}',{'estado':'Cancelada'}))])])],
+      if (section == 'Visitas' && data is List) ...[
+        if ((data as List).isEmpty)
+          const Text('No hay visitas en este alcance.'),
+        for (final v in data)
+          card('${v['propiedad'] ?? "Visita pendiente"}', [
+            Text('${v['fecha_hora']} · ${v['estado']}'),
+            Text(
+              'Cliente: ${v['cliente'] ?? "Por confirmar"} · Agente: ${v['agente'] ?? "Por confirmar"}',
+            ),
+            if (['Programada', 'Confirmada'].contains(v['estado']))
+              Wrap(
+                children: [
+                  if (staff)
+                    button(
+                      'Confirmar',
+                      () => mutate('PUT', '/api/visitas/${v['id_visita']}', {
+                        'estado': 'Confirmada',
+                      }),
+                    ),
+                  if (staff)
+                    button(
+                      'Realizada',
+                      () => mutate('PUT', '/api/visitas/${v['id_visita']}', {
+                        'estado': 'Realizada',
+                      }),
+                    ),
+                  button(
+                    'Cancelar',
+                    () => mutate('PUT', '/api/visitas/${v['id_visita']}', {
+                      'estado': 'Cancelada',
+                    }),
+                  ),
+                ],
+              ),
+          ]),
+      ],
       if (section == 'Mantenimiento') ...[
         pickProperty(),
         button('Registrar incidencia', createMaintenance, icon: Icons.add),
@@ -781,7 +809,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
       ],
       if (section == 'Notificaciones') ...[
         button(
-          'Activar push',
+          'Activar avisos',
           () => act(() async {
             message = await context.read<PushService>().activate();
           }),
@@ -794,7 +822,10 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
               '/api/notificaciones/prueba',
               options: Options(extra: {'replicaBypass': true}),
             );
-            message = r.data['push_enviado'] == true ? 'FCM aceptó la prueba.' : 'Guardada en la bandeja. Falta activar el dispositivo o completar Firebase.';
+            await context.read<PushService>().pollNow();
+            message = r.data['push_enviado'] == true
+                ? 'El servicio push aceptó la prueba.'
+                : 'Prueba guardada. Si activaste los avisos, revisa las notificaciones del teléfono.';
           }),
         ),
         if (data is Map) ...[
@@ -832,7 +863,14 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                 '${jsonDecode(r['command'])['metodo']} ${jsonDecode(r['command'])['ruta']}',
               ),
               if (r['error'] != null) SelectableText('${r['error']}'),
-                if(r['state']=='conflicto')button('Volver a proponer con la versión mostrada',()=>act(()async{await service.rebase(r['uuid'] as String);data=await service.changes();})),
+              if (r['state'] == 'conflicto')
+                button(
+                  'Volver a proponer con la versión mostrada',
+                  () => act(() async {
+                    await service.rebase(r['uuid'] as String);
+                    data = await service.changes();
+                  }),
+                ),
               button(
                 'Descartar propuesta',
                 () => act(() async {

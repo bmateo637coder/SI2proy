@@ -1,4 +1,15 @@
-# Configurar Gmail y Firebase
+# Avisos automáticos y configuración opcional de Gmail/Firebase
+
+## Activar avisos sin crear cuentas
+
+- **Web:** Servicios ? Notificaciones ? Activar en este navegador. Acepta el permiso. El backend genera y conserva sus claves VAPID cifradas en la base; no necesitas Firebase ni variables nuevas.
+- **Android:** Servicios ? Notificaciones ? Activar avisos. Acepta el permiso. La app consulta la bandeja en primer plano y programa una tarea nativa cada 15 minutos aproximadamente en segundo plano. Android puede retrasarla por ahorro de batería; forzar la detenci?n desde Ajustes la suspende hasta volver a abrir la app. Esta alternativa es consulta periódica, no entrega FCM inmediata.
+- Pulsa **Enviar prueba** y comprueba que aparece en las notificaciones del sistema. Cerrar sesión cancela los avisos del teléfono y la suscripción del navegador.
+- Cada dispositivo Android obtiene una credencial revocable que solo permite leer la bandeja propia, con caducidad de 90 d?as y renovaci?n al activar/reabrir la app con sesión en l?nea. Se guarda cifrada mediante Android Keystore.
+- La bandeja de la aplicación se conserva aunque se rechace el permiso o no haya Internet. La entrega de mensajes nuevos requiere conexión y que el backend est? activo.
+
+Firebase queda como integraci?n opcional para entrega FCM en Android. La sección siguiente sirve si el docente exige demostrar espec?ficamente FCM. Gmail sí requiere una cuenta emisora y su contraseña de aplicación.
+
 
 Estas variables se guardan en Render → servicio de backend → **Environment**. No se agregan a GitHub ni a los archivos públicos. La aplicación muestra qué integraciones faltan sin afirmar que se envió un mensaje.
 

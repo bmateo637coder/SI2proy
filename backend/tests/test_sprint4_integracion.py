@@ -133,3 +133,55 @@ def test_audit_history_is_encrypted_and_persistent(api, monkeypatch, tmp_path):
     assert rows[0]['accion'] == 'Evento de prueba persistente'
     assert logger.importar_bitacora(logger.DEV_SECRET_KEY.decode(), rows) == 1
     assert logger.importar_bitacora(logger.DEV_SECRET_KEY.decode(), rows) == 0
+
+
+def test_android_alert_credential_is_read_only_revocable_and_account_bound(api):
+    client, factory = api
+    from sprint4_notificaciones import notificar
+    with factory() as db:
+        notificar(db, 'client1', 'prueba', 'Mensaje privado uno')
+        notificar(db, 'client2', 'prueba', 'Mensaje privado dos')
+        db.commit()
+    registered = client.put('/api/notificaciones/avisos/dispositivo', headers=headers('client1', 1), json={'dispositivo': 'telefono'})
+    assert registered.status_code == 200, registered.text
+    credential = {'X-Avisos-Token': registered.json()['token']}
+    data = client.get('/api/notificaciones/avisos', headers=credential)
+    assert [n['titulo'] for n in data.json()['notificaciones']] == ['Mensaje privado uno']
+    assert client.get('/api/gerencia/dashboard', headers=credential).status_code == 401
+    assert client.get('/api/notificaciones/avisos', headers={'X-Avisos-Token': 'inventado'}).status_code == 401
+    second = client.put('/api/notificaciones/avisos/dispositivo', headers=headers('client2', 2), json={'dispositivo': 'telefono'})
+    assert client.get('/api/notificaciones/avisos', headers=credential).status_code == 401
+    credential = {'X-Avisos-Token': second.json()['token']}
+    assert client.get('/api/notificaciones/avisos', headers=credential).json()['notificaciones'][0]['titulo'] == 'Mensaje privado dos'
+    client.delete('/api/notificaciones/avisos/dispositivo/telefono', headers=headers('client2', 2))
+    assert client.get('/api/notificaciones/avisos', headers=credential).status_code == 401
+
+
+def test_webpush_generates_stable_keys_and_encrypts_real_payload(api, monkeypatch):
+    import base64
+    import requests
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives import serialization
+    client, _ = api
+    config = client.get('/api/notificaciones/webpush/config', headers=headers('client1', 1))
+    assert config.status_code == 200, config.text
+    assert len(config.json()['clave_publica']) == 87
+    assert client.get('/api/notificaciones/webpush/config', headers=headers('client2', 2)).json() == config.json()
+    encode = lambda b: base64.urlsafe_b64encode(b).decode().rstrip('=')
+    key = ec.generate_private_key(ec.SECP256R1()).public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+    body = {'dispositivo':'web-uno', 'endpoint':'https://fcm.googleapis.com/fcm/send/prueba', 'keys':{'p256dh':encode(key),'auth':encode(b'1234567890123456')}}
+    bad = body | {'endpoint':'https://127.0.0.1/privado'}
+    assert client.put('/api/notificaciones/webpush', headers=headers('client1', 1), json=bad).status_code == 422
+    assert client.put('/api/notificaciones/webpush', headers=headers('client1', 1), json=body).status_code == 200
+    deliveries = []
+    def accept(url, data=None, headers=None, **kwargs):
+        deliveries.append((url, data, headers))
+        response = requests.Response(); response.status_code = 201; response._content = b''
+        return response
+    monkeypatch.setattr(requests, 'post', accept)
+    result = client.post('/api/notificaciones/prueba', headers=headers('client1', 1))
+    assert result.status_code == 200 and result.json()['push_enviado'], result.text
+    assert len(deliveries) == 1
+    assert 'authorization' in {k.lower() for k in deliveries[0][2]}
+    assert b'notificaciones activadas' not in deliveries[0][1]
+    assert client.post('/api/notificaciones/prueba', headers=headers('client2', 2)).json()['push_enviado'] is False

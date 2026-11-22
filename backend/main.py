@@ -62,6 +62,8 @@ import sprint4_mantenimiento
 import sprint4_notificaciones
 for sprint4_router in (sprint4_api.router, sprint4_fidelizacion.router, sprint4_mantenimiento.router, sprint4_notificaciones.router):
     app.include_router(sprint4_router)
+import sprint4_avisos
+app.include_router(sprint4_avisos.router)
 import sprint4_sync
 app.include_router(sprint4_sync.router)
 os.makedirs("uploads", exist_ok=True)

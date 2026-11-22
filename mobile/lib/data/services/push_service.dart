@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -31,13 +32,73 @@ Future<void> raicesBackgroundMessage(RemoteMessage message) async {
 }
 
 class PushService {
-  PushService(this.dio, this.auth);
+  PushService(this.dio, this.auth) {
+    auth.addListener(accountChanged);
+    unawaited(restoreSimple().catchError((_) {}));
+    simpleTimer = Timer.periodic(const Duration(seconds: 45), (_) {
+      if (Platform.isAndroid &&
+          auth.isAuthenticated &&
+          simpleAccount == auth.userá.ci) {
+        unawaited(channel.invokeMethod<bool>('poll').catchError((_) => false));
+      }
+    });
+  }
+  static const channel = MethodChannel('raices/avisos');
+  Timer? simpleTimer;
+  String? simpleAccount;
+  void accountChanged() {
+    unawaited(restoreSimple().catchError((_) {}));
+  }
+
+  Future<void> restoreSimple() async {
+    if (!Platform.isAndroid ||
+        !auth.isAuthenticated ||
+        auth.isLoading ||
+        auth.localSession)
+      return;
+    final ci = auth.userá.ci;
+    if (ci == null || simpleAccount == ci) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('avisos_enabled_$ci') == true) await activate();
+  }
+
+  Future<String> activate() async {
+    if (!Platform.isAndroid)
+      throw StateError(
+        'Los avisos automáticos nativos están disponibles en Android.',
+      );
+    final ci = auth.userá.ci;
+    if (ci == null)
+      throw StateError('Inicia sesión antes de activar los avisos.');
+    final prefs = await SharedPreferences.getInstance();
+    final device = prefs.getString('push_device') ?? const Uuid().v4();
+    await prefs.setString('push_device', device);
+    final r = await dio.put(
+      '/api/notificaciones/avisos/dispositivo',
+      data: {'dispositivo': device},
+      options: Options(extra: {'replicaBypass': true}),
+    );
+    if (!auth.isAuthenticated || auth.userá.ci != ci)
+      throw StateError('La cuenta cambió. Vuelve a activar los avisos.');
+    await channel.invokeMethod<bool>('activate', {
+      'account': ci,
+      'token': r.data['token'],
+    });
+    await prefs.setBool('avisos_enabled_$ci', true);
+    simpleAccount = ci;
+    return 'Avisos activados sin Firebase. En segundo plano Android consulta novedades aproximadamente cada 15 minutos; el ahorro de batería puede retrasarlos.';
+  }
+
+  Future<void> pollNow() async {
+    if (Platform.isAndroid) await channel.invokeMethod<bool>('poll');
+  }
+
   final Dio dio;
   final AuthProvider auth;
   StreamSubscription<String>? refreshed;
   StreamSubscription<RemoteMessage>? foreground;
   final ValueNotifier<String?> message = ValueNotifier(null);
-  Future<String> activate() async {
+  Future<String> activateFcm() async {
     final config =
         (await dio.get(
               '/api/notificaciones/config',
@@ -104,6 +165,27 @@ class PushService {
   }
 
   Future<void> unregister() async {
+    simpleAccount = null;
+    final simplePrefs = await SharedPreferences.getInstance();
+    final ci = auth.userá.ci;
+    if (ci != null) await simplePrefs.remove('avisos_enabled_$ci');
+    if (Platform.isAndroid) {
+      try {
+        await channel.invokeMethod<bool>('disable');
+      } catch (_) {}
+    }
+    final device = simplePrefs.getString('push_device');
+    if (device != null) {
+      try {
+        await dio
+            .delete(
+              '/api/notificaciones/avisos/dispositivo/$device',
+              options: Options(extra: {'replicaBypass': true}),
+            )
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {}
+    }
+
     await refreshed?.cancel();
     await foreground?.cancel();
     final prefs = await SharedPreferences.getInstance(),
@@ -136,6 +218,8 @@ class PushService {
   }
 
   void dispose() {
+    simpleTimer?.cancel();
+    auth.removeListener(accountChanged);
     unawaited(refreshed?.cancel());
     unawaited(foreground?.cancel());
     message.dispose();

@@ -49,12 +49,14 @@ def _firebase_app():
 
 def enviar_push(db, id_usuario, titulo, cuerpo, data=None):
     """Push best-effort. Devuelve cuántos dispositivos aceptaron el mensaje."""
+    from sprint4_avisos import enviar_web
+    enviados_web = enviar_web(db, id_usuario, titulo, cuerpo)
     app = _firebase_app()
     if app is None:
-        return 0
+        return enviados_web
     from firebase_admin import messaging
     from sprint4_api import Dispositivo
-    enviados = 0
+    enviados = enviados_web
     for device in db.query(Dispositivo).filter_by(id_usuario=id_usuario).all():
         try:
             messaging.send(messaging.Message(
@@ -77,13 +79,13 @@ def notificar(db, id_usuario, tipo, titulo, cuerpo="", referencia=None, push=Tru
 
 def entregar_pendientes(db, ci=None):
     """El worker entrega únicamente notificaciones cuyo cambio ya fue confirmado en la BD."""
-    if _firebase_app() is None: return 0
     from sprint4_api import Dispositivo
+    from sprint4_avisos import NavegadorPush
     query = db.query(Notificacion).filter_by(push_enviado=False, push_solicitado=True).filter(Notificacion.push_intentos < 5)
     if ci: query = query.filter_by(id_usuario=ci)
     count = 0
     for n in query.order_by(Notificacion.id).limit(50).with_for_update(skip_locked=True):
-        if not db.query(Dispositivo).filter_by(id_usuario=n.id_usuario).first(): continue
+        if not db.query(Dispositivo).filter_by(id_usuario=n.id_usuario).first() and not db.query(NavegadorPush).filter_by(ci_usuario=n.id_usuario).first(): continue
         n.push_intentos += 1
         n.push_enviado = enviar_push(db, n.id_usuario, n.titulo, n.cuerpo, {'tipo': n.tipo, 'referencia': n.referencia or ''}) > 0
         count += bool(n.push_enviado)
