@@ -132,4 +132,6 @@ if __name__ == '__main__':
         print('Recuperación detenida: ' + type(error).__name__ + '. La conexión de producción solo cambia después de validar todos los registros.', flush=True)
         if isinstance(error, RuntimeError): print(str(error), flush=True)
         if isinstance(error, psycopg2.Error): print('SQLSTATE: ' + str(error.pgcode), flush=True)
+        if isinstance(error, psycopg2.Error) and error.pgcode in ('42704', '42601', '42P01', '42703'):
+            print('Compatibilidad del esquema: ' + str(error.diag.message_primary), flush=True)
         raise SystemExit(1) from None
