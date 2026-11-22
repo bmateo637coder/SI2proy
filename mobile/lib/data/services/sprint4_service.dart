@@ -378,6 +378,7 @@ class Sprint4Service extends ChangeNotifier {
       '/api/mi-cuenta',
       '/api/mantenimiento',
       '/api/mantenimiento/mis-inmuebles',
+      '/api/mantenimiento/costos/resumen',
       '/modulo_inmuebles/propiedades/catalogo',
       if (staff) ...[
         '/api/gerencia/dashboard',

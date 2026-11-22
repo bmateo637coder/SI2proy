@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/config/api_constants.dart';
 import '../providers/propiedades_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/property_image.dart';
 
 class CatalogoScreen extends StatefulWidget {
@@ -41,6 +42,12 @@ class _CatalogoState extends State<CatalogoScreen> {
       appBar: AppBar(
         title: const Text('Catálogo'),
         actions: [
+          if (context.watch<AuthProvider>().user?.canSeePropiedades == true)
+            IconButton(
+              tooltip: 'Gestionar propiedades',
+              onPressed: () => context.push('/gestion/propiedades'),
+              icon: const Icon(Icons.edit_note),
+            ),
           IconButton(
             tooltip: 'IA y analítica',
             onPressed: () => context.push('/ia'),

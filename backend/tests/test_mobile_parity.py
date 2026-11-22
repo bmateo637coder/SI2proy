@@ -50,3 +50,17 @@ def test_restore_failure_is_not_reported_as_success(api, monkeypatch):
     assert response.status_code == 500
     assert 'revertida' in response.json()['detail']
     assert 'private server details' not in response.text
+
+
+def test_legacy_agent_role_can_manage_its_maintenance(api):
+    from database import models as m
+    client, factory = api
+    with factory() as db:
+        db.get(m.Rol, 3).nombre = 'Agente Raices'
+        db.commit()
+    response = client.post('/api/mantenimiento', headers=headers('agent1', 1), json={
+        'id_propiedad': 1, 'titulo': 'Reparar iluminación', 'descripcion': 'Falla en la luz de cocina.'})
+    assert response.status_code == 201, response.text
+    rows = client.get('/api/mantenimiento', headers=headers('agent1', 1))
+    assert rows.status_code == 200
+    assert any(r['id'] == response.json()['id'] for r in rows.json())

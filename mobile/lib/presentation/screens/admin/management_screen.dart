@@ -643,13 +643,15 @@ class _ManagementScreenState extends State<ManagementScreen> {
 
   Future<void> backup(bool restore) async {
     if (restore) {
-      final selection = await FilePicker.platform.pickFiles(
+      final selection = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['sql'],
-        withData: true,
+        withData: false,
       );
       if (selection == null || !mounted) return;
       final file = selection.files.single;
+      if (file.size > 50 * 1024 * 1024)
+        throw StateError('El respaldo debe pesar como máximo 50 MB.');
       if (!await confirm(
         'Restaurar base de datos',
         'Se reemplazará la información de toda la plataforma por ${file.name}. Descarga antes un respaldo y verifica el archivo. Esta acción afecta a todas las inmobiliarias.',

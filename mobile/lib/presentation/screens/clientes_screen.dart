@@ -30,6 +30,14 @@ class _ClientesScreenState extends State<ClientesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestión de Clientes'),
+        actions: [
+          if (auth.user?.isAdministrator == true)
+            IconButton(
+              tooltip: 'Editar y administrar clientes',
+              onPressed: () => context.push('/gestion/clientes'),
+              icon: const Icon(Icons.manage_accounts_outlined),
+            ),
+        ],
         centerTitle: true,
       ),
       floatingActionButton: canRegister
@@ -101,7 +109,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           const SizedBox(height: 4),
                           if (cliente.inmobiliaria.isNotEmpty)
                             Text(cliente.inmobiliaria),
-                          if (cliente.pendienteSync) const Text('Pendiente de sincronizar'),
+                          if (cliente.pendienteSync)
+                            const Text('Pendiente de sincronizar'),
                           if (cliente.correo.isNotEmpty) Text(cliente.correo),
                           if (cliente.telefono.isNotEmpty)
                             Text(cliente.telefono),
@@ -117,7 +126,9 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            cliente.pendienteSync ? 'Registro local' : 'Cliente #${cliente.idCliente}',
+                            cliente.pendienteSync
+                                ? 'Registro local'
+                                : 'Cliente #${cliente.idCliente}',
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: Colors.grey),
                           ),

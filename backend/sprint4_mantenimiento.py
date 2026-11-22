@@ -109,7 +109,7 @@ def solicitud_json(s, detalle=False, db=None):
 
 def relacion(db, user, prop):
     """'staff' (empresa del inmueble), 'propietario', 'inquilino' (cliente con contrato) o None."""
-    if in_scope(user, prop.id_tenant) and (is_admin(user) or role_name(user) in {"agente", "agente inmobiliario"}):
+    if in_scope(user, prop.id_tenant) and (is_admin(user) or user.agente is not None or role_name(user) in {"agente", "agente inmobiliario"}):
         return "staff"
     if prop.propietario and prop.propietario.id_usuario == user.id:
         return "propietario"
@@ -153,7 +153,7 @@ def obtener(db, user, ident):
 def mis_inmuebles(db: Session = Depends(get_db), user=Depends(get_current_user)):
     """Inmuebles sobre los que el usuario puede reportar: personal (su empresa), propietario (los suyos)
     o cliente (los que tiene bajo contrato)."""
-    if is_admin(user) or role_name(user) in {"agente", "agente inmobiliario"}:
+    if is_admin(user) or user.agente is not None or role_name(user) in {"agente", "agente inmobiliario"}:
         props = scoped(db.query(Propiedad), user, Propiedad.id_tenant).all()
     else:
         ids = set()
@@ -242,7 +242,7 @@ def subir_foto(ident: int, file: UploadFile = File(...), db: Session = Depends(g
 def listar(estado: Estado | None = None, db: Session = Depends(get_db), user=Depends(get_current_user)):
     """Personal: solicitudes de su empresa (el agente, las asignadas o de sus inmuebles).
     Propietario: las de sus inmuebles. Cliente: las que reportó."""
-    es_staff = is_admin(user) or role_name(user) in {"agente", "agente inmobiliario"}
+    es_staff = is_admin(user) or user.agente is not None or role_name(user) in {"agente", "agente inmobiliario"}
     query = db.query(Solicitud)
     if es_staff:
         query = scoped(query, user, Solicitud.id_tenant)
@@ -262,7 +262,7 @@ def listar(estado: Estado | None = None, db: Session = Depends(get_db), user=Dep
 @router.get("/costos/resumen")
 def resumen_costos(db: Session = Depends(get_db), user=Depends(get_current_user)):
     """Costos consolidados por inmueble: el propietario ve los suyos; el personal, los de su empresa."""
-    if is_admin(user) or role_name(user) in {"agente", "agente inmobiliario"}:
+    if is_admin(user) or user.agente is not None or role_name(user) in {"agente", "agente inmobiliario"}:
         solicitudes = scoped(db.query(Solicitud), user, Solicitud.id_tenant).all()
     else:
         propietario = db.query(Propietario).filter(Propietario.id_usuario == user.id).first()
@@ -312,7 +312,7 @@ def actualizar(ident: int, data: SolicitudUpdate, db: Session = Depends(get_db),
         s.urgencia = data.urgencia; cambios.append(f"urgencia {data.urgencia}")
     if data.id_responsable is not None and data.id_responsable != s.id_responsable:
         nuevo = db.get(Usuario, data.id_responsable)
-        if not nuevo or nuevo.id_tenant != s.id_tenant or not (is_admin(nuevo) or role_name(nuevo) in {"agente", "agente inmobiliario"}):
+        if not nuevo or nuevo.id_tenant != s.id_tenant or not (is_admin(nuevo) or nuevo.agente is not None or role_name(nuevo) in {"agente", "agente inmobiliario"}):
             raise HTTPException(422, "El responsable debe ser personal de la inmobiliaria.")
         s.id_responsable = nuevo.id
         cambios.append(f"responsable {nuevo.nombre}")

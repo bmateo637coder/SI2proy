@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -8,11 +9,16 @@ import 'package:latlong2/latlong.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../data/services/sprint4_service.dart';
 import '../../data/services/push_service.dart';
+import '../../data/models/propiedad_model.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/company_scope.dart';
+import '../widgets/workspace_form.dart';
 
 class ServiciosScreen extends StatefulWidget {
   const ServiciosScreen({super.key, this.initialSection = 'Inicio'});
@@ -93,6 +99,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
         'Mi cuenta': '/api/mi-cuenta',
         'Visitas': '/api/visitas',
         'Mantenimiento': '/api/mantenimiento',
+        'Costos de mantenimiento': '/api/mantenimiento/costos/resumen',
         'Gerencia': '/api/gerencia/dashboard',
         'Mapa de ventas': '/api/analitica/zonas',
         'Comisiones': '/api/comisiones',
@@ -185,6 +192,18 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     Map<String, dynamic> body = const {},
     int? version,
   ]) async {
+    if (!context.read<AuthProvider>().canWrite &&
+        [
+          '/api/mantenimiento',
+          '/api/comisiones',
+          '/api/promociones',
+          '/api/visitas',
+        ].any(path.startsWith)) {
+      setState(
+        () => message = 'Selecciona una inmobiliaria concreta antes de guardar este cambio.',
+      );
+      return;
+    }
     final detailId = section == 'Detalle de mantenimiento' && data is Map
         ? data['id'] as int?
         : null;
@@ -239,6 +258,78 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     ],
     onChanged: (v) => setState(() => propertyId = v),
   );
+
+  Widget metricCards(Map<String, dynamic> values) => LayoutBuilder(
+    builder: (context, constraints) => Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (final e in values.entries)
+          SizedBox(
+            width: (constraints.maxWidth - 10) / 2,
+            height: 132,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      e.key,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const Spacer(),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${e.value}',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Widget bars(String title, Map values) {
+    final numbers = values.values
+        .map((v) => double.tryParse('$v') ?? 0)
+        .toList();
+    final max = numbers.fold<double>(1, (a, b) => a > b ? a : b);
+    return card(title, [
+      if (values.isEmpty) const Text('Sin movimientos para este alcance.'),
+      for (final entry in values.entries)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${entry.key} · ${entry.value}'),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: ((double.tryParse('${entry.value}') ?? 0) / max)
+                    .clamp(0.0, 1.0)
+                    .toDouble(),
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ],
+          ),
+        ),
+    ]);
+  }
+
   Widget propertyCard(
     Map p, {
     bool favorite = false,
@@ -309,6 +400,181 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
     await act(() async {
       data = await service.get('/api/mantenimiento/$id');
       section = 'Detalle de mantenimiento';
+    });
+  }
+
+  Future<void> reloadCurrent() =>
+      section == 'Detalle de mantenimiento' && data is Map
+      ? maintenanceDetail(data['id'] as int)
+      : open(section);
+
+  Future<void> scheduleVisit() async {
+    await act(() async {
+      if (!context.read<AuthProvider>().canWrite)
+        throw StateError('Selecciona una inmobiliaria para agendar.');
+      final rows = List<Map<String, dynamic>>.from(
+        await service.get('/modulo_inmuebles/propiedades/catalogo'),
+      );
+      final available = rows.where((p) => p['estado'] == 'Disponible').toList();
+      if (!mounted) return;
+      final picked = await showModalBottomSheet<Map<String, dynamic>>(
+        context: context,
+        isScrollControlled: true,
+        builder: (c) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(c).height * .7,
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  'Seleccionar inmueble',
+                  style: Theme.of(c).textTheme.titleLarge,
+                ),
+                if (available.isEmpty)
+                  const ListTile(title: Text('No hay inmuebles disponibles.')),
+                for (final p in available)
+                  ListTile(
+                    title: Text('${p['titulo']}'),
+                    subtitle: Text('${p['tipo_operacion']} · ${p['precio']}'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.pop(c, p),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (picked != null && mounted) {
+        await context.push(
+          '/agendar-visita',
+          extra: PropiedadModel.fromJson(picked),
+        );
+        if (mounted) data = await service.get('/api/visitas');
+      }
+    });
+  }
+
+  Future<void> editMaintenance(Map row) async {
+    if (!context.read<AuthProvider>().canWrite) {
+      setState(
+        () => message = 'Selecciona una inmobiliaria concreta para gestionar la incidencia.',
+      );
+      return;
+    }
+    final originalScope = context.read<AuthProvider>().scopeKey;
+    List<Map<String, dynamic>> users = [];
+    await act(() async {
+      final agents = List<Map<String, dynamic>>.from(
+        await service.get('/modulo_inmuebles/agentes'),
+      );
+      final agentCis = agents.map((a) => a['ci_usuario']).toSet();
+      users =
+          List<Map<String, dynamic>>.from(
+                await service.get('/gestion_usuarios/usuarios'),
+              )
+              .where(
+                (u) =>
+                    [1, 2].contains(u['id_rol']) || agentCis.contains(u['ci']),
+              )
+              .toList();
+    });
+    if (!mounted) return;
+    await workspaceForm(
+      context,
+      'Gestionar incidencia',
+      [
+        const WorkspaceField(
+          'categoria',
+          'Categoría',
+          choices: {
+            'Plomeria': 'Plomería',
+            'Electricidad': 'Electricidad',
+            'Estructura': 'Estructura',
+            'Electrodomesticos': 'Electrodomésticos',
+            'Seguridad': 'Seguridad',
+            'Limpieza y plagas': 'Limpieza y plagas',
+            'Otro': 'Otro',
+          },
+        ),
+        const WorkspaceField(
+          'urgencia',
+          'Urgencia',
+          choices: {
+            'Baja': 'Baja',
+            'Media': 'Media',
+            'Alta': 'Alta',
+            'Critica': 'Crítica',
+          },
+        ),
+        WorkspaceField(
+          'id_responsable',
+          'Responsable',
+          required: false,
+          choices: {for (final u in users) '${u['ci']}': '${u['nombre']}'},
+        ),
+        const WorkspaceField('contratista', 'Contratista', required: false),
+        const WorkspaceField(
+          'comentario',
+          'Comentario de seguimiento',
+          multiline: true,
+          required: false,
+        ),
+      ],
+      (v) async {
+        if (originalScope != context.read<AuthProvider>().scopeKey)
+          throw StateError(
+            'Cambió la inmobiliaria. Vuelve a abrir la incidencia.',
+          );
+        final payload = <String, dynamic>{...v};
+        if (payload['id_responsable'] == '') payload.remove('id_responsable');
+        final result = await service.mutate(
+          'PUT',
+          '/api/mantenimiento/${row['id']}',
+          payload,
+          row['version'] as int?,
+        );
+        if (!mounted) return;
+        setState(
+          () => message = result['pendiente'] == true
+              ? 'Cambio pendiente de sincronizar.'
+              : 'Incidencia actualizada.',
+        );
+      },
+      initial: Map<String, dynamic>.from(row),
+    );
+    if (mounted) await maintenanceDetail(row['id'] as int);
+  }
+
+  Future<void> exportExecutiveCsv() async {
+    await act(() async {
+      final r = await service.get('/api/reportes/ejecutivo') as Map;
+      final rows = <List<dynamic>>[
+        ['Indicador', 'Valor'],
+        ['Inmuebles', r['cartera']['total']],
+        ['Contratos', r['ingresos']['contratos']],
+        ['Cobrado', r['ingresos']['cobrado_total']],
+        ['Por cobrar', r['ingresos']['por_cobrar']],
+        ['Vencido', r['ingresos']['vencido']],
+        ['Costo mantenimiento', r['mantenimiento']['costo_total']],
+        ['Comisiones generadas', r['comisiones']['generadas']],
+        ['Comisiones liquidadas', r['comisiones']['cobradas']],
+      ];
+      final file = File(
+        '${(await getTemporaryDirectory()).path}/reporte-ejecutivo.csv',
+      );
+      await file.writeAsString(
+        '\ufeff' +
+            rows
+                .map(
+                  (row) => row
+                      .map((v) => '"${'$v'.replaceAll('"', '""')}"')
+                      .join(','),
+                )
+                .join('\r\n'),
+      );
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Reporte ejecutivo Raíces');
     });
   }
 
@@ -449,7 +715,9 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
               leading: Icon(e.value),
               title: Text(e.key),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => open(e.key),
+              onTap: () => e.key == 'Plan y suscripción'
+                  ? context.push('/gestion/planes')
+                  : open(e.key),
             ),
           ),
         ),
@@ -570,6 +838,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           ]),
       ],
       if (section == 'Visitas' && data is List) ...[
+        button('Agendar visita', scheduleVisit, icon: Icons.add),
         if ((data as List).isEmpty)
           const Text('No hay visitas en este alcance.'),
         for (final v in data)
@@ -606,6 +875,11 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           ]),
       ],
       if (section == 'Mantenimiento') ...[
+        button(
+          'Costos consolidados',
+          () => open('Costos de mantenimiento'),
+          icon: Icons.account_balance_wallet_outlined,
+        ),
         pickProperty(),
         button('Registrar incidencia', createMaintenance, icon: Icons.add),
         if (data is List) ...[
@@ -616,7 +890,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
               child: ListTile(
                 title: Text('${s['titulo']}'),
                 subtitle: Text(
-                  '${s['estado']} · ${s['urgencia']} · ${s['propiedad']}',
+                  '${s['inmobiliaria'] ?? ''} · ${s['estado']} · ${s['urgencia']} · ${s['propiedad']}',
                 ),
                 onTap: () => maintenanceDetail(s['id'] as int),
               ),
@@ -631,6 +905,9 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           ),
           Text('Responsable: ${data['responsable'] ?? "Por asignar"}'),
           Text('Contratista: ${data['contratista'] ?? ""}'),
+          Text(
+            'Clasificación: ${data['clasificacion_modo'] ?? ''} · ${data['justificacion'] ?? ''}',
+          ),
           for (final f in data['fotos'] ?? [])
             if ((f['url'] as String).startsWith('data:'))
               Padding(
@@ -648,6 +925,11 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             icon: Icons.add_photo_alternate,
           ),
           if (staff) ...[
+            button(
+              'Responsable, categoría y urgencia',
+              () => editMaintenance(Map.from(data)),
+              icon: Icons.tune,
+            ),
             for (final state
                 in <String, List<String>>{
                       'Recibida': ['Asignada', 'Rechazada'],
@@ -681,7 +963,20 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             ),
             Text('Costo total: ${data['costo_total']}'),
             for (final c in data['costos'] ?? [])
-              Text('${c['concepto']}: ${c['monto']}'),
+              ListTile(
+                title: Text('${c['concepto']}'),
+                subtitle: Text('${c['monto']}'),
+                trailing: IconButton(
+                  tooltip: 'Eliminar costo',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => mutate(
+                    'DELETE',
+                    '/api/mantenimiento/${data['id']}/costos/${c['id']}',
+                    {},
+                    data['version'] as int?,
+                  ),
+                ),
+              ),
           ],
           for (final e in data['eventos'] ?? [])
             ListTile(
@@ -690,25 +985,58 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             ),
         ]),
       ],
+      if (section == 'Costos de mantenimiento' && data is Map) ...[
+        card('Costo total de mantenimiento', [
+          Text(
+            '${data['total_general']}',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+        ]),
+        for (final p in data['inmuebles'] ?? [])
+          card('${p['propiedad']}', [
+            Text('${p['solicitudes']} solicitudes · ${p['abiertas']} abiertas'),
+            Text('Total: ${p['costo_total']}'),
+            for (final e in (p['por_categoria'] as Map).entries)
+              Text('${e.key}: ${e.value}'),
+          ]),
+      ],
       if (section == 'Gerencia' && data is Map) ...[
-        for (final item in {
+        metricCards({
           'Inmuebles': data['cartera']['total'],
           'Cobrado': data['ingresos']['cobrado_total'],
           'Por cobrar': data['ingresos']['por_cobrar'],
           'Vencido': data['ingresos']['vencido'],
           'Mantenimiento abierto': data['mantenimiento']['abiertas'],
           'Costo mantenimiento': data['mantenimiento']['costo_total'],
-        }.entries)
-          card(item.key, [
-            Text(
-              '${item.value}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-          ]),
+          'Contratos': data['ingresos']['contratos'],
+          'Ocupación %': data['cartera']['ocupacion_pct'],
+          'Morosidad %': data['ingresos']['morosidad_pct'],
+          'Cuotas vencidas': data['ingresos']['cuotas_vencidas'],
+          'Comisiones generadas': data['comisiones']['generadas'],
+          'Comisiones liquidadas': data['comisiones']['cobradas'],
+          'Visitas próximas': data['visitas']['proximas_7_dias'],
+          'Incidencias críticas': data['mantenimiento']['criticas_abiertas'],
+        }),
+        const SizedBox(height: 12),
+        bars('Cartera por estado', Map.from(data['cartera']['por_estado'])),
+        bars(
+          'Cartera por operación',
+          Map.from(data['cartera']['por_operacion']),
+        ),
+        bars('Ingresos por mes', {
+          for (final row in data['ingresos']['por_mes'])
+            row['mes']: row['monto'],
+        }),
         for (final a in data['rendimiento_agentes'])
-          card('${a['agente']}', [
+          card('${a['agente']} · ${a['inmobiliaria']}', [
             Text(
               '${a['contratos']} contratos · monto ${a['monto_cerrado']} · comisión ${a['comision_generada']}',
+            ),
+            Text(
+              '${a['inmuebles']} inmuebles · ${a['visitas']} visitas · ${a['visitas_realizadas']} realizadas',
+            ),
+            Text(
+              'Comisión liquidada: ${a['comision_cobrada']} · Conversión: ${a['conversion_visitas'] ?? 'Sin visitas'}',
             ),
           ]),
       ],
@@ -747,8 +1075,12 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           'Pendiente: ${data['pendiente']} · Liquidado: ${data['liquidado']}',
         ),
         for (final c in data['comisiones'])
-          card('${c['agente']}', [
+          card('${c['agente']} · ${c['inmobiliaria']}', [
             Text('${c['propiedad']} · ${c['monto']} · ${c['estado']}'),
+            Text('Base: ${c['base']} · Comisión: ${c['porcentaje']}%'),
+            Text(
+              'Creada: ${c['creado']} · Liquidación: ${c['liquidada_en'] ?? 'Pendiente'}',
+            ),
             if (c['estado'] == 'Pendiente' &&
                 context.read<AuthProvider>().user!.isAdministrator)
               button(
@@ -820,6 +1152,11 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           ]),
       ],
       if (section == 'Reporte ejecutivo') ...[
+        button(
+          'Exportar y compartir CSV',
+          exportExecutiveCsv,
+          icon: Icons.table_view,
+        ),
         const Text(
           'Consolida cartera, pagos, mora, comisiones y rendimiento del alcance seleccionado.',
         ),
@@ -934,7 +1271,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           if (section != 'Inicio')
             IconButton(
               tooltip: 'Actualizar',
-              onPressed: () => open(section),
+              onPressed: reloadCurrent,
               icon: const Icon(Icons.refresh),
             ),
         ],
@@ -944,7 +1281,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           const CompanyScope(),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () => open(section),
+              onRefresh: reloadCurrent,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: children,
