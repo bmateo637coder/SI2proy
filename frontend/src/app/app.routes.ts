@@ -27,6 +27,8 @@ export const routes: Routes = [
     component: Layout,
     canActivate: [sessionGuard],
     children: [
+      { path: 'predicciones', canActivate: [staffGuard], loadComponent: () => import('./features/analitica/market-tools').then(m => m.PredictionsPage) },
+      { path: 'moneda', loadComponent: () => import('./features/analitica/market-tools').then(m => m.CurrencyPage) },
       { path: 'servicios', loadComponent: () => import('./features/servicios/servicios').then(m => m.Servicios) },
       { path: 'visitas', loadComponent: () => import('./features/visitas/visitas').then(m => m.Visitas) },
       { path: 'sincronizacion-servicios', loadComponent: () => import('./features/servicios/sincronizacion').then(m => m.SincronizacionServicios) },

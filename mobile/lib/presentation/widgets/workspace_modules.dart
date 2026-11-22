@@ -32,6 +32,21 @@ class WorkspaceModule {
 
 List<WorkspaceModule> workspaceModules(UserModel? user) => [
   const WorkspaceModule(
+    'Conversión multimoneda',
+    'USD, BOB, EUR, BRL, CLP y PEN; tasas con fecha',
+    'Operaciones',
+    '/moneda',
+    Icons.currency_exchange,
+  ),
+  if (user?.isAdministrator == true || user?.canOperateOffline == true)
+    const WorkspaceModule(
+      'Predicción de ventas y demanda',
+      'Proyección mensual, historial y validación ML',
+      'Clientes e IA',
+      '/predicciones',
+      Icons.trending_up,
+    ),
+  const WorkspaceModule(
     'Mapa de propiedades',
     'Ubicación y ficha de los inmuebles',
     'Inmuebles',

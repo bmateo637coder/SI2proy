@@ -370,6 +370,8 @@ class Sprint4Service extends ChangeNotifier {
       return;
     final key = account;
     final paths = [
+      '/api/moneda',
+      if (staff) '/api/predicciones',
       '/api/favoritos',
       '/api/alertas',
       '/api/recomendaciones',
@@ -392,11 +394,16 @@ class Sprint4Service extends ChangeNotifier {
       if (staff && !auth.allTenants) '/api/saas/suscripcion',
       if (staff) '/api/saas/sucursales',
       if (auth.user?.canSeePropiedades == true) '/modulo_inmuebles/propiedades',
-      if (auth.user?.canSeePropietarios == true) '/modulo_inmuebles/propietarios',
+      if (auth.user?.canSeePropietarios == true)
+        '/modulo_inmuebles/propietarios',
       if (auth.user?.canSeeAgentes == true) '/modulo_inmuebles/agentes',
       if (auth.user?.canSeeUsuarios == true) '/gestion_usuarios/usuarios',
       if (auth.user?.canSeeRoles == true) ...['/roles', '/permisos'],
-      if (auth.isSuperAdmin) ...['/admin/empresas', '/admin/vista-global/resumen', '/admin/backup/estado'],
+      if (auth.isSuperAdmin) ...[
+        '/admin/empresas',
+        '/admin/vista-global/resumen',
+        '/admin/backup/estado',
+      ],
     ];
     for (final path in paths) {
       if (disposed || key != account) return;

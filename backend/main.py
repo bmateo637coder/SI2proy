@@ -36,6 +36,7 @@ import reportes_generativos
 import analitica_ml
 import vista_global
 import property_media
+import market_tools
 
 from contextlib import asynccontextmanager
 
@@ -48,6 +49,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Raíces - Inmobiliaria API", version="2.0.0", lifespan=lifespan)
 app.include_router(property_media.router)
+app.include_router(market_tools.router)
 
 app.include_router(ia_router.router)
 app.include_router(contratos_router.router)

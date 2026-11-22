@@ -19,6 +19,8 @@
                 Mi Perfil
             </a>
 
+            <a routerLink="/dashboard/moneda" class="luxury-nav-link" routerLinkActive="active">Conversión multimoneda</a>
+            <a *ngIf="canOperate" routerLink="/dashboard/predicciones" class="luxury-nav-link" routerLinkActive="active">Predicción de ventas y demanda</a>
             <a routerLink="/dashboard/catalogo" class="luxury-nav-link text-gold" routerLinkActive="active">
                 Catálogo
             </a>

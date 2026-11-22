@@ -16,6 +16,7 @@ import '../presentation/screens/reportes_dinamicos_screen.dart';
 import '../presentation/screens/agendar_visita_screen.dart';
 import '../presentation/screens/forgot_password_screen.dart';
 import '../presentation/screens/map_screen.dart';
+import '../presentation/screens/market_tools_screen.dart';
 import '../presentation/screens/propiedad_detalle_screen.dart';
 import '../presentation/screens/offline_screen.dart';
 import '../presentation/screens/ia_screen.dart';
@@ -65,6 +66,17 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/moneda',
+      builder: (_, _) =>
+          ScopedScreen(builder: (_) => const MarketToolsScreen()),
+    ),
+    GoRoute(
+      path: '/predicciones',
+      builder: (_, _) => ScopedScreen(
+        builder: (_) => const MarketToolsScreen(predictions: true),
+      ),
+    ),
     GoRoute(path: '/inicio', builder: (_, _) => const WorkspaceScreen()),
     GoRoute(
       path: '/gestion/:modulo',

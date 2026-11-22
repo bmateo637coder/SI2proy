@@ -84,7 +84,7 @@ def main():
     if native['conclusion'] != 'success' or not required <= successful:
         raise RuntimeError('Faltan pruebas Android o la verificación de firma. No se publicará el APK.')
     artifacts = request(f'actions/runs/{args.run_id}/artifacts')['artifacts']
-    artifact = next(a for a in artifacts if a['name'] == 'Raices-Android-3.1.1' and not a['expired'])
+    artifact = next(a for a in artifacts if a['name'] == 'Raices-Android-3.2.0' and not a['expired'])
     if artifact['workflow_run']['head_sha'] != run['head_sha']:
         raise RuntimeError('El artefacto no coincide con el código comprobado.')
     archive = request(f"actions/artifacts/{artifact['id']}/zip", raw=True)
@@ -95,7 +95,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     archive_path = out / 'verified-actions-artifact.zip'
     archive_path.write_bytes(archive)
-    names = ['Raices-3.1.1.apk', 'Raices-3.1.1.apk.sha256']
+    names = ['Raices-3.2.0.apk', 'Raices-3.2.0.apk.sha256']
     with ZipFile(archive_path) as zip_file:
         for name in names:
             info = zip_file.getinfo(name)
@@ -107,7 +107,7 @@ def main():
     with apk.open('rb') as handle:
         if hashlib.file_digest(handle, 'sha256').hexdigest() != expected:
             raise RuntimeError('El SHA-256 del APK no coincide con el verificado por CI.')
-    tag = args.tag or f"mobile-3.1.1-{run['run_number']}"
+    tag = args.tag or f"mobile-3.2.0-{run['run_number']}"
     existing_tag = optional('git/ref/tags/' + quote(tag, safe=''))
     if existing_tag and existing_tag['object']['sha'] != run['head_sha']:
         raise RuntimeError('La etiqueta ya corresponde a otro commit; se conserva sin modificarla.')
@@ -115,8 +115,10 @@ def main():
         (r for r in request('releases?per_page=30') if r['tag_name'] == tag), None)
     if release and release['target_commitish'] != run['head_sha']:
         raise RuntimeError('La versión existente corresponde a otro commit; se conserva sin modificarla.')
-    notes = f'''Raíces Android 3.1.1, conectada al backend de producción.
+    notes = f'''Raíces Android 3.2.0, conectada al backend de producción.
 
+- Predicción mensual de ventas y demanda con validación temporal ML, modo de historial real y escenario académico identificado; exportación CSV.
+- Conversión USD/BOB/EUR/BRL/CLP/PEN con tasas fechadas, última descarga offline y tasa manual; no altera contratos ni pagos en USD.
 - Mapas renovados: encuadre de todas las ubicaciones, zoom, fichas desplazables y mapa de ventas ampliable. Se excluyen coordenadas inválidas y se conserva la geolocalización en la copia local.
 - Cargas protegidas frente a respuestas antiguas al cambiar de sección o inmobiliaria, incluidos clientes, contratos y pagos.
 - Nuevo centro de trabajo con buscador y menú por áreas para acceder a todas las funciones.
@@ -148,7 +150,7 @@ El workflow conserva el artefacto firmado en la rama de trabajo. Este APK se pub
         if args.upload_only:
             raise RuntimeError('Primero prepara un borrador con una credencial autorizada para Workflows.')
         release = request('releases', 'POST', {'tag_name': tag, 'target_commitish': run['head_sha'],
-            'name': 'Raíces Android 3.1.1', 'body': notes, 'draft': True, 'prerelease': False})
+            'name': 'Raíces Android 3.2.0', 'body': notes, 'draft': True, 'prerelease': False})
     if args.prepare_only:
         print(json.dumps({'release_id':release['id'],'tag':tag,'sha256':expected}))
         return
