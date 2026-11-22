@@ -6,6 +6,7 @@ import '../../core/config/api_constants.dart';
 import '../../data/models/propiedad_model.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/property_image.dart';
+import '../../data/services/sprint4_service.dart';
 
 class PropiedadDetalleScreen extends StatelessWidget {
   const PropiedadDetalleScreen({super.key, required this.propiedad});
@@ -40,6 +41,13 @@ class PropiedadDetalleScreen extends StatelessWidget {
         Text(
           'USD ${propiedad.precio.toStringAsFixed(2)} · ${propiedad.tipoOperacion} · ${propiedad.estado}',
         ),
+        FilledButton.tonalIcon(onPressed: () async {
+          try {
+            final result=await context.read<Sprint4Service>().mutate('POST','/api/favoritos/${propiedad.idPropiedad}');
+            if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(result['pendiente']==true?'Favorito guardado; pendiente de sincronización.':'Favorito guardado.')));
+          } catch(_) { if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('No se pudo guardar. Revisa Sincronización de servicios.'))); }
+        }, icon:const Icon(Icons.favorite_outline),label:const Text('Guardar favorito')),
+        if(propiedad.estado=='Disponible')FilledButton.icon(onPressed:()=>context.push('/agendar-visita',extra:propiedad),icon:const Icon(Icons.event),label:const Text('Agendar visita')),
         const Divider(height: 32),
         SelectableText(
           propiedad.descripcion.isEmpty

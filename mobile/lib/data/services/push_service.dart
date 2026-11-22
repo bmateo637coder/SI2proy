@@ -113,15 +113,23 @@ class PushService {
     await prefs.remove('push_registration');
     if (id != null) {
       try {
-        await dio.delete(
-          '/api/notificaciones/tokens/$id',
-          options: Options(extra: {'replicaBypass': true}),
-        );
+        await dio
+            .delete(
+              '/api/notificaciones/tokens/$id',
+              options: Options(
+                extra: {'replicaBypass': true},
+                sendTimeout: const Duration(seconds: 5),
+                receiveTimeout: const Duration(seconds: 5),
+              ),
+            )
+            .timeout(const Duration(seconds: 6));
       } catch (_) {}
     }
     if (Firebase.apps.isNotEmpty) {
       try {
-        await FirebaseMessaging.instance.unregister();
+        await FirebaseMessaging.instance.unregister().timeout(
+          const Duration(seconds: 6),
+        );
       } catch (_) {}
     }
     message.value = null;

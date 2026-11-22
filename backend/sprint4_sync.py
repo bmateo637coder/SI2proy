@@ -56,7 +56,7 @@ def sync(body: Comando, db: Session = Depends(get_db), user=Depends(get_current_
         return old.respuesta
     s = WorkSession(db)
     path, method, data = body.ruta, body.metodo, body.datos
-    match = re.fullmatch(r'/api/(favoritos|alertas|promociones|comisiones|mantenimiento|bandeja)(?:/(\d+))?(?:/(costos|fotos|liquidar|leida|leer-todas))?(?:/(\d+))?', path)
+    match = re.fullmatch(r'/api/(favoritos|alertas|promociones|comisiones|mantenimiento|bandeja|visitas)(?:/(\d+))?(?:/(costos|fotos|liquidar|leida|leer-todas))?(?:/(\d+))?', path)
     if path == '/api/recomendaciones/feedback' and method == 'POST':
         result = api.feedback(checked(api.FeedbackIn, data), s, user)
     elif match:
@@ -69,7 +69,11 @@ def sync(body: Comando, db: Session = Depends(get_db), user=Depends(get_current_
             row = mant.obtener(s, user, ident)
             if row.version != body.version:
                 raise HTTPException(409, jsonable_encoder({'mensaje': 'La incidencia cambió en el servidor. Revisa el conflicto.', 'servidor': mant.solicitud_json(row, True, s)}))
-        if entity == 'favoritos' and ident and method in ('POST', 'DELETE'):
+        if entity == 'visitas' and method == 'POST' and ident is None:
+            result = api.create_visit(checked(api.VisitIn, data), s, user)
+        elif entity == 'visitas' and method == 'PUT' and ident:
+            result = api.update_visit(ident, checked(api.VisitUpdate, data), s, user)
+        elif entity == 'favoritos' and ident and method in ('POST', 'DELETE'):
             result = (f.agregar_favorito if method == 'POST' else f.quitar_favorito)(ident, s, user)
         elif entity == 'alertas' and not action:
             if method == 'POST' and ident is None: result = f.crear_alerta(checked(f.AlertaCreate, data), s, user)

@@ -8,7 +8,7 @@ import os
 import smtplib
 import ssl
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from email.message import EmailMessage
 from io import BytesIO, StringIO
@@ -24,6 +24,105 @@ from saas import today
 from sprint4_notificaciones import notificar
 
 router = APIRouter(prefix='/api', tags=['Sprint 4 web y móvil'])
+
+
+class VisitIn(BaseModel):
+    id_propiedad: int
+    id_cliente: int | None = None
+    fecha_hora: datetime
+    comentario: str = Field(default='', max_length=2000)
+
+
+def visit_json(row):
+    return {'id': row.id_visita, 'id_visita': row.id_visita, 'id_tenant': row.id_tenant, 'inmobiliaria': row.tenant.nombre,
+            'id_propiedad': row.id_propiedad, 'propiedad': row.propiedad.titulo, 'id_cliente': row.id_cliente,
+            'cliente': row.cliente.usuario.nombre, 'telefono_cliente': row.cliente.usuario.telefono,
+            'direccion': row.propiedad.direccion, 'agente': row.agente.usuario.nombre,
+            'fecha_hora': row.fecha_hora.replace(tzinfo=timezone.utc).isoformat(), 'estado': row.estado, 'comentario': row.comentario}
+
+
+def utc_time(value):
+    if value.tzinfo is None:
+        from zoneinfo import ZoneInfo
+        value = value.replace(tzinfo=ZoneInfo('America/La_Paz'))
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+@router.get('/visitas')
+@router.get('/visitas/agenda')
+def visits(estado: str | None = None, desde: date | None = None, hasta: date | None = None,
+           db: Session = Depends(get_db), user=Depends(get_current_user)):
+    q = scoped(db.query(m.Visita), user, m.Visita.id_tenant)
+    if user.id_rol not in (1, 2) and user.agente: q = q.filter(m.Visita.id_agente == user.agente.id_agente)
+    if user.id_rol not in (1, 2) and not user.agente:
+        q = q.join(m.Cliente).filter(m.Cliente.ci_usuario == user.ci)
+    if estado: q = q.filter(m.Visita.estado == estado)
+    if desde: q = q.filter(m.Visita.fecha_hora >= utc_time(datetime.combine(desde, datetime.min.time())))
+    if hasta: q = q.filter(m.Visita.fecha_hora < utc_time(datetime.combine(hasta + timedelta(days=1), datetime.min.time())))
+    return [visit_json(v) for v in q.order_by(m.Visita.fecha_hora)]
+
+
+@router.post('/visitas', status_code=201)
+def create_visit(body: VisitIn, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    p = prop(db, user, body.id_propiedad)
+    if user.id_rol == 1 and not user.id_tenant: raise HTTPException(403, 'Seleccione una inmobiliaria concreta para agendar la visita.')
+    moment = utc_time(body.fecha_hora)
+    if moment <= datetime.utcnow(): raise HTTPException(422, 'Seleccione una fecha y hora futuras.')
+    if p.estado != 'Disponible': raise HTTPException(409, 'El inmueble ya no está disponible para visitas.')
+    db.query(m.Usuario).filter_by(ci=user.ci).with_for_update().one()
+    if user.id_rol in (1, 2) or user.agente:
+        require_staff(user)
+        customer = db.query(m.Cliente).filter_by(id_cliente=body.id_cliente, id_tenant=p.id_tenant).first()
+    else:
+        customer = db.query(m.Cliente).filter_by(ci_usuario=user.ci, id_tenant=p.id_tenant).first()
+        if not customer:
+            customer = m.Cliente(ci_usuario=user.ci, id_tenant=p.id_tenant); db.add(customer); db.flush()
+        if body.id_cliente is not None and body.id_cliente != customer.id_cliente: raise HTTPException(403, 'No puede agendar por otro cliente.')
+    if not customer: raise HTTPException(422, 'Seleccione un cliente de la inmobiliaria del inmueble.')
+    db.query(m.Agente).filter_by(id_agente=p.id_agente).with_for_update().one()
+    conflict = db.query(m.Visita).filter(m.Visita.id_agente == p.id_agente, m.Visita.estado.in_(['Programada', 'Confirmada']),
+        m.Visita.fecha_hora > moment - timedelta(minutes=30), m.Visita.fecha_hora < moment + timedelta(minutes=30)).first()
+    if conflict: raise HTTPException(409, 'El agente ya tiene una visita en ese horario. Seleccione otro turno.')
+    row = m.Visita(id_tenant=p.id_tenant, id_propiedad=p.id_propiedad, id_cliente=customer.id_cliente,
+                   id_agente=p.id_agente, fecha_hora=moment, comentario=body.comentario.strip(), estado='Programada')
+    db.add(row); db.flush()
+    for ci in {customer.ci_usuario, p.agente.ci_usuario}:
+        notificar(db, ci, 'visita', 'Visita programada', f'{p.titulo}: {moment.replace(tzinfo=timezone.utc).isoformat()}', f'visita:{row.id_visita}')
+    db.commit()
+    return visit_json(row)
+
+
+class VisitUpdate(BaseModel):
+    estado: Literal['Programada', 'Confirmada', 'Realizada', 'No asistio', 'Cancelada'] | None = None
+    fecha_hora: datetime | None = None
+    comentario: str | None = Field(default=None, max_length=2000)
+
+
+@router.put('/visitas/{ident}')
+def update_visit(ident: int, body: VisitUpdate, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    row = scoped(db.query(m.Visita), user, m.Visita.id_tenant).filter_by(id_visita=ident).with_for_update().first()
+    if not row: raise HTTPException(404, 'Visita no encontrada.')
+    if user.id_rol not in (1, 2) and user.agente and row.id_agente != user.agente.id_agente:
+        raise HTTPException(403, 'Solo puede gestionar sus visitas asignadas.')
+    staff = user.id_rol in (1, 2) or bool(user.agente)
+    if staff: require_staff(user)
+    if not staff and (row.cliente.ci_usuario != user.ci or body.estado != 'Cancelada' or body.fecha_hora is not None):
+        raise HTTPException(403, 'Solo puede cancelar sus propias visitas.')
+    if row.estado in ['Realizada', 'No asistio', 'Cancelada']: raise HTTPException(409, 'La visita ya terminó o fue cancelada.')
+    if body.fecha_hora:
+        moment = utc_time(body.fecha_hora)
+        if moment <= datetime.utcnow(): raise HTTPException(422, 'Seleccione un horario futuro.')
+        db.query(m.Agente).filter_by(id_agente=row.id_agente).with_for_update().one()
+        clash = db.query(m.Visita).filter(m.Visita.id_visita != ident, m.Visita.id_agente == row.id_agente,
+            m.Visita.estado.in_(['Programada','Confirmada']), m.Visita.fecha_hora > moment-timedelta(minutes=30), m.Visita.fecha_hora < moment+timedelta(minutes=30)).first()
+        if clash: raise HTTPException(409, 'El agente tiene otra visita en ese horario.')
+        row.fecha_hora = moment
+    if body.estado: row.estado = body.estado
+    if body.comentario is not None: row.comentario = body.comentario
+    for ci in {row.cliente.ci_usuario, row.agente.ci_usuario}:
+        notificar(db, ci, 'visita', 'Visita actualizada', f'{row.propiedad.titulo}: {row.estado}', f'visita:{row.id_visita}')
+    db.commit()
+    return visit_json(row)
 
 
 class Feedback(Base):

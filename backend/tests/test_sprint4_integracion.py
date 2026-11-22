@@ -102,3 +102,34 @@ def test_sync_idempotency_and_optimistic_conflict(api):
     assert client.get(f'/api/mantenimiento/{sid}', headers=headers()).json()['estado'] == first.json()['estado']
     bad = {'uuid': str(uuid4()), 'metodo': 'POST', 'ruta': '/api/alertas', 'datos': {}}
     assert client.post('/api/servicios/sync', headers=headers(), json=bad).status_code == 422
+
+
+def test_visits_are_persisted_isolated_and_no_double_booking(api):
+    from datetime import datetime
+    client, _ = api
+    data = {'id_propiedad': 1, 'fecha_hora': (datetime.utcnow()+timedelta(days=2)).isoformat()+'Z', 'comentario': 'Visitar patio'}
+    first = client.post('/api/visitas', headers=headers('client1', 1), json=data)
+    assert first.status_code == 201, first.text
+    ident = first.json()['id_visita']
+    assert client.get('/api/visitas', headers=headers('client1', 1)).json()[0]['id_visita'] == ident
+    assert client.get('/api/visitas', headers=headers('client2', 2)).json() == []
+    assert client.post('/api/visitas', headers=headers('client1', 1), json=data).status_code == 409
+    assert client.put(f'/api/visitas/{ident}', headers=headers('client2', 2), json={'estado':'Cancelada'}).status_code == 404
+    assert client.put(f'/api/visitas/{ident}', headers=headers('client1', 1), json={'estado':'Cancelada'}).status_code == 200
+    assert client.get('/api/bandeja', headers=headers('client1', 1)).json()['no_leidas'] >= 1
+
+
+def test_audit_history_is_encrypted_and_persistent(api, monkeypatch, tmp_path):
+    import logger
+    from sqlalchemy.orm import Session
+    _, factory = api
+    monkeypatch.setattr(logger, 'engine', factory.kw['bind'])
+    monkeypatch.setattr(logger, 'LOG_FILE_PATH', str(tmp_path/'fallback.log'))
+    logger.log_accion_segura('127.0.0.1', 'SaaS', 'Evento de prueba persistente')
+    with Session(factory.kw['bind']) as db:
+        encrypted = db.query(logger.RegistroAuditoria).one().contenido
+        assert 'Evento de prueba' not in encrypted
+    rows = logger.leer_bitacora_segura(logger.DEV_SECRET_KEY.decode())
+    assert rows[0]['accion'] == 'Evento de prueba persistente'
+    assert logger.importar_bitacora(logger.DEV_SECRET_KEY.decode(), rows) == 1
+    assert logger.importar_bitacora(logger.DEV_SECRET_KEY.decode(), rows) == 0

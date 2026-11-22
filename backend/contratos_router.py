@@ -421,6 +421,8 @@ def eliminar_contrato(
         raise HTTPException(status_code=400, detail="No se puede eliminar un contrato con pagos registrados.")
 
     from sprint4_api import Comision
+    if db.query(Comision).filter_by(id_contrato=contrato.id_contrato, estado='Liquidada').first():
+        raise HTTPException(409, 'No se puede eliminar un contrato con comisiones liquidadas.')
     db.query(Comision).filter_by(id_contrato=contrato.id_contrato).delete()
     db.delete(contrato)
     db.commit()

@@ -12,6 +12,13 @@ import { environment } from '../../../environments/environment';
   templateUrl: './catalogo.html',
 })
 export class Catalogo implements OnInit, OnDestroy {
+  mensajeFavorito = '';
+  guardarFavorito(prop: any) {
+    this.http.post<any>(`${this.apiBase}/api/favoritos/${prop.id_propiedad}`, {}).subscribe({
+      next: r => { this.mensajeFavorito = r.pendiente ? 'Favorito guardado en este navegador; pendiente de sincronización.' : 'Favorito guardado.'; this.cdr.markForCheck(); },
+      error: () => { this.mensajeFavorito = 'No se pudo guardar el favorito. Revisa la sincronización.'; this.cdr.markForCheck(); }
+    });
+  }
   propiedades: any[] = [];
   recomendados: any[] = [];
   private apiBase = environment.apiUrl;

@@ -28,6 +28,7 @@ export const routes: Routes = [
     canActivate: [sessionGuard],
     children: [
       { path: 'servicios', loadComponent: () => import('./features/servicios/servicios').then(m => m.Servicios) },
+      { path: 'visitas', loadComponent: () => import('./features/visitas/visitas').then(m => m.Visitas) },
       { path: 'sincronizacion-servicios', loadComponent: () => import('./features/servicios/sincronizacion').then(m => m.SincronizacionServicios) },
       { path: 'favoritos', loadComponent: () => import('./features/fidelizacion/favoritos').then(m => m.Favoritos) },
       { path: 'notificaciones', loadComponent: () => import('./features/fidelizacion/bandeja').then(m => m.Bandeja) },

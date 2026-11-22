@@ -43,6 +43,11 @@ import { PushService } from '../../core/services/push.service';
   <button class="btn-secondary" (click)="ia('descripcion')" [disabled]="busy() || !pid">Generar descripción</button>
   <p *ngIf="respuesta()" style="white-space:pre-wrap">{{respuesta()}}</p><small>{{modo()}}</small>
  </section>
+ <section class="card"><h2>Agendar visita</h2><p>Selecciona el inmueble en el formulario de IA.</p>
+  <label>Fecha y hora <input type="datetime-local" [(ngModel)]="fechaVisita"></label>
+  <label *ngIf="staff">Cliente <select [(ngModel)]="clienteVisita"><option [ngValue]="null">Selecciona un cliente</option><option *ngFor="let c of clientes()" [ngValue]="c.id_cliente">{{c.nombre}} · {{c.inmobiliaria}}</option></select></label>
+  <button class="btn-primary" (click)="visita()" [disabled]="busy() || !pid || !fechaVisita">Agendar visita</button>
+  <a routerLink="/dashboard/visitas">Consultar agenda</a></section>
  <section class="card"><h2>Mi estado de cuenta</h2><button class="btn-secondary" (click)="cuenta()" [disabled]="busy()">Consultar contratos y pagos</button>
   <div *ngIf="estadoCuenta() as c"><p>Pagado: {{c.pagado | number:'1.2-2'}} · Saldo: {{c.saldo | number:'1.2-2'}}</p>
    <article *ngFor="let contrato of c.contratos" class="card"><h3>{{contrato.propiedad}} · {{contrato.tipo_contrato}}</h3><p>{{contrato.estado}} · Saldo {{contrato.saldo_pendiente | number:'1.2-2'}}</p>
@@ -64,8 +69,9 @@ export class Servicios {
  readonly recomendados = signal<any[]>([]); readonly propiedades = signal<any[]>([]); readonly resumen = signal('');
  readonly respuesta = signal(''); readonly modo = signal(''); readonly estadoCuenta = signal<any>(null);
  texto = ''; pregunta = ''; pid: number | null = null;
+ fechaVisita = ''; clienteVisita: number | null = null; readonly clientes = signal<any[]>([]);
  get staff() { return this.auth.currentUser()?.id_rol === 1 || this.auth.currentUser()?.id_rol === 2 || this.auth.currentUser()?.es_agente; }
- constructor() { void this.act(async () => { this.propiedades.set(await this.get('/modulo_inmuebles/propiedades/catalogo')); }); }
+ constructor() { void this.act(async () => { this.propiedades.set(await this.get('/modulo_inmuebles/propiedades/catalogo')); if(this.staff) this.clientes.set(await this.get('/modulo_inmuebles/clientes')); }); }
  private get(path: string) { return firstValueFrom(this.http.get<any>(API + path).pipe(timeout(90000))); }
  private post(path: string, data = {}) { return firstValueFrom(this.http.post<any>(API + path, data).pipe(timeout(90000))); }
  async act(fn: () => Promise<void>) { if (this.busy()) return; this.busy.set(true); this.message.set('');
@@ -78,6 +84,7 @@ export class Servicios {
  ia(accion: string) { void this.act(async () => { const r = await this.post('/api/servicios/ia/' + accion, {id_propiedad: this.pid, texto: this.pregunta}); this.respuesta.set(r.respuesta); this.modo.set(r.modo + (r.advertencia ? ' · ' + r.advertencia : '')); }); }
  cuenta() { void this.act(async () => { this.estadoCuenta.set(await this.get('/api/mi-cuenta')); }); }
  enviar(id: number) { void this.act(async () => { const r = await this.post('/api/pagos/' + id + '/enviar-recibo'); this.message.set('Comprobante enviado a ' + r.destinatario); }); }
+ visita() { void this.act(async () => { const r = await this.post('/api/visitas', {id_propiedad:this.pid,fecha_hora:new Date(this.fechaVisita).toISOString(),...(this.staff?{id_cliente:this.clienteVisita}:{})}); this.message.set(r.pendiente?'Propuesta de visita guardada; pendiente de sincronización.':'Visita confirmada por el servidor.'); }); }
  activarPush() { void this.act(async () => { this.message.set(await this.push.activar()); }); }
  pruebaPush() { void this.act(async () => { const r = await this.post('/api/notificaciones/prueba'); this.message.set(r.push_enviado ? 'FCM aceptó el mensaje. Revisa tu dispositivo.' : 'Prueba guardada en la bandeja; no se confirmó un envío push. Revisa Firebase y activa este dispositivo.'); }); }
  exportar(formato: string) { void this.act(async () => { const blob = await firstValueFrom(this.http.get(API + '/api/reportes/ejecutivo', {params: {formato}, responseType: 'blob'})); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'reporte-ejecutivo.' + formato; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }); }

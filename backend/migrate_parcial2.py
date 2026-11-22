@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from database.database import Base, engine
 from database import models as m
+import logger
 import sprint4_api
 import sprint4_fidelizacion
 import sprint4_mantenimiento

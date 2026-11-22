@@ -2,12 +2,13 @@ import { test, expect } from '@playwright/test';
 
 test('favoritos y búsqueda permanecen disponibles offline y sincronizan después',async({page,context})=>{
  const property={id_propiedad:1,id_tenant:1,titulo:'Casa del Centro',direccion:'Centro',precio:1000,tipo_operacion:'Venta',estado:'Disponible',imagenes:[],caracteristicas:[{nombre:'Cuartos',valor:'3'}]};
- let favorites:any[]=[];const receipts=new Map<string,any>();
+ let favorites:any[]=[], available=true;const receipts=new Map<string,any>();
  await page.addInitScript(()=>{
   const user={ci:'s4-test',id_rol:1,id_tenant:null,nombre:'SaaS',permisos:['UI:MENU_CATALOGO','UI:MENU_PROPIEDADES']};
   localStorage.setItem('user',JSON.stringify(user));localStorage.setItem('permissions',JSON.stringify(user.permisos));localStorage.setItem('token','s4-token');localStorage.setItem('user_role','1');localStorage.setItem('selected_tenant','1');
  });
  await page.route('**/raices-backend-n1yy.onrender.com/**',async route=>{
+  if(!available)return route.abort('internetdisconnected');
   const path=new URL(route.request().url()).pathname;
   if(path==='/admin/empresas')return route.fulfill({json:[{id_tenant:1,nombre:'Empresa Centro'}]});
   if(path.endsWith('/propiedades/catalogo'))return route.fulfill({json:[property]});
@@ -31,12 +32,15 @@ test('favoritos y búsqueda permanecen disponibles offline y sincronizan despué
  await page.getByRole('button',{name:'Guardar favorito',exact:true}).click();
  await expect(page.getByRole('status')).toContainText('guardado');
  await page.getByRole('link',{name:'Favoritos y alertas',exact:true}).first().click();
- await expect(page.getByText('Casa del Centro',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Favoritos y alertas',exact:true})).toBeVisible();
+ await expect(page.locator('strong').filter({hasText:'Casa del Centro'})).toBeVisible();
+ available=false;
  await context.setOffline(true);
  await page.getByRole('button',{name:'Quitar',exact:true}).click();
  await expect(page.getByText('Mis favoritos (0)',{exact:true})).toBeVisible();
  await expect(page.getByRole('status')).toContainText(/Pendiente de sincronización|datos de la última descarga/);
  await context.setOffline(false);
+ available=true;
  await page.getByRole('link',{name:/Sincronizar servicios/}).click();
  await page.getByRole('button',{name:'Sincronizar ahora',exact:true}).click();
  await expect(page.getByText('No hay cambios pendientes.',{exact:true})).toBeVisible();

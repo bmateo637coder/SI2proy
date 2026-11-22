@@ -69,6 +69,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
         'Alertas': '/api/alertas',
         'Recomendaciones': '/api/recomendaciones',
         'Mi cuenta': '/api/mi-cuenta',
+      'Visitas': '/api/visitas',
         'Mantenimiento': '/api/mantenimiento',
         'Gerencia': '/api/gerencia/dashboard',
         'Mapa de ventas': '/api/analitica/zonas',
@@ -393,6 +394,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
       'Recomendaciones': Icons.recommend,
       'Asistente e IA': Icons.auto_awesome,
       'Mi cuenta': Icons.receipt_long,
+      'Visitas': Icons.event,
       'Mantenimiento': Icons.handyman,
       'Notificaciones': Icons.notifications,
       'Sincronización de servicios': Icons.sync,
@@ -545,6 +547,14 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
               ),
           ]),
       ],
+      if(section=='Visitas' && data is List)...[
+        if((data as List).isEmpty)const Text('No hay visitas en este alcance.'),
+        for(final v in data)card('${v['propiedad']??"Visita pendiente"}',[
+          Text('${v['fecha_hora']} · ${v['estado']}'),Text('Cliente: ${v['cliente']??"Por confirmar"} · Agente: ${v['agente']??"Por confirmar"}'),
+          if(['Programada','Confirmada'].contains(v['estado']))Wrap(children:[
+            if(staff)button('Confirmar',()=>mutate('PUT','/api/visitas/${v['id_visita']}',{'estado':'Confirmada'})),
+            if(staff)button('Realizada',()=>mutate('PUT','/api/visitas/${v['id_visita']}',{'estado':'Realizada'})),
+            button('Cancelar',()=>mutate('PUT','/api/visitas/${v['id_visita']}',{'estado':'Cancelada'}))])])],
       if (section == 'Mantenimiento') ...[
         pickProperty(),
         button('Registrar incidencia', createMaintenance, icon: Icons.add),
@@ -822,6 +832,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
                 '${jsonDecode(r['command'])['metodo']} ${jsonDecode(r['command'])['ruta']}',
               ),
               if (r['error'] != null) SelectableText('${r['error']}'),
+                if(r['state']=='conflicto')button('Volver a proponer con la versión mostrada',()=>act(()async{await service.rebase(r['uuid'] as String);data=await service.changes();})),
               button(
                 'Descartar propuesta',
                 () => act(() async {

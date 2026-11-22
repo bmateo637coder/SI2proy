@@ -14,6 +14,7 @@ from jose import jwt, JWTError
 import schemas
 from logger import log_accion_segura, leer_bitacora_segura
 from fastapi import Request
+from starlette.concurrency import run_in_threadpool
 from ws_manager import manager
 
 
@@ -105,7 +106,7 @@ async def log_requests(request: Request, call_next):
 
     # Registrar de forma asíncrona pero sin bloquear si falla
     try:
-        log_accion_segura(ip, usuario, accion)
+        await run_in_threadpool(log_accion_segura, ip, usuario, accion)
     except Exception as e:
         print(f"Error guardando bitacora: {e}")
 
@@ -290,6 +291,30 @@ def get_bitacora_segura(dev_key: str, current_user: models.Usuario = Depends(get
         return registros
     except ValueError:
         raise HTTPException(status_code=403, detail="Llave de desarrollador inválida")
+
+
+from pydantic import BaseModel, Field
+
+
+class RegistroAuditoriaImportado(BaseModel):
+    ip: str = Field(max_length=150)
+    usuario: str = Field(max_length=150)
+    accion: str = Field(max_length=1000)
+    fecha_hora: str = Field(pattern=r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+
+
+class ImportarAuditoria(BaseModel):
+    dev_key: str = Field(max_length=100)
+    registros: list[RegistroAuditoriaImportado] = Field(max_length=10000)
+
+
+@app.post('/admin/bitacora/importar')
+def importar_auditoria(body: ImportarAuditoria, user=Depends(get_current_user)):
+    if user.id_rol != 1: raise HTTPException(403, 'Solo el administrador SaaS puede recuperar la auditoría.')
+    from logger import importar_bitacora
+    try:
+        return {'importados': importar_bitacora(body.dev_key, [r.model_dump() for r in body.registros])}
+    except ValueError: raise HTTPException(403, 'Llave de desarrollador inválida') from None
 
 # ==========================================
 # ENDPOINTS DE PERMISOS (RBAC/CBAC)

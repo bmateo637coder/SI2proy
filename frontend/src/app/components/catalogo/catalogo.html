@@ -170,6 +170,7 @@
             <button class="btn-secondary" style="padding: 0.6rem 1.2rem; font-size: 0.75rem;" (click)="abrirDetalles(prop)">
                 Detalles
             </button>
+            <button class="btn-secondary" (click)="guardarFavorito(prop)" aria-label="Guardar propiedad en favoritos">♡ Favorito</button>
         </div>
       </div>
     </div>
@@ -226,3 +227,4 @@
     </div>
   </div>
 </div>
+<p *ngIf="mensajeFavorito" role="status" style="padding:1rem;">{{mensajeFavorito}}</p>

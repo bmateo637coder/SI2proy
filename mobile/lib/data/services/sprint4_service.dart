@@ -84,6 +84,29 @@ class Sprint4Service extends ChangeNotifier {
       return project(path, jsonDecode(rows.first['data'] as String), key);
     }
 
+    if (RegExp(r'^/api/mantenimiento/-[0-9]+$').hasMatch(path)) {
+      final id = int.parse(path.split('/').last);
+      final rows = await (await store.database).query(
+        's4_queue',
+        where: 'account=? AND local_id=?',
+        whereArgs: [key, id],
+      );
+      if (rows.isNotEmpty) {
+        final data =
+            jsonDecode(rows.first['command'] as String)['datos'] as Map;
+        return {
+          ...data,
+          'id': id,
+          'pendiente': true,
+          'estado': 'Pendiente de sincronizar',
+          'fotos': [],
+          'costos': [],
+          'historial': [],
+          'costo_total': 0,
+          'version': 0,
+        };
+      }
+    }
     if (auth.localSession || auth.needsOnlineLogin) return cached();
     try {
       final r = await dio.get(
@@ -328,6 +351,12 @@ class Sprint4Service extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (!disposed && auth.isAuthenticated && !auth.isLoading) {
+      final active = await changes();
+      pending = active.where((r) => r['state'] == 'pendiente').length;
+      conflicts = active.where((r) => r['state'] == 'conflicto').length;
+      emit();
+    }
     if (disposed ||
         busy ||
         !auth.isAuthenticated ||
@@ -345,6 +374,7 @@ class Sprint4Service extends ChangeNotifier {
       '/api/alertas',
       '/api/recomendaciones',
       '/api/bandeja',
+      '/api/visitas',
       '/api/mi-cuenta',
       '/api/mantenimiento',
       '/api/mantenimiento/mis-inmuebles',
@@ -357,6 +387,7 @@ class Sprint4Service extends ChangeNotifier {
         '/api/saas/planes',
       ],
       if (staff) '/api/reportes/ejecutivo',
+      if (staff) '/modulo_inmuebles/clientes',
       if (staff && !auth.allTenants) '/api/saas/suscripcion',
     ];
     for (final path in paths) {
@@ -398,6 +429,7 @@ class Sprint4Service extends ChangeNotifier {
           '/api/favoritos',
           '/api/alertas',
           '/api/mantenimiento',
+          '/api/visitas',
         ].contains(path))
       return source;
     final rows = await (await store.database).query(
@@ -438,6 +470,7 @@ class Sprint4Service extends ChangeNotifier {
         result.add({
           ...c['datos'] as Map,
           'id': row['local_id'],
+          'id_visita': row['local_id'],
           'pendiente': true,
           'activa': true,
           'resumen': c['datos']['texto'] ?? 'Criterios guardados',

@@ -95,13 +95,13 @@ export class Sprint4Offline {
   for(const row of all.filter(r=>r.account===account&&r.state==='pendiente').sort((a,b)=>b.local-a.local)){
    const c=row.command;if(path==='/api/favoritos'&&c.ruta.startsWith(path+'/')){const id=Number(c.ruta.split('/').pop());const index=result.findIndex((f:any)=>f.id_propiedad===id);if(index>=0)result.splice(index,1);
     if(c.metodo==='POST'){const catalog=await this.getCache(account+'|'+API+'/modulo_inmuebles/propiedades/catalogo');const p=catalog?.find((p:any)=>p.id_propiedad===id);if(p)result.push({id_propiedad:id,propiedad:p,disponible:p.estado==='Disponible',pendiente:true});}
-   }else if(c.ruta===path&&c.metodo==='POST'&&['/api/alertas','/api/mantenimiento'].includes(path)){result.push({...c.datos,id:row.local,activa:true,resumen:c.datos.texto||'Criterios guardados',estado:'Pendiente de sincronizar',urgencia:'Pendiente',pendiente:true});}
+   }else if(c.ruta===path&&c.metodo==='POST'&&['/api/alertas','/api/mantenimiento','/api/visitas'].includes(path)){result.push({...c.datos,id:row.local,id_visita:row.local,activa:true,resumen:c.datos.texto||'Criterios guardados',estado:'Pendiente de sincronizar',urgencia:'Pendiente',pendiente:true});}
    else if(c.ruta.startsWith(path+'/')&&!c.ruta.slice(path.length+1).includes('/')){const id=Number(c.ruta.split('/').pop()),i=result.findIndex((r:any)=>r.id===id);if(i>=0&&c.metodo==='DELETE')result.splice(i,1);else if(i>=0&&c.metodo==='PUT')result[i]={...result[i],...c.datos,pendiente:true};}
   }return result;
  }
  private async download(){if(this.downloading||!navigator.onLine)return;this.downloading=true;const account=this.account;
   try {await this.sync();const u=this.auth.currentUser();const staff=u?.id_rol===1||u?.id_rol===2||u?.es_agente;
-   const paths=['/modulo_inmuebles/propiedades/catalogo','/api/favoritos','/api/alertas','/api/recomendaciones','/api/bandeja','/api/mi-cuenta','/api/mantenimiento','/api/mantenimiento/mis-inmuebles',
+   const paths=['/modulo_inmuebles/propiedades/catalogo','/api/favoritos','/api/alertas','/api/recomendaciones','/api/bandeja','/api/mi-cuenta','/api/mantenimiento','/api/mantenimiento/mis-inmuebles','/api/visitas',
     ...(staff?['/api/gerencia/dashboard','/api/analitica/zonas','/api/comisiones','/api/promociones','/api/reportes/ejecutivo']:[])];
    for(const path of paths){if(account!==this.account)return;const r=await firstValueFrom(this.http.get<any>(API+path,{headers:this.headers()}));await this.putCache(account+'|'+API+path,r);
     if(path==='/api/mantenimiento')for(const item of r){const url=API+path+'/'+item.id;const detail=await firstValueFrom(this.http.get(url,{headers:this.headers()}));await this.putCache(account+'|'+url,detail);}}
@@ -111,8 +111,8 @@ export class Sprint4Offline {
 
 export const sprint4Interceptor:HttpInterceptorFn=(req,next)=>{
  const path=req.url.startsWith(API)?req.url.slice(API.length):'';
- const reads=req.method==='GET'&&/^\/(api\/(favoritos|alertas|recomendaciones|bandeja|mantenimiento|gerencia|analitica\/zonas|comisiones|promociones|mi-cuenta|reportes\/ejecutivo)|modulo_inmuebles\/propiedades\/catalogo)/.test(path);
- const writes=['POST','PUT','DELETE'].includes(req.method)&&/^\/api\/(favoritos(?:\/-?\d+)|alertas(?:\/-?\d+)?|recomendaciones\/feedback|mantenimiento(?:\/-?\d+)?(?:\/(costos|fotos)(?:\/\d+)?)?|promociones(?:\/-?\d+)?|comisiones\/\d+\/liquidar|bandeja\/(?:\d+\/leida|leer-todas))$/.test(path);
+ const reads=req.method==='GET'&&/^\/(api\/(visitas|favoritos|alertas|recomendaciones|bandeja|mantenimiento|gerencia|analitica\/zonas|comisiones|promociones|mi-cuenta|reportes\/ejecutivo)|modulo_inmuebles\/propiedades\/catalogo)/.test(path);
+ const writes=['POST','PUT','DELETE'].includes(req.method)&&/^\/api\/(visitas(?:\/-?\d+)?|favoritos(?:\/-?\d+)|alertas(?:\/-?\d+)?|recomendaciones\/feedback|mantenimiento(?:\/-?\d+)?(?:\/(costos|fotos)(?:\/\d+)?)?|promociones(?:\/-?\d+)?|comisiones\/\d+\/liquidar|bandeja\/(?:\d+\/leida|leer-todas))$/.test(path);
  const queries=req.method==='POST'&&/^\/api\/(busqueda-semantica|servicios\/ia\/(chat|cotizar|descripcion))$/.test(path);
  return reads||writes||queries?from(inject(Sprint4Offline).request(req)):next(req);
 };
