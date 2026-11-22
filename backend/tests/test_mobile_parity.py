@@ -89,3 +89,22 @@ def test_property_form_exposes_branch_and_can_change_it(api):
     updated = client.put(f'/modulo_inmuebles/propiedades/{row["id_propiedad"]}', headers=headers(), json=body)
     assert updated.status_code == 200, updated.text
     assert updated.json()['id_sucursal'] == branch.json()['id_sucursal']
+
+
+def test_property_delete_preserves_maintenance_and_contract_history(api):
+    from database import models as m
+    from saas import today
+    client, factory = api
+    incident = client.post('/api/mantenimiento', headers=headers(), json={'id_propiedad': 1,
+        'titulo': 'Revisión de cocina', 'descripcion': 'Problema de iluminación.'})
+    assert incident.status_code == 201, incident.text
+    assert client.delete('/modulo_inmuebles/propiedades/1', headers=headers()).status_code == 409
+    with factory() as db:
+        db.add(m.Contrato(id_tenant=1, id_cliente=1, id_agente=1, id_propiedad=2,
+            tipo_contrato='Alquiler', monto_total=500, fecha_inicio=today()))
+        db.commit()
+    assert client.delete('/modulo_inmuebles/propiedades/2', headers=headers()).status_code == 409
+    with factory() as db:
+        assert db.query(m.Contrato).count() == 1
+        assert db.get(m.Propiedad, 1) is not None
+        assert db.get(m.Propiedad, 2) is not None

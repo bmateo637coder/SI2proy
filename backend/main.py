@@ -913,6 +913,11 @@ def delete_propiedad(
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     if current_user.id_rol != 1 and propiedad.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar propiedades de otra empresa")
+    from sprint4_mantenimiento import Solicitud as SolicitudMantenimiento
+    if (db.query(models.Contrato).filter_by(id_propiedad=id_propiedad).first()
+            or db.query(models.Visita).filter_by(id_propiedad=id_propiedad).first()
+            or db.query(SolicitudMantenimiento).filter_by(id_propiedad=id_propiedad).first()):
+        raise HTTPException(409, 'El inmueble tiene contratos, visitas o incidencias asociados. Conserve su historial.')
     db.delete(propiedad)
     db.commit()
     return {"message": "Propiedad eliminada"}

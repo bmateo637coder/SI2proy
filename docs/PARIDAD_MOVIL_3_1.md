@@ -51,7 +51,7 @@ La descarga automática incorpora las listas administrativas autorizadas, sucurs
 
 - Las fotos nuevas de propiedades se guardan en PostgreSQL y se sirven como imágenes por una URL estable; no dependen del disco temporal de Render.
 - Restaurar SQL usa la conexión configurada, una sola transacción y detención ante error. Se elimina el `SET transaction_timeout` incompatible de algunos volcados de pg_dump 18. Los errores no se presentan como restauraciones exitosas. No se restauró la base de producción para probar esta función.
-- Propietarios con inmuebles y clientes con contratos/visitas devuelven un conflicto explicativo al intentar eliminarlos.
+- Propietarios con inmuebles, clientes con contratos/visitas e inmuebles con contratos/visitas/incidencias devuelven un conflicto explicativo al intentar eliminarlos, conservando el historial.
 - Los agentes con nombres de rol heredados, como “Agente Raíces”, conservan acceso al mantenimiento de sus inmuebles mediante su relación real de agente.
 
 ## Validación
