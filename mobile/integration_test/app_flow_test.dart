@@ -37,6 +37,19 @@ void main() {
         (widget) =>
             widget is Scrollable && widget.axisDirection == AxisDirection.down,
       );
+      Future<void> searchWorkspace(String value) async {
+        final field = find.byKey(const ValueKey('workspace-search'));
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+        // El IME real responde después del foco; esperar evita que su estado
+        // anterior sobrescriba el texto inyectado por el ejecutor del test.
+        await tester.pump(const Duration(seconds: 1));
+        await tester.enterText(field, value);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(field).controller!.text, value);
+      }
+
       late AuthProvider auth;
       late OfflineService offline;
       Future<InmobiliariaApp> app({bool restore = false}) async {
@@ -95,20 +108,12 @@ void main() {
       await tester.tap(find.text('Todo'));
       await tester.pumpAndSettle();
       expect(find.text('Centro de trabajo'), findsOneWidget);
-      await tester.enterText(
-        find.byKey(const ValueKey('workspace-search')),
-        'bitacora',
-      );
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
+      await searchWorkspace('bitacora');
       expect(find.text('Bitácora'), findsOneWidget);
       await tester.tap(find.byTooltip('Limpiar búsqueda'));
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const ValueKey('workspace-search')),
-        'propiedades',
-      );
-      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await searchWorkspace('propiedades');
+      FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
       expect(
         tester
