@@ -1034,6 +1034,9 @@ def delete_propietario(
         raise HTTPException(status_code=404, detail="Propietario no encontrado")
     if current_user.id_rol != 1 and propietario.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar propietarios de otra empresa")
+    saas.tenant_scope(current_user, propietario.id_tenant)
+    if db.query(models.Propiedad).filter_by(id_propietario=id_propietario).first():
+        raise HTTPException(409, 'El propietario tiene inmuebles asociados. Reasígnelos antes de eliminarlo.')
     db.delete(propietario)
     db.commit()
     return {"message": "Propietario eliminado"}
@@ -1155,6 +1158,9 @@ def delete_cliente(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     if current_user.id_rol != 1 and cliente.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar clientes de otra empresa")
+    saas.tenant_scope(current_user, cliente.id_tenant)
+    if db.query(models.Contrato).filter_by(id_cliente=id_cliente).first() or db.query(models.Visita).filter_by(id_cliente=id_cliente).first():
+        raise HTTPException(409, 'El cliente tiene contratos o visitas asociados. Conserve su historial.')
     db.delete(cliente)
     db.commit()
     return {"message": "Cliente eliminado"}

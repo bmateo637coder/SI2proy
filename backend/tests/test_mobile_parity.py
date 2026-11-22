@@ -64,3 +64,15 @@ def test_legacy_agent_role_can_manage_its_maintenance(api):
     rows = client.get('/api/mantenimiento', headers=headers('agent1', 1))
     assert rows.status_code == 200
     assert any(r['id'] == response.json()['id'] for r in rows.json())
+
+
+def test_people_delete_preserves_linked_property_and_visit_history(api):
+    from datetime import datetime, timedelta
+    client, _ = api
+    assert client.delete('/modulo_inmuebles/propietarios/1', headers=headers()).status_code == 409
+    visit = client.post('/api/visitas', headers=headers(), json={'id_propiedad': 1, 'id_cliente': 1,
+        'fecha_hora': (datetime.utcnow() + timedelta(days=3)).isoformat()})
+    assert visit.status_code == 201, visit.text
+    deleted = client.delete('/modulo_inmuebles/clientes/1', headers=headers())
+    assert deleted.status_code == 409, deleted.text
+    assert any(c['id_cliente'] == 1 for c in client.get('/modulo_inmuebles/clientes', headers=headers()).json())

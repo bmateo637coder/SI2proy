@@ -648,6 +648,15 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             pw.Text('Datos de la ultima descarga disponible'),
             pw.SizedBox(height: 20),
             pw.Text('Inmuebles: ${report['cartera']['total']}'),
+            pw.Text(
+              'Costo de mantenimiento: ${report['mantenimiento']['costo_total']}',
+            ),
+            pw.Text(
+              'Comisiones generadas: ${report['comisiones']['generadas']}',
+            ),
+            pw.Text(
+              'Comisiones liquidadas: ${report['comisiones']['cobradas']}',
+            ),
             for (final e in income.entries.where((e) => e.key != 'por_mes'))
               pw.Text('${e.key}: ${e.value}'),
             pw.Header(level: 1, text: 'Agentes'),
@@ -1181,6 +1190,11 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
         ],
       ],
       if (section == 'Notificaciones') ...[
+        button(
+          'Marcar todas como leídas',
+          () => mutate('PUT', '/api/bandeja/leer-todas'),
+          icon: Icons.done_all,
+        ),
         button(
           'Activar avisos',
           () => act(() async {
