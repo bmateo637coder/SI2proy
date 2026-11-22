@@ -25,6 +25,7 @@ test('map fits a phone, ignores invalid locations and clears outdated AI analysi
   await expect(page.locator('.leaflet-overlay-pane path')).toHaveCount(2);
   expect((await page.locator('.mapa').boundingBox())!.width).toBeGreaterThan(250);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  expect(await page.locator('.luxury-main').evaluate(el=>el.scrollWidth <= el.clientWidth)).toBeTruthy();
   await page.getByRole('button',{name:'Análisis con IA'}).click();
   await expect(page.getByText('Análisis de cierres anterior',{exact:true})).toBeVisible();
   await page.getByLabel('Métrica del mapa').selectOption('monto');
@@ -76,5 +77,6 @@ test('catalog reports failed requests and validates price ranges', async ({page}
   await page.getByRole('button',{name:'Explorar',exact:true}).click();
   await expect(page.locator('app-catalogo [role=alert]')).toContainText('Revisa el rango de precio');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  expect(await page.locator('.luxury-main').evaluate(el=>el.scrollWidth <= el.clientWidth)).toBeTruthy();
   await page.screenshot({path:'test-results/presentacion/catalogo-telefono.png',fullPage:true});
 });

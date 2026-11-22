@@ -43,7 +43,7 @@ class API:
                 return data if raw else json.loads(data)
         except HTTPError as error:
             # Nunca imprimir cuerpos de respuesta, credenciales ni datos personales.
-            raise RuntimeError(f'{request.method} {path}: HTTP {error.code}') from None
+            raise RuntimeError(f'{request.get_method()} {path}: HTTP {error.code}') from None
 
     def login(self, email, password):
         self.token = self.call('/login', {'correo': email, 'password': password})['access_token']
@@ -153,10 +153,9 @@ def main():
                  ('Residencia Equipetrol', 'Venta', 225000, 310, 4, 1),
                  ('Departamento sur alquilado', 'Alquiler', 550, 85, 2, 2),
                  ('Casa en anticrético', 'Anticretico', 48000, 150, 3, 2)]
-        if tid == 1:
-            specs += [('Casa con jardín disponible', 'Venta', 132000, 180, 3, 0),
-                      ('Suite amoblada disponible', 'Alquiler', 420, 58, 1, 1),
-                      ('Departamento para anticrético', 'Anticretico', 32000, 88, 2, 2)]
+        specs += [('Casa con jardín disponible', 'Venta', 132000, 180, 3, 0),
+                  ('Suite amoblada disponible', 'Alquiler', 420, 58, 1, 1),
+                  ('Departamento para anticrético', 'Anticretico', 32000, 88, 2, 2)]
         zones = [('Zona Norte', -17.731, -63.174), ('Equipetrol', -17.759, -63.198), ('Zona Sur', -17.817, -63.180)]
         for index, (label, operation, price, area, rooms, zone) in enumerate(specs):
             title = f'{MARK} {tid}-{index+1} {label}'
