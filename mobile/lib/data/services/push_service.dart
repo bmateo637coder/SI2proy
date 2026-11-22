@@ -38,7 +38,7 @@ class PushService {
     simpleTimer = Timer.periodic(const Duration(seconds: 45), (_) {
       if (Platform.isAndroid &&
           auth.isAuthenticated &&
-          simpleAccount == auth.userá.ci) {
+          simpleAccount == auth.user?.ci) {
         unawaited(channel.invokeMethod<bool>('poll').catchError((_) => false));
       }
     });
@@ -56,7 +56,7 @@ class PushService {
         auth.isLoading ||
         auth.localSession)
       return;
-    final ci = auth.userá.ci;
+    final ci = auth.user?.ci;
     if (ci == null || simpleAccount == ci) return;
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('avisos_enabled_$ci') == true) await activate();
@@ -67,7 +67,7 @@ class PushService {
       throw StateError(
         'Los avisos automáticos nativos están disponibles en Android.',
       );
-    final ci = auth.userá.ci;
+    final ci = auth.user?.ci;
     if (ci == null)
       throw StateError('Inicia sesión antes de activar los avisos.');
     final prefs = await SharedPreferences.getInstance();
@@ -78,7 +78,7 @@ class PushService {
       data: {'dispositivo': device},
       options: Options(extra: {'replicaBypass': true}),
     );
-    if (!auth.isAuthenticated || auth.userá.ci != ci)
+    if (!auth.isAuthenticated || auth.user?.ci != ci)
       throw StateError('La cuenta cambió. Vuelve a activar los avisos.');
     await channel.invokeMethod<bool>('activate', {
       'account': ci,
@@ -167,7 +167,7 @@ class PushService {
   Future<void> unregister() async {
     simpleAccount = null;
     final simplePrefs = await SharedPreferences.getInstance();
-    final ci = auth.userá.ci;
+    final ci = auth.user?.ci;
     if (ci != null) await simplePrefs.remove('avisos_enabled_$ci');
     if (Platform.isAndroid) {
       try {
