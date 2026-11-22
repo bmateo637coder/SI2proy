@@ -69,7 +69,7 @@ ng build       # producción → dist/
 
 ## Mobile (`mobile/`)
 
-[Descargar APK Android 3.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.1.0-29/Raices-3.1.0.apk) · [Guía de uso móvil](mobile/README.md) · [Funciones web y móvil / validación 3.1](docs/PARIDAD_MOVIL_3_1.md) · [Validación y despliegue del sprint 4](docs/VALIDACION_SPRINT4.md).
+[Descargar APK Android 3.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.2.0-33/Raices-3.2.0.apk) · [Guía de uso móvil](mobile/README.md) · [Funciones web y móvil / validación 3.1](docs/PARIDAD_MOVIL_3_1.md) · [Validación y despliegue del sprint 4](docs/VALIDACION_SPRINT4.md).
 
 App Flutter con selección de una o todas las inmobiliarias, reportes/IA y operaciones offline. La URL de la API se define en `lib/core/config/api_constants.dart`
 y puede sobrescribirse en build/run:
@@ -84,3 +84,5 @@ flutter build apk --dart-define=API_BASE_URL=https://<backend-publico>/
 - **Frontend:** GitHub Pages (rama `gh-pages`).
 - **Backend:** Render (free web service) + PostgreSQL en Neon (tier free).
 - **Mobile:** APK publicado como GitHub Release.
+
+La revisión para la presentación final, capturas y pruebas están en [REVISION_FINAL.md](docs/REVISION_FINAL.md). Las pantallas de [predicciones de ventas/demanda y conversión multimoneda](docs/PREDICCIONES_MONEDA.md) están disponibles en web y Android.

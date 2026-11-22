@@ -1,5 +1,7 @@
 # Raíces Android 3.1 — navegación y funciones de la web
 
+La versión actual es **3.2.0**. Ver la [revisión final](REVISION_FINAL.md) y los módulos nuevos de [predicciones y multimoneda](PREDICCIONES_MONEDA.md). Esta matriz conserva la evidencia de la entrega 3.1.0.
+
 La versión 3.0 agrupaba los servicios nuevos y dejaba sin formularios buena parte de la administración. La versión 3.1 incorpora un **Centro de trabajo**, accesible desde **Todo** en la barra superior o desde el menú lateral, con búsqueda por nombre y por finalidad. La búsqueda encuentra palabras con o sin tildes. El perfil también enlaza a este centro.
 
 ## Correspondencia de pantallas
@@ -68,7 +70,7 @@ Código móvil verificado: `bacd758ddcc10380b46621794e10b7a667557de8`.
 
 Se conserva la firma Android existente para actualizar sin desinstalar ni borrar la copia local. La publicación verifica que el artefacto corresponda al código y a las pruebas aprobadas, además de su firma y SHA-256.
 
-## Descarga verificada
+## Descarga verificada de 3.1.0 (histórico)
 
 [Descargar Raíces Android 3.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.1.0-29/Raices-3.1.0.apk) · [Versión y checksum](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.1.0-29).
 

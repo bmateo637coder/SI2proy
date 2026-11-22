@@ -7,11 +7,11 @@ La carga se ejecutó sobre la API de producción a solicitud del propietario. Lo
 | Inmobiliaria | Propiedades | Clientes | Contratos | Incidencias | Visitas | Ventas en mapa |
 |---|---:|---:|---:|---:|---:|---:|
 | Raíces | 11 | 6 | 6 | 4 | 2 | 3 |
-| Horizonte | 10 | 3 | 5 | 4 | 2 | 3 |
-| Cúspide | 10 | 3 | 5 | 4 | 2 | 3 |
-| Total | 31 | 12 | 16 | 12 | 6 | 9 |
+| Horizonte | 13 | 3 | 5 | 4 | 2 | 3 |
+| Cúspide | 13 | 3 | 5 | 4 | 2 | 3 |
+| Total | 37 | 12 | 16 | 12 | 6 | 9 |
 
-Se conservan las 13 propiedades anteriores. Se agregaron 18 propiedades, 9 clientes y 15 contratos. Los límites de Horizonte y Cúspide siguen en 10 propiedades; no se modificaron planes ni suscripciones.
+Se conservan las 13 propiedades anteriores. La carga inicial agregó 18 propiedades, 9 clientes y 15 contratos. La revisión final agregó seis inmuebles ficticios disponibles y geolocalizados, tres en Horizonte y tres en Cúspide, conservando las 31 propiedades existentes. No se modificaron planes ni suscripciones. El alcance de catálogos y mapas está documentado en [REVISION_FINAL.md](REVISION_FINAL.md).
 
 También hay:
 

@@ -1,10 +1,10 @@
-# Raíces para Android · 3.1.0
+# Raíces para Android · 3.2.0
 
 Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** genera `Raices-3.1.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.1.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.1.0-29/Raices-3.1.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.1.0-29)). Conserva la firma anterior: instalar encima de la versión existente, sin desinstalar ni borrar los datos. No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-3.2.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.2.0-33/Raices-3.2.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.2.0-33)). Conserva la firma anterior: instalar encima de la versión existente, sin desinstalar ni borrar los datos. No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
 
@@ -59,3 +59,7 @@ La distribución se firma con un almacén persistente protegido en secretos de G
 GitHub exige permiso de escritura de Workflows para publicar una versión cuyo commit modifica workflows respecto de `main`; el token automático de Actions no ofrece ese permiso. En una rama de trabajo, el workflow conserva el APK firmado como artefacto. Se publica sin recompilar con `python scripts/publish_mobile_release.py ID_EJECUCION`, usando la credencial Git local o una variable `RELEASE_TOKEN`/`GH_TOKEN` autorizada. El script verifica el origen de la ejecución, las pruebas Android, la firma aprobada, el artefacto y su SHA-256; no reemplaza etiquetas ni archivos de una versión diferente. Opcionalmente, un secreto `RELEASE_TOKEN` con los permisos adecuados permite la publicación automática. La credencial Git local no se copia a secretos de Actions.
 
 Si la carga local es lenta, usar `--prepare-only` para obtener el ID del borrador. Ejecutar **Build APK Release** con `artifact_run=ID_EJECUCION_ORIGINAL` y `release_id=ID_BORRADOR`: GitHub carga el mismo artefacto verificado sin recompilar. Después, repetir el comando local con `--release-id ID_BORRADOR` para publicar; las cargas existentes se verifican y se conservan.
+
+## Predicciones y moneda
+
+En **Todo → Centro de trabajo**, buscar **Predicción de ventas y demanda** o **Conversión multimoneda**. El primer módulo ofrece historial, validación temporal, escenario académico identificado y CSV; el segundo, seis monedas con fuente/fecha y tasa manual. La última descarga se puede consultar sin red. [Guía de ambas funciones](../docs/PREDICCIONES_MONEDA.md) · [Revisión final y pruebas](../docs/REVISION_FINAL.md).
