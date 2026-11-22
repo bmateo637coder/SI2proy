@@ -6,6 +6,10 @@ from sqlalchemy.orm import Session
 
 from database.database import Base, engine
 from database import models as m
+import sprint4_api
+import sprint4_fidelizacion
+import sprint4_mantenimiento
+import sprint4_sync
 from saas import today
 
 
@@ -30,6 +34,9 @@ def migrate():
             for code, name, limit, ai in [("basico", "Básico", 2, False), ("profesional", "Profesional", 10, True)]:
                 if not db.get(m.Plan, code):
                     db.add(m.Plan(codigo=code, nombre=name, max_sucursales=limit, reportes_ia=ai))
+            db.flush()
+            for contract in db.query(m.Contrato).all():
+                sprint4_api.create_commission(db, contract)
             db.flush()
             for tenant in db.query(m.Tenant).order_by(m.Tenant.id_tenant):
                 if not db.get(m.Suscripcion, tenant.id_tenant):

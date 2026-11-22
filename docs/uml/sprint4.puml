@@ -1,0 +1,31 @@
+@startuml
+actor Usuario
+actor "Administrador SaaS" as SaaS
+rectangle "Web Angular / Flutter" {
+  usecase "Buscar y guardar favoritos" as Favoritos
+  usecase "Configurar alertas" as Alertas
+  usecase "Valorar recomendaciones" as Feedback
+  usecase "Gestionar mantenimiento" as Mant
+  usecase "Consultar gerencia y mapa" as Gerencia
+  usecase "Revisar sincronización" as Sync
+}
+Usuario --> Favoritos
+Usuario --> Alertas
+Usuario --> Feedback
+Usuario --> Mant
+Usuario --> Sync
+SaaS --> Gerencia
+SaaS --> Mant
+database "IndexedDB / SQLite" as Local
+database PostgreSQL as DB
+component "API: validación, alcance y UUID" as API
+component "Worker notificaciones" as Worker
+cloud FCM
+Favoritos --> Local
+Mant --> Local
+Sync --> API
+API --> DB
+API --> Worker
+Worker --> DB
+Worker --> FCM
+@enduml

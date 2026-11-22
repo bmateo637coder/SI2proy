@@ -47,6 +47,11 @@ export class Propiedades implements OnInit {
       imagen_url: [''],
       superficie: ['', [Validators.min(1)]],
       habitaciones: ['', [Validators.min(1), Validators.pattern(/^[0-9]+$/)]],
+      latitud: ['', [Validators.min(-90), Validators.max(90)]],
+      longitud: ['', [Validators.min(-180), Validators.max(180)]],
+      zona_geografica: [''],
+      banos: ['', [Validators.min(0)]],
+      tipo_inmueble: [''],
       zona: ['']
     };
     this.propiedadForm = this.fb.group(formDef);
@@ -236,6 +241,11 @@ export class Propiedades implements OnInit {
       imagen_url: prop.imagenes?.[0]?.url || '',
       superficie: this.atributo(prop, ['superficie', 'metros cuadrados', 'm2', 'area', 'metros_cuadrados']),
       habitaciones: this.atributo(prop, ['habitaciones', 'cuartos', 'dormitorios']),
+      latitud: this.atributo(prop, ['latitud']),
+      longitud: this.atributo(prop, ['longitud']),
+      banos: this.atributo(prop, ['banos', 'baños']),
+      tipo_inmueble: this.atributo(prop, ['tipo inmueble']),
+      zona_geografica: this.atributo(prop, ['zona geografica']),
       zona: this.atributo(prop, ['zona'])
     });
     this.mensajeError = '';
@@ -279,10 +289,12 @@ export class Propiedades implements OnInit {
   }
   private caracteristicas(form: FormGroup) {
     const fields = [['superficie', ['superficie', 'metros cuadrados', 'm2', 'area', 'metros_cuadrados']],
-      ['habitaciones', ['habitaciones', 'cuartos', 'dormitorios']], ['zona', ['zona']]] as const;
+      ['habitaciones', ['habitaciones', 'cuartos', 'dormitorios']], ['zona', ['zona']],
+      ['latitud', ['latitud']], ['longitud', ['longitud']], ['zona_geografica', ['zona geografica']], ['banos', ['banos', 'baños']], ['tipo_inmueble', ['tipo inmueble']]] as const;
+    const labels: Record<string,string> = {superficie:'Superficie',habitaciones:'Habitaciones',zona:'Zona',latitud:'Latitud',longitud:'Longitud',zona_geografica:'Zona geográfica',banos:'Baños',tipo_inmueble:'Tipo inmueble'};
     return fields.map(([field, names]) => {
       const old = this.propiedadEditando?.caracteristicas?.find((c: any) => (names as readonly string[]).includes(this.normalizar(c.nombre)));
-      return { nombre: form === this.editForm && old ? old.nombre : field === 'superficie' ? 'Superficie' : field === 'habitaciones' ? 'Habitaciones' : 'Zona', valor: String(form.value[field] || '') };
+      return { nombre: form === this.editForm && old ? old.nombre : labels[field], valor: String(form.value[field] ?? '') };
     });
   }
 

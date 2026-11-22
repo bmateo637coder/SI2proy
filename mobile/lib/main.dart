@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:cryptography_flutter/cryptography_flutter.dart';
 
 import 'data/services/replica_store.dart';
+import 'data/services/sprint4_service.dart';
+import 'data/services/push_service.dart';
 import 'data/services/replica_controller.dart';
 import 'presentation/widgets/sync_status.dart';
 
@@ -107,6 +109,8 @@ class InmobiliariaApp extends StatefulWidget {
 }
 
 class _InmobiliariaAppState extends State<InmobiliariaApp> {
+  late final Sprint4Service services;
+  late final PushService push;
   late final GoRouter router = createRouter(widget.auth);
   ReplicaController? controller;
   void refreshVisible() {
@@ -123,6 +127,13 @@ class _InmobiliariaAppState extends State<InmobiliariaApp> {
   @override
   void initState() {
     super.initState();
+    services = Sprint4Service(
+      widget.dio,
+      widget.auth,
+      widget.replica ?? ReplicaStore(user: () => widget.auth.user),
+    );
+    push = PushService(widget.dio, widget.auth);
+    widget.auth.onSignOut = push.unregister;
     if (widget.replica case final ReplicaStore store) {
       router.routeInformationProvider.addListener(refreshVisible);
       controller = ReplicaController(
@@ -140,6 +151,9 @@ class _InmobiliariaAppState extends State<InmobiliariaApp> {
 
   @override
   void dispose() {
+    widget.auth.onSignOut = null;
+    services.dispose();
+    push.dispose();
     controller?.dispose();
     if (widget.replica != null)
       router.routeInformationProvider.removeListener(refreshVisible);
@@ -152,6 +166,8 @@ class _InmobiliariaAppState extends State<InmobiliariaApp> {
   Widget build(BuildContext context) => MultiProvider(
     providers: [
       Provider.value(value: widget.dio),
+      ChangeNotifierProvider.value(value: services),
+      Provider.value(value: push),
       ChangeNotifierProvider.value(value: widget.auth),
       ChangeNotifierProvider.value(value: widget.propiedadesProvider),
       ChangeNotifierProvider.value(value: widget.clientesProvider),
@@ -179,6 +195,21 @@ class _InmobiliariaAppState extends State<InmobiliariaApp> {
           ? child!
           : Column(
               children: [
+                ValueListenableBuilder<String?>(
+                  valueListenable: push.message,
+                  builder: (_, value, _) => value == null
+                      ? const SizedBox.shrink()
+                      : Material(
+                          child: ListTile(
+                            leading: const Icon(Icons.notifications_active),
+                            title: Text(value),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => push.message.value = null,
+                            ),
+                          ),
+                        ),
+                ),
                 SyncStatus(onOpen: () => router.go('/sincronizacion')),
                 Expanded(child: child!),
               ],

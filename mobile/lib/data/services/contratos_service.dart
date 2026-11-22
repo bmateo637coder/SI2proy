@@ -30,12 +30,14 @@ class ContratosService {
     required String fechaInicio,
     String? fechaFin,
     int? numCuotas,
+    bool aplicarPromocion = false,
   }) async {
     final data = <String, dynamic>{
       'id_cliente': idCliente,
       'id_propiedad': idPropiedad,
       'tipo_contrato': tipoContrato,
       'monto_total': montoTotal,
+      if (aplicarPromocion) 'aplicar_promocion': true,
       'fecha_inicio': fechaInicio,
       if (fechaFin != null && fechaFin.isNotEmpty) 'fecha_fin': fechaFin,
       if (numCuotas != null && numCuotas > 0) 'num_cuotas': numCuotas,

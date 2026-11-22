@@ -32,6 +32,7 @@ class ContratosRepository {
     required String fechaInicio,
     String? fechaFin,
     int? numCuotas,
+    bool aplicarPromocion = false,
   }) async {
     try {
       return await _service.createContrato(
@@ -42,6 +43,7 @@ class ContratosRepository {
         fechaInicio: fechaInicio,
         fechaFin: fechaFin,
         numCuotas: numCuotas,
+        aplicarPromocion: aplicarPromocion,
       );
     } catch (e) {
       throw Exception('Error al crear contrato: $e');

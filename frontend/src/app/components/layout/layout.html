@@ -70,6 +70,15 @@
             </a>
         </div>
 
+            <a routerLink="/dashboard/servicios" class="luxury-nav-link" routerLinkActive="active">Servicios, búsqueda e IA</a>
+            <a routerLink="/dashboard/favoritos" class="luxury-nav-link" routerLinkActive="active">Favoritos y alertas</a>
+            <a routerLink="/dashboard/notificaciones" class="luxury-nav-link" routerLinkActive="active">Notificaciones</a>
+            <a routerLink="/dashboard/sincronizacion-servicios" class="luxury-nav-link" routerLinkActive="active">Sincronizar servicios ({{servicios.pending()}} / {{servicios.conflicts()}} conflictos)</a>
+            <a routerLink="/dashboard/mantenimiento" class="luxury-nav-link" routerLinkActive="active">Mantenimiento</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/gerencia" class="luxury-nav-link" routerLinkActive="active">Dashboard gerencial</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/mapa-calor" class="luxury-nav-link" routerLinkActive="active">Mapa de ventas</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/comisiones" class="luxury-nav-link" routerLinkActive="active">Comisiones</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/promociones" class="luxury-nav-link" routerLinkActive="active">Promociones</a>
             <div class="spacer"></div>
 
             <button class="btn-logout-luxury" (click)="logout()">
@@ -80,6 +89,7 @@
 
     <!-- Contenido Principal -->
     <main class="luxury-main">
+        <p *ngIf="servicios.message()" role="status" style="padding:1rem;background:#fff7ed;">{{servicios.message()}}</p>
         <header class="luxury-topbar">
             <div class="topbar-left">
                 <h3 class="topbar-title">Bienvenido al Panel de Control</h3>

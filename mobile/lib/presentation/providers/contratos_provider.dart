@@ -91,6 +91,7 @@ class ContratosProvider extends ChangeNotifier {
     required String fechaInicio,
     String? fechaFin,
     int? numCuotas,
+    bool aplicarPromocion = false,
   }) async {
     _isSubmitting = true;
     _errorMessage = null;
@@ -105,6 +106,7 @@ class ContratosProvider extends ChangeNotifier {
         fechaInicio: fechaInicio,
         fechaFin: fechaFin,
         numCuotas: numCuotas,
+        aplicarPromocion: aplicarPromocion,
       );
       _contratos = [..._contratos, creado];
       _successMessage = creado.pendienteSync

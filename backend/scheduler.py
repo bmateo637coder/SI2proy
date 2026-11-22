@@ -101,7 +101,23 @@ def iniciar_scheduler():
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(_bucle())
+        loop.create_task(_bucle_notificaciones())
         _TAREA_INICIADA = True
         print("Scheduler de procesos periódicos iniciado.")
     except RuntimeError:
         print("Scheduler: no hay event loop activo, se omitió su inicio.")
+
+
+async def _bucle_notificaciones():
+    """Trabajo corto en un hilo: no bloquear el event loop con Firebase ni SQL."""
+    def process():
+        from database.database import SessionLocal
+        from sprint4_notificaciones import entregar_pendientes
+        with SessionLocal() as db:
+            entregar_pendientes(db)
+    while True:
+        try:
+            await asyncio.to_thread(process)
+        except Exception:
+            print('Notificaciones: no se pudo completar este ciclo; se reintentará.')
+        await asyncio.sleep(30)

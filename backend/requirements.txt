@@ -13,3 +13,4 @@ reportlab==4.2.2
 numpy==2.5.4
 scikit-learn==1.9.1
 tzdata>=2025.2
+firebase-admin>=6.5,<8

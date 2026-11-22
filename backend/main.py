@@ -55,6 +55,14 @@ app.include_router(analitica_ml.router)
 app.include_router(vista_global.router)
 import replica
 app.include_router(replica.router)
+import sprint4_api
+import sprint4_fidelizacion
+import sprint4_mantenimiento
+import sprint4_notificaciones
+for sprint4_router in (sprint4_api.router, sprint4_fidelizacion.router, sprint4_mantenimiento.router, sprint4_notificaciones.router):
+    app.include_router(sprint4_router)
+import sprint4_sync
+app.include_router(sprint4_sync.router)
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
@@ -756,6 +764,8 @@ def create_propiedad(
                 db.add(new_img)
     db.commit()
     db.refresh(new_prop)
+    from sprint4_fidelizacion import procesar_alertas
+    procesar_alertas(db, new_prop)
     return new_prop
 
 @app.put("/modulo_inmuebles/propiedades/{id_propiedad}/estado")
@@ -780,6 +790,8 @@ def update_propiedad_estado(
     propiedad.version += 1
     db.commit()
     db.refresh(propiedad)
+    from sprint4_fidelizacion import procesar_alertas
+    procesar_alertas(db, propiedad)
 
     # Broadcast to all websocket clients
     background_tasks.add_task(
@@ -858,6 +870,8 @@ def update_propiedad(
                 db.add(models.Imagen(id_propiedad=propiedad.id_propiedad, url=url.strip()))
     db.commit()
     db.refresh(propiedad)
+    from sprint4_fidelizacion import procesar_alertas
+    procesar_alertas(db, propiedad)
     return propiedad
 
 @app.delete("/modulo_inmuebles/propiedades/{id_propiedad}")

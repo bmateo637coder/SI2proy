@@ -2,6 +2,7 @@ import { ApplicationConfig, provideZoneChangeDetection, provideBrowserGlobalErro
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { apiInterceptor } from './core/services/api.interceptor';
+import { sprint4Interceptor } from './core/services/sprint4-offline.service';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -9,6 +10,6 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([apiInterceptor]))
+    provideHttpClient(withInterceptors([apiInterceptor, sprint4Interceptor]))
   ]
 };

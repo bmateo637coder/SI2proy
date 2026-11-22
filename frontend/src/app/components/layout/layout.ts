@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
+import { Sprint4Offline } from '../../core/services/sprint4-offline.service';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ApiFeedback } from '../../core/services/api-feedback.service';
@@ -17,6 +18,7 @@ import { environment } from '../../../environments/environment';
   templateUrl: './layout.html',
 })
 export class Layout {
+  readonly servicios = inject(Sprint4Offline);
   userRole: number = 0;
   rolNombre: string = 'Inmobiliaria';
   tenantNombre: string = '';

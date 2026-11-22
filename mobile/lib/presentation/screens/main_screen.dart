@@ -83,6 +83,7 @@ class MainScreen extends StatelessWidget {
         child: Column(
           children: [
             const CompanyScope(),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () => context.push('/servicios'), icon: const Icon(Icons.dashboard_customize), label: const Text('Servicios y favoritos'))),
             Expanded(child: navigationShell),
           ],
         ),
