@@ -209,10 +209,16 @@ def deploy(service, url):
     service_id = service["id"]
     variables = api(f"services/{service_id}/env-vars?limit=100")
     recovering = any(r['envVar']['key'] == 'DATABASE_RECOVERY_SNAPSHOT' for r in variables)
-    if recovering:
+    persistent_audit = False
+    try:
+        with urlopen(url + '/api/health', timeout=10) as response:
+            persistent_audit = 'sprint4' in json.load(response).get('features', [])
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        pass
+    if recovering or persistent_audit:
         # Recuperación explícitamente autorizada cuando la base anterior ya no existe.
         audit = []
-        print('Se usa la base recuperada del respaldo; el historial SQL se conserva en la migración.', flush=True)
+        print('La auditoría se conserva en PostgreSQL; no se vuelve a importar una copia de los mismos registros.', flush=True)
     else:
         audit = backup_audit(service, url)
     # Solo se actualiza Python: las credenciales y DATABASE_URL se conservan.

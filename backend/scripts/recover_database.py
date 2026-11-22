@@ -32,6 +32,8 @@ def snapshot():
     # pg_dump 18 añade metacomandos de psql y un SET que no existe en PostgreSQL 16.
     source = re.sub(r'^\\(?:un)?restrict [A-Za-z0-9]+\n', '', source, flags=re.M)
     source = re.sub(r'^SET transaction_timeout = 0;\n', '', source, flags=re.M)
+    # Los objetos pertenecen al usuario de la nueva base; los roles del servidor anterior no existen aquí.
+    source = re.sub(r'^ALTER DEFAULT PRIVILEGES [^\n]+;\n', '', source, flags=re.M)
     if re.search(r'^\\(?!\.$)|\b(?:CREATE DATABASE|ALTER SYSTEM|COPY\s+[^;]*\bPROGRAM)\b', source, re.M | re.I):
         # Los escapes de datos COPY se validan dentro de su bloque, no como comandos de psql.
         outside = re.sub(r'^COPY public\.[^\n]+ FROM stdin;\n.*?^\\\.\n', '', source, flags=re.M | re.S)
