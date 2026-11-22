@@ -47,6 +47,6 @@ La primera descarga, la administración de suscripciones, la entrega de correos/
 
 - Agendar una visita persiste realmente el turno y notifica al cliente y al agente; detecta disponibilidad y choques de agenda. Las propuestas offline se validan al sincronizar.
 - Las comisiones liquidadas impiden eliminar su contrato.
-- La bitácora se conserva cifrada en PostgreSQL. El despliegue respalda el historial anterior cifrado y lo importa con control de duplicados.
+- La bitácora nueva se conserva cifrada en PostgreSQL. Cuando el servicio anterior responde, el despliegue respalda su historial cifrado y lo importa con control de duplicados. La recuperación autorizada del 22 de noviembre usó el respaldo disponible, que contiene cero entradas históricas; ver [VALIDACION_SPRINT4.md](VALIDACION_SPRINT4.md).
 - Pruebas de integración de dominio: aislamiento por cuenta e inmobiliaria, alertas sin duplicados, mantenimiento con fotos/costos, promociones, ventas por zona, reportes PDF, visitas, recibos UUID, conflicto de versiones y auditoría persistente.
 - Avisos: pruebas de credenciales limitadas y revocación; Web Push comprueba firma VAPID y cifrado del mensaje real antes de simular la respuesta del proveedor. Esa prueba no acredita recepción en un navegador del usuario.

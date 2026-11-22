@@ -1,12 +1,16 @@
-# Raíces para Android · 2.2.0
+# Raíces para Android · 3.0.0
 
 Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** genera `Raices-2.2.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 2.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-2.2.0-13/Raices-2.2.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-2.2.0-13)). No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-3.0.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.0.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.0.0-18/Raices-3.0.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.0.0-18)). No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
+
+La versión 3.0 incorpora **Servicios**: favoritos y alertas, búsqueda semántica, recomendaciones y feedback, mantenimiento con fotos y costos, comisiones, promociones, estado de cuenta, dashboard gerencial, mapa de ventas y reporte ejecutivo. La matriz de casos de uso está en [SPRINT4_INTEGRACION.md](../docs/SPRINT4_INTEGRACION.md).
+
+Para recibir avisos abre **Servicios → Notificaciones → Activar avisos** y acepta el permiso. Android consulta la bandeja aproximadamente cada 15 minutos en segundo plano y cada 45 segundos con la app abierta; el ahorro de batería puede retrasarlo. No requiere crear una cuenta Firebase. La integración FCM específica queda opcional. Los comprobantes PDF se pueden descargar y compartir; Gmail SMTP requiere credenciales y un alojamiento que permita esos puertos, bloqueados en Render gratuito.
 
 La selección superior **Inmobiliaria activa** aplica a catálogo, clientes, contratos, usuarios, reportes e IA. **Todas las inmobiliarias** consulta el conjunto y etiqueta la empresa de cada registro. Para crear clientes, contratos, descripciones o realizar operaciones offline se selecciona una inmobiliaria concreta.
 
