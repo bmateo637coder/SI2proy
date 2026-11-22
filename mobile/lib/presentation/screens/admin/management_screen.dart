@@ -661,7 +661,7 @@ class _ManagementScreenState extends State<ManagementScreen> {
 
   Future<void> backup(bool restore) async {
     if (restore) {
-      final selection = await FilePicker.pickFiles(
+      final selection = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['sql'],
         withData: false,
