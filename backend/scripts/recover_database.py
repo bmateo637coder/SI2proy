@@ -92,7 +92,7 @@ def recover(source):
         if databases: raise RuntimeError('Apareció otra base en el workspace; revisar antes de crear o conectar recursos.')
         with urlopen('https://api.ipify.org', timeout=15) as response: address = str(ipaddress.ip_address(response.read().decode().strip()))
         existing = api('postgres', 'POST', {'name': DB_NAME, 'ownerId': owner, 'region': 'oregon', 'version': '16',
-            'plan': 'free', 'diskSizeGB': 1, 'enableHighAvailability': False, 'enableDiskAutoscaling': False,
+            'plan': 'free', 'enableHighAvailability': False,
             'ipAllowList': [{'cidrBlock': address + '/32', 'description': 'Recuperacion temporal desde Actions'}]})
         existing = existing.get('postgres', existing)
     identifier = existing['id']
