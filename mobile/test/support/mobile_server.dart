@@ -172,6 +172,7 @@ class MobileServer implements HttpClientAdapter {
       case '/admin/empresas':
         return json(companies);
       case '/modulo_inmuebles/propiedades/catalogo':
+      case '/modulo_inmuebles/propiedades':
         return json([
           if (all || tenant == 1) property(1),
           if (all || tenant == 2) property(2),

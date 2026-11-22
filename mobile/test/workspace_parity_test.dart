@@ -119,6 +119,15 @@ void main() {
     expect(find.text('Bitácora'), findsOneWidget);
     expect(tester.getBottomRight(find.text('Bitácora')).dy, lessThan(440));
     expect(find.text('Tu inmobiliaria, a la mano'), findsNothing);
+    await tester.tap(find.byTooltip('Limpiar búsqueda'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('workspace-search')))
+          .controller!
+          .text,
+      isEmpty,
+    );
     await tester.enterText(
       find.byKey(const ValueKey('workspace-search')),
       'propiedades',

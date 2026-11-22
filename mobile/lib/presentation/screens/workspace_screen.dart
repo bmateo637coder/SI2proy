@@ -14,7 +14,23 @@ class WorkspaceScreen extends StatefulWidget {
 }
 
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
-  String query = '';
+  final searchController = TextEditingController();
+  String get query => searchController.text.trim();
+  @override
+  void initState() {
+    super.initState();
+    searchController.addListener(searchChanged);
+  }
+
+  void searchChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    searchController.removeListener(searchChanged);
+    searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -30,12 +46,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: TextField(
         key: const ValueKey('workspace-search'),
-        onChanged: (value) => setState(() => query = value),
+        controller: searchController,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-        decoration: const InputDecoration(
-          prefixIcon: Icon(Icons.search),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
           hintText: 'Buscar una función…',
+          suffixIcon: query.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Limpiar búsqueda',
+                  onPressed: searchController.clear,
+                  icon: const Icon(Icons.close),
+                ),
         ),
       ),
     );

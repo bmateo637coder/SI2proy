@@ -102,12 +102,27 @@ void main() {
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
       expect(find.text('Bitácora'), findsOneWidget);
+      await tester.tap(find.byTooltip('Limpiar búsqueda'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('workspace-search')),
         'propiedades',
       );
       await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('workspace-search')))
+            .controller!
+            .text,
+        'propiedades',
+      );
+      expect(
+        find.text('Gestionar propiedades'),
+        findsOneWidget,
+        reason:
+            'Rol ${auth.user?.idRol}; textos: ${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(" | ")}',
+      );
       await tester.scrollUntilVisible(
         find.text('Gestionar propiedades'),
         100,
