@@ -7,7 +7,7 @@ import os
 import re
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, unquote
 from urllib.request import Request, urlopen
 
 
@@ -68,6 +68,27 @@ def discover(url):
     return service
 
 
+def diagnose_database(rows):
+    values = {r['envVar']['key']:r['envVar']['value'] for r in rows}
+    dsn = values.get('DATABASE_URL','')
+    if not dsn: return
+    try:
+        import psycopg2
+        with psycopg2.connect(dsn, connect_timeout=8, options='-c statement_timeout=5000') as connection:
+            with connection.cursor() as cursor: cursor.execute('SELECT 1'); cursor.fetchone()
+        print('Diagnóstico BD: conexión y consulta de lectura correctas.', flush=True)
+    except ImportError:
+        print('Diagnóstico BD: controlador no disponible en este ejecutor.',flush=True)
+    except Exception as error:
+        parsed = urlsplit(dsn)
+        message = str(error)
+        hidden = [dsn, parsed.hostname, parsed.username, parsed.password, parsed.path.lstrip('/')]
+        for value in sorted((unquote(v) for v in hidden if v),key=len,reverse=True): message=message.replace(value,'[oculto]')
+        for value in values.values():
+            if len(value)>8: message=message.replace(value,'[oculto]')
+        print('Diagnóstico BD: ' + type(error).__name__ + ': ' + safe(message)[:1000],flush=True)
+
+
 def inspect_service(service):
     details = service.get("serviceDetails", {})
     specific = details.get("envSpecificDetails", {})
@@ -78,6 +99,7 @@ def inspect_service(service):
         "buildCommand": specific.get("buildCommand"), "startCommand": specific.get("startCommand"),
         "detailKeys": sorted(details), "runtimeKeys": sorted(specific)}
     rows = api(f"services/{service['id']}/env-vars?limit=100")
+    diagnose_database(rows)
     summary["environmentKeys"] = sorted(row["envVar"]["key"] for row in rows)
     for row in rows:
         if row["envVar"]["key"] == "PYTHON_VERSION":
