@@ -124,7 +124,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       if (widget.drawer) Navigator.pop(context);
-                      context.push(m.path);
+                      if ([
+                        '/catalogo',
+                        '/contratos',
+                        '/clientes',
+                        '/reportes',
+                        '/profile',
+                      ].contains(m.path)) {
+                        context.go(m.path);
+                      } else {
+                        context.push(m.path);
+                      }
                     },
                   ),
                 ),

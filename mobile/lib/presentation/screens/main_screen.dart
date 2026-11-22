@@ -74,7 +74,8 @@ class MainScreen extends StatelessWidget {
     return Scaffold(
       drawer: const Drawer(width: 360, child: WorkspaceScreen(drawer: true)),
       floatingActionButton:
-          (user?.idRol == 1 || user?.canOperateOffline == true)
+          ((currentBranch == 0 || currentBranch == 4) &&
+              (user?.idRol == 1 || user?.canOperateOffline == true))
           ? FloatingActionButton.extended(
               onPressed: () => context.push('/offline'),
               icon: const Icon(Icons.offline_bolt),

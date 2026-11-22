@@ -92,6 +92,23 @@ void main() {
         findsOneWidget,
         reason: auth.errorMessage ?? 'La cuenta debe llegar al catálogo después de preparar el acceso local.',
       );
+      await tester.tap(find.text('Todo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Centro de trabajo'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'bitacora');
+      await tester.pumpAndSettle();
+      expect(find.text('Bitácora'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'propiedades');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Gestionar propiedades'));
+      await tester.tap(find.text('Gestionar propiedades'));
+      await tester.pumpAndSettle();
+      expect(find.text('Gestión de propiedades'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Reportes').last);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
