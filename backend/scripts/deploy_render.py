@@ -207,7 +207,14 @@ def deploy(service, url):
     if branch not in {"feat/parcial2-saas-offline-analitica", "feat/sprint4-integracion-web-movil", "main"}:
         raise SystemExit("Seleccionar la rama del parcial 2 o main para actualizar produccion.")
     service_id = service["id"]
-    audit = backup_audit(service, url)
+    variables = api(f"services/{service_id}/env-vars?limit=100")
+    recovering = any(r['envVar']['key'] == 'DATABASE_RECOVERY_SNAPSHOT' for r in variables)
+    if recovering:
+        # Recuperación explícitamente autorizada cuando la base anterior ya no existe.
+        audit = []
+        print('Se usa la base recuperada del respaldo; el historial SQL se conserva en la migración.', flush=True)
+    else:
+        audit = backup_audit(service, url)
     # Solo se actualiza Python: las credenciales y DATABASE_URL se conservan.
     api(f"services/{service_id}/env-vars/PYTHON_VERSION", "PUT", {"value": "3.12.10"})
     api(f"services/{service_id}", "PATCH", {

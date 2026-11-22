@@ -1,0 +1,48 @@
+name: Recuperar PostgreSQL desde respaldo verificado
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        type: choice
+        options: [validate, restore]
+        default: validate
+permissions:
+  contents: read
+concurrency:
+  group: recovery-database
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: restauracion_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'psycopg2-binary>=2.9,<3' 'cryptography>=43,<51'
+      - name: Validar respaldo y recuperar únicamente en base nueva gratuita
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RENDER_API_KEY: ${{ inputs.operation == 'restore' && secrets.RENDER_API_KEY || '' }}
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+          VALIDATE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/restauracion_test
+          RECOVERY_OPERATION: ${{ inputs.operation }}
+        run: python backend/scripts/recover_database.py "$RECOVERY_OPERATION"
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.operation == 'restore'
+        with:
+          name: configuracion-anterior-cifrada
+          path: database-before-recovery.fernet
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,5 +1,6 @@
 """Migración aditiva e idempotente. No elimina tablas ni registros existentes."""
 from datetime import timedelta
+import json
 
 from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
@@ -33,6 +34,13 @@ def migrate():
         Base.metadata.create_all(conn)
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_propiedad_id_sucursal ON propiedad (id_sucursal)"))
         with Session(conn) as db:
+            for event in db.query(m.Bitacora).all():
+                identity = 'legacy-db:' + str(event.id_bitacora)
+                if not db.query(logger.RegistroAuditoria).filter_by(identidad=identity).first():
+                    record = {'ip': 'Base de datos', 'usuario': event.usuario.nombre if event.usuario else event.ci_usuario,
+                              'accion': event.accion, 'fecha_hora': event.fecha_hora.strftime('%Y-%m-%d %H:%M:%S'),
+                              'origen': 'Historial SQL conservado'}
+                    db.add(logger.RegistroAuditoria(identidad=identity, contenido=logger.fernet.encrypt(json.dumps(record).encode()).decode()))
             for code, name, limit, ai in [("basico", "Básico", 2, False), ("profesional", "Profesional", 10, True)]:
                 if not db.get(m.Plan, code):
                     db.add(m.Plan(codigo=code, nombre=name, max_sucursales=limit, reportes_ia=ai))
