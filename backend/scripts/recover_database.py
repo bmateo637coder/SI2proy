@@ -70,7 +70,8 @@ def restore(dsn, source):
 
 
 def verify(dsn):
-    expected = {'tenant': 3, 'usuario': 7, 'propiedad': 3, 'cliente': 3, 'contrato': 1, 'bitacora': 14}
+    expected = {'tenant': 3, 'usuario': 7, 'propiedad': 3, 'cliente': 3, 'contrato': 1,
+                'bitacora': 0, 'pago': 1, 'cuota': 1, 'caracteristica': 6}
     with psycopg2.connect(dsn, connect_timeout=15) as connection:
         with connection.cursor() as cursor:
             counts = {}
