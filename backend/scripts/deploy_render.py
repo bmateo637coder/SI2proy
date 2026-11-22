@@ -1,6 +1,7 @@
 """Actualizar el servicio existente desde Actions sin imprimir credenciales."""
 import argparse
 import ast
+import ipaddress
 from pathlib import Path
 import json
 import os
@@ -87,6 +88,23 @@ def diagnose_database(rows):
         for value in values.values():
             if len(value)>8: message=message.replace(value,'[oculto]')
         print('Diagnóstico BD: ' + type(error).__name__ + ': ' + safe(message)[:1000],flush=True)
+        host = parsed.hostname or ''
+        print('Diagnóstico DNS: ' + json.dumps({'dominio_neon':host.endswith('.neon.tech'), 'espacios':any(c.isspace() for c in host), 'longitud':len(host)}),flush=True)
+        if 'could not translate host name' in str(error) and host.endswith('.neon.tech'):
+            for resolver in ['https://dns.google/resolve?', 'https://cloudflare-dns.com/dns-query?']:
+                try:
+                    req = Request(resolver + urlencode({'name':host,'type':'A'}),headers={'Accept':'application/dns-json'})
+                    with urlopen(req,timeout=8) as response: dns=json.load(response)
+                    addresses = [r['data'] for r in dns.get('Answer',[]) if r.get('type') == 1 and ipaddress.ip_address(r['data']).version == 4]
+                    print('DNS HTTPS: ' + json.dumps({'resolutor':urlsplit(resolver).hostname,'estado':dns.get('Status'),'direcciones':len(addresses)}),flush=True)
+                    if addresses:
+                        with psycopg2.connect(dsn,hostaddr=addresses[0],connect_timeout=8,options='-c statement_timeout=5000') as connection:
+                            with connection.cursor() as cursor: cursor.execute('SELECT 1'); cursor.fetchone()
+                        print('Diagnóstico BD: consulta correcta usando resolución DNS HTTPS.',flush=True)
+                        break
+                except Exception as retry:
+                    print('DNS HTTPS: intento no completado ('+type(retry).__name__+').',flush=True)
+
 
 
 def inspect_service(service):

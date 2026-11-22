@@ -56,7 +56,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          script: cd mobile && flutter test integration_test -d emulator-5554 --no-dds
+          script: cd mobile && bash scripts/test_android_ci.sh
   build-apk:
     needs: android-test
     runs-on: ubuntu-latest
