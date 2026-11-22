@@ -124,7 +124,17 @@ void main() {
       'propiedades',
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Gestionar propiedades'), 100);
+    await tester.scrollUntilVisible(
+      find.text('Gestionar propiedades'),
+      100,
+      scrollable: find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          )
+          .last,
+    );
     expect(find.text('Gestionar propiedades'), findsOneWidget);
     expect(find.text('Bitácora'), findsNothing);
   });
