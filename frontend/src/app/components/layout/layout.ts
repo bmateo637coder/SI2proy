@@ -24,6 +24,7 @@ export class Layout {
   tenantNombre: string = '';
   canOperate: boolean = false;
   showHelp: boolean = false;
+  menuOpen = false;
   buildVersion: string = environment.version;
   empresas = signal<any[]>([]);
   selectedTenant: number | null = null;

@@ -1,12 +1,13 @@
 <div class="luxury-dashboard">
     <!-- Menú Lateral -->
-    <aside class="luxury-sidebar">
+    <button *ngIf="menuOpen" class="menu-backdrop" aria-label="Cerrar menú" (click)="menuOpen = false"></button>
+    <aside class="luxury-sidebar" id="main-navigation" [class.menu-open]="menuOpen" (keydown.escape)="menuOpen = false">
         <div class="sidebar-brand">
             <h2 class="brand-text">Raíces</h2>
             <p class="brand-subtext">{{ rolNombre }}</p>
         </div>
 
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" aria-label="Navegación principal" (click)="$any($event.target).closest('a') && (menuOpen = false)">
             <a *ngIf="authService.allTenants()" routerLink="/dashboard/vista-global" class="luxury-nav-link text-gold" routerLinkActive="active">Vista global por inmobiliaria</a>
             <ng-container *ngIf="canOperate">
             <a routerLink="/dashboard/offline" class="luxury-nav-link" routerLinkActive="active">Operaciones sin conexión</a>
@@ -92,6 +93,7 @@
     <main class="luxury-main">
         <p *ngIf="servicios.message()" role="status" style="padding:1rem;background:#fff7ed;">{{servicios.message()}}</p>
         <header class="luxury-topbar">
+            <button class="menu-toggle" (click)="menuOpen = !menuOpen" aria-label="Abrir menú de navegación" aria-controls="main-navigation" [attr.aria-expanded]="menuOpen">☰ Menú</button>
             <div class="topbar-left">
                 <h3 class="topbar-title">Bienvenido al Panel de Control</h3>
             </div>

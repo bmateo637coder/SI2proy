@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -25,6 +25,7 @@ export class Catalogo implements OnInit, OnDestroy {
   error = '';
   private catalogRequest?: Subscription;
   private recommendationsRequest?: Subscription;
+  private propertyById = new Map<number, any>();
   propiedades: any[] = [];
   recomendados: any[] = [];
   private apiBase = environment.apiUrl;
@@ -56,10 +57,11 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   abrirDetalles(prop: any) {
-    this.propiedadSeleccionada = this.propiedades.find(p => p.id_propiedad === prop.id_propiedad) || prop;
+    this.propiedadSeleccionada = this.propertyById.get(prop.id_propiedad) || prop;
     this.mostrarModalDetalle = true;
   }
 
+  @HostListener('document:keydown.escape')
   cerrarDetalles() {
     this.mostrarModalDetalle = false;
     this.propiedadSeleccionada = null;
@@ -177,6 +179,7 @@ export class Catalogo implements OnInit, OnDestroy {
       .subscribe({
         next: (res: any[]) => {
           this.propiedades = [...res];
+          for (const p of res) this.propertyById.set(p.id_propiedad, p);
           this.loading = false;
           this.cdr.detectChanges();
         },
