@@ -117,7 +117,14 @@ def inspect_service(service):
         "buildCommand": specific.get("buildCommand"), "startCommand": specific.get("startCommand"),
         "detailKeys": sorted(details), "runtimeKeys": sorted(specific)}
     rows = api(f"services/{service['id']}/env-vars?limit=100")
-    diagnose_database(rows)
+    values = {r['envVar']['key']:r['envVar']['value'] for r in rows}
+    host = urlsplit(values.get('DATABASE_URL','')).hostname or ''
+    if host.startswith('dpg-'):
+        databases = api('postgres?' + urlencode({'ownerId':service['ownerId'],'limit':100}))
+        summary['databases'] = [{k:p.get(k) for k in ('id','name','status','plan','region','createdAt','expiresAt','suspended')} | {'coincide_con_backend':host.startswith(p.get('id','?'))} for r in databases for p in [r.get('postgres',r)]]
+        print('La URL de la base es interna de Render; no es resoluble desde Actions.',flush=True)
+    else:
+        diagnose_database(rows)
     summary["environmentKeys"] = sorted(row["envVar"]["key"] for row in rows)
     for row in rows:
         if row["envVar"]["key"] == "PYTHON_VERSION":
