@@ -88,6 +88,17 @@ def inspect_service(service):
         summary["latestDeploy"] = {key: latest.get(key) for key in ("id", "status", "createdAt", "finishedAt")}
         summary["latestDeploy"]["commit"] = latest.get("commit", {}).get("id")
     print(safe(json.dumps(summary, ensure_ascii=False, indent=2)), flush=True)
+    try:
+        logs = api('logs?' + urlencode({'ownerId':service['ownerId'], 'resource':service['id'], 'limit':100}))
+        messages = [r.get('message','') for r in logs.get('logs',[])]
+        # Los logs de Actions son públicos: publicar solo señales operativas, sin datos de solicitudes.
+        patterns = {'memoria':r'out of memory|OOM|memory limit', 'base_de_datos':r'OperationalError|connection.*(failed|timed out|refused)|UndefinedColumn|UndefinedTable',
+                    'inicio':r'Application startup complete|Uvicorn running|Your service is live',
+                    'dependencia':r'ModuleNotFoundError|ImportError', 'health':r'health check.*(fail|timed out)', 'tarea_diaria':r'backup diario|registrando vencimientos'}
+        print('Diagnóstico de logs: ' + json.dumps({'cantidad':len(messages), 'señales':{k:sum(bool(re.search(v,m,re.I)) for m in messages) for k,v in patterns.items()},
+            'excepciones':sorted(set(t for msg in messages for t in re.findall(r'\b([A-Za-z_]+(?:Error|Exception)):',msg)))}), flush=True)
+    except (SystemExit, KeyError, TypeError):
+        print('Los logs no están disponibles con este acceso; se conserva el estado del servicio.',flush=True)
 
 
 def verify_health(url, commit=None, attempts=12):
