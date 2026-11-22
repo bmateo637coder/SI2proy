@@ -117,6 +117,8 @@ def main():
         raise RuntimeError('La versión existente corresponde a otro commit; se conserva sin modificarla.')
     notes = f'''Raíces Android 3.1.1, conectada al backend de producción.
 
+- Mapas renovados: encuadre de todas las ubicaciones, zoom, fichas desplazables y mapa de ventas ampliable. Se excluyen coordenadas inválidas y se conserva la geolocalización en la copia local.
+- Cargas protegidas frente a respuestas antiguas al cambiar de sección o inmobiliaria, incluidos clientes, contratos y pagos.
 - Nuevo centro de trabajo con buscador y menú por áreas para acceder a todas las funciones.
 - Administración nativa de propiedades y fotos, propietarios, agentes, clientes, usuarios, roles/permisos, empresas, planes, suscripciones y sucursales.
 - Vista global SaaS, bitácora con llave y descarga/restauración de respaldos SQL.

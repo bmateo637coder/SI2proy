@@ -9,6 +9,12 @@ class PropiedadesProvider extends ChangeNotifier {
 
   final PropiedadesRepository _repository;
   int _generation = 0;
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
   void reset() {
     _generation++;
     _propiedades = [];

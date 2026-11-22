@@ -9,10 +9,21 @@ class ContratosProvider extends ChangeNotifier {
 
   final ContratosRepository _repository;
   int _generation = 0;
+  int _listRequest = 0;
+  int _detailRequest = 0;
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
   void reset() {
     _generation++;
+    _isSubmitting = false;
+    _isDownloadingComprobante = false;
     _contratos = [];
-    _isLoading = false;
+    _listLoading = false;
+    _detailLoading = false;
     _errorMessage = null;
     _detalle = null;
     _successMessage = null;
@@ -25,8 +36,8 @@ class ContratosProvider extends ChangeNotifier {
   ContratoModel? _detalle;
   ContratoModel? get detalle => _detalle;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
+  bool _listLoading = false, _detailLoading = false;
+  bool get isLoading => _listLoading || _detailLoading;
 
   bool _isSubmitting = false;
   bool get isSubmitting => _isSubmitting;
@@ -42,20 +53,21 @@ class ContratosProvider extends ChangeNotifier {
 
   Future<void> fetchContratos() async {
     final generation = _generation;
-    _isLoading = true;
+    final request = ++_listRequest;
+    _listLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final result = await _repository.getContratos();
-      if (generation != _generation) return;
+      if (generation != _generation || request != _listRequest) return;
       _contratos = result;
     } catch (e) {
-      if (generation != _generation) return;
+      if (generation != _generation || request != _listRequest) return;
       _errorMessage = apiError(e);
     } finally {
-      if (generation == _generation) {
-        _isLoading = false;
+      if (generation == _generation && request == _listRequest) {
+        _listLoading = false;
         notifyListeners();
       }
     }
@@ -63,21 +75,22 @@ class ContratosProvider extends ChangeNotifier {
 
   Future<void> fetchDetalle(int idContrato) async {
     final generation = _generation;
+    final request = ++_detailRequest;
     _detalle = null;
-    _isLoading = true;
+    _detailLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final result = await _repository.getContratoDetalle(idContrato);
-      if (generation != _generation) return;
+      if (generation != _generation || request != _detailRequest) return;
       _detalle = result;
     } catch (e) {
-      if (generation != _generation) return;
+      if (generation != _generation || request != _detailRequest) return;
       _errorMessage = apiError(e);
     } finally {
-      if (generation == _generation) {
-        _isLoading = false;
+      if (generation == _generation && request == _detailRequest) {
+        _detailLoading = false;
         notifyListeners();
       }
     }
@@ -93,6 +106,7 @@ class ContratosProvider extends ChangeNotifier {
     int? numCuotas,
     bool aplicarPromocion = false,
   }) async {
+    final generation = _generation;
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
@@ -108,17 +122,20 @@ class ContratosProvider extends ChangeNotifier {
         numCuotas: numCuotas,
         aplicarPromocion: aplicarPromocion,
       );
+      if (generation != _generation) return false;
       _contratos = [..._contratos, creado];
       _successMessage = creado.pendienteSync
           ? 'Contrato guardado en el teléfono. Pendiente de sincronizar.'
           : 'Contrato #${creado.idContrato} creado correctamente.';
       return true;
     } catch (e) {
-      _errorMessage = apiError(e);
+      if (generation == _generation) _errorMessage = apiError(e);
       return false;
     } finally {
-      _isSubmitting = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isSubmitting = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -127,6 +144,7 @@ class ContratosProvider extends ChangeNotifier {
     required double monto,
     required String metodoPago,
   }) async {
+    final generation = _generation;
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
@@ -137,54 +155,67 @@ class ContratosProvider extends ChangeNotifier {
         monto: monto,
         metodoPago: metodoPago,
       );
+      if (generation != _generation) return null;
       final recibo = result['numero_recibo'] as String? ?? '';
       _successMessage = result['pendiente_sync'] == true
           ? 'Pago guardado en el teléfono. Recibo provisional: $recibo. Pendiente de sincronizar.'
           : 'Pago registrado. Recibo: $recibo';
       await fetchDetalle(idContrato);
+      if (generation != _generation) return null;
       await fetchContratos();
+      if (generation != _generation) return null;
       return recibo;
     } catch (e) {
-      _errorMessage = apiError(e);
+      if (generation == _generation) _errorMessage = apiError(e);
       return null;
     } finally {
-      _isSubmitting = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isSubmitting = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<bool> eliminarContrato(int idContrato) async {
+    final generation = _generation;
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       await _repository.eliminarContrato(idContrato);
+      if (generation != _generation) return false;
       _contratos = _contratos.where((c) => c.idContrato != idContrato).toList();
       _successMessage = 'Contrato eliminado.';
       return true;
     } catch (e) {
-      _errorMessage = apiError(e);
+      if (generation == _generation) _errorMessage = apiError(e);
       return false;
     } finally {
-      _isSubmitting = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isSubmitting = false;
+        notifyListeners();
+      }
     }
   }
 
   Future<Uint8List?> descargarComprobante(int idPago) async {
+    final generation = _generation;
     _isDownloadingComprobante = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      return await _repository.descargarComprobante(idPago);
+      final bytes = await _repository.descargarComprobante(idPago);
+      return generation == _generation ? bytes : null;
     } catch (e) {
-      _errorMessage = apiError(e);
+      if (generation == _generation) _errorMessage = apiError(e);
       return null;
     } finally {
-      _isDownloadingComprobante = false;
-      notifyListeners();
+      if (generation == _generation) {
+        _isDownloadingComprobante = false;
+        notifyListeners();
+      }
     }
   }
 
