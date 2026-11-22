@@ -28,7 +28,7 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
   List<PropiedadModel> get _propiedadesElegibles => context
       .watch<PropiedadesProvider>()
       .propiedades
-      .where((p) => p.estado == 'Disponible' || p.estado == 'Reservada')
+      .where((p) => p.estado == 'Disponible')
       .toList();
 
   @override
@@ -198,6 +198,16 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
                     labelText: 'Monto total (\$us) *',
                     border: OutlineInputBorder(),
                   ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Aplicar promoción vigente'),
+                  subtitle: const Text(
+                    'El servidor valida la vigencia y calcula el descuento sobre el monto ingresado. Sin promoción activa, pide revisar el contrato.',
+                  ),
+                  value: _aplicarPromocion,
+                  onChanged: (v) => setState(() => _aplicarPromocion = v),
                 ),
                 const SizedBox(height: 16),
                 TextField(

@@ -35,6 +35,7 @@ import offline
 import reportes_generativos
 import analitica_ml
 import vista_global
+import property_media
 
 from contextlib import asynccontextmanager
 
@@ -46,6 +47,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Raíces - Inmobiliaria API", version="2.0.0", lifespan=lifespan)
+app.include_router(property_media.router)
 
 app.include_router(ia_router.router)
 app.include_router(contratos_router.router)
@@ -649,26 +651,30 @@ async def restaurar_backup(
     if current_user.id_rol != 1:
         raise HTTPException(status_code=403, detail="Solo Super Admin puede restaurar backups")
 
-    if not file.filename.endswith(".sql"):
+    if not (file.filename or '').lower().endswith(".sql"):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos .sql")
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".sql", prefix="restore_")
     try:
-        content = await file.read()
+        content = await file.read(50 * 1024 * 1024 + 1)
+        if len(content) > 50 * 1024 * 1024:
+            raise HTTPException(413, 'El respaldo debe pesar como máximo 50 MB.')
+        # pg_dump 18 añade un SET no admitido por PostgreSQL 16 de Render.
+        content = content.replace(b'SET transaction_timeout = 0;\n', b'').replace(b'SET transaction_timeout = 0;\r\n', b'')
         tmp.write(content)
         tmp.close()
 
-        env = os.environ.copy()
-        env["PGPASSWORD"] = get_postgres_password()
+        from backup_service import _pg_env
+        env = _pg_env()
 
         psql_exe = pg_bin_tool("psql")
         result = subprocess.run(
-            [psql_exe, uri_conexion(), "-f", tmp.name, "--no-password"],
+            [psql_exe, uri_conexion(), "-f", tmp.name, "--no-password", "--single-transaction", "--set=ON_ERROR_STOP=1"],
             capture_output=True, text=True, env=env, timeout=120
         )
 
         if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Error al restaurar: {result.stderr[:500]}")
+            raise HTTPException(status_code=500, detail='No se pudo restaurar el archivo. La transacción fue revertida; verifique la compatibilidad del respaldo.')
 
         return {"mensaje": "Base de datos restaurada exitosamente"}
     except subprocess.TimeoutExpired:
@@ -676,6 +682,7 @@ async def restaurar_backup(
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="psql no encontrado. Asegúrese de que PostgreSQL esté en el PATH del sistema.")
     finally:
+        tmp.close()
         if os.path.exists(tmp.name):
             os.unlink(tmp.name)
 
@@ -731,17 +738,8 @@ def guardar_caracteristicas(db, propiedad, characteristics):
             db.add(models.Caracteristica(id_propiedad=propiedad.id_propiedad, nombre=item.nombre.strip(), valor=item.valor.strip()))
 
 @app.post("/upload")
-async def upload_image(file: UploadFile = File(...), current_user=Depends(require_staff)):
-    try:
-        # Save file to uploads folder
-        ext = file.filename.split('.')[-1]
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        filepath = os.path.join("uploads", filename)
-        with open(filepath, "wb") as f:
-            f.write(await file.read())
-        return {"url": f"/uploads/{filename}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def upload_image(file: UploadFile = File(...), current_user=Depends(require_staff), db: Session = Depends(get_db)):
+    return property_media.save_photo(file, db)
 
 @app.post("/modulo_inmuebles/propiedades", response_model=schemas.PropiedadAdminResponse, status_code=201)
 def create_propiedad(

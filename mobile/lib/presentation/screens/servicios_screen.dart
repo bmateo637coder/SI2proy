@@ -12,14 +12,36 @@ import 'package:provider/provider.dart';
 import '../../data/services/sprint4_service.dart';
 import '../../data/services/push_service.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/company_scope.dart';
 
 class ServiciosScreen extends StatefulWidget {
-  const ServiciosScreen({super.key});
+  const ServiciosScreen({super.key, this.initialSection = 'Inicio'});
+  final String initialSection;
   @override
   State<ServiciosScreen> createState() => _ServiciosScreenState();
 }
 
 class _ServiciosScreenState extends State<ServiciosScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSection != 'Inicio') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) open(widget.initialSection);
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ServiciosScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSection != widget.initialSection) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) open(widget.initialSection);
+      });
+    }
+  }
+
   String section = 'Inicio',
       message = '',
       metric = 'cierres',
@@ -806,6 +828,20 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           exportExecutive,
           icon: Icons.picture_as_pdf,
         ),
+        if (data is Map) ...[
+          card('Cartera', [Text('${data['cartera']['total']} inmuebles')]),
+          card('Resumen financiero', [
+            Text('Cobrado: ${data['ingresos']['cobrado_total']}'),
+            Text('Por cobrar: ${data['ingresos']['por_cobrar']}'),
+            Text('Vencido: ${data['ingresos']['vencido']}'),
+            Text('Contratos: ${data['ingresos']['contratos']}'),
+          ]),
+          card('Mantenimiento', [
+            Text(
+              'Abiertas: ${data['mantenimiento']['abiertas']} · Costo: ${data['mantenimiento']['costo_total']}',
+            ),
+          ]),
+        ],
       ],
       if (section == 'Notificaciones') ...[
         button(
@@ -903,7 +939,20 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             ),
         ],
       ),
-      body: ListView(padding: const EdgeInsets.all(16), children: children),
+      body: Column(
+        children: [
+          const CompanyScope(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => open(section),
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: children,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

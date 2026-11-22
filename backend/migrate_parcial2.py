@@ -13,6 +13,7 @@ import sprint4_fidelizacion
 import sprint4_mantenimiento
 import sprint4_sync
 import sprint4_avisos
+import property_media
 from saas import today
 
 

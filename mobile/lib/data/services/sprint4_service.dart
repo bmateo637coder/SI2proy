@@ -389,6 +389,13 @@ class Sprint4Service extends ChangeNotifier {
       if (staff) '/api/reportes/ejecutivo',
       if (staff) '/modulo_inmuebles/clientes',
       if (staff && !auth.allTenants) '/api/saas/suscripcion',
+      if (staff) '/api/saas/sucursales',
+      if (auth.user?.canSeePropiedades == true) '/modulo_inmuebles/propiedades',
+      if (auth.user?.canSeePropietarios == true) '/modulo_inmuebles/propietarios',
+      if (auth.user?.canSeeAgentes == true) '/modulo_inmuebles/agentes',
+      if (auth.user?.canSeeUsuarios == true) '/gestion_usuarios/usuarios',
+      if (auth.user?.canSeeRoles == true) ...['/roles', '/permisos'],
+      if (auth.isSuperAdmin) ...['/admin/empresas', '/admin/vista-global/resumen', '/admin/backup/estado'],
     ];
     for (final path in paths) {
       if (disposed || key != account) return;

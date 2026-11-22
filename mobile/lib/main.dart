@@ -186,8 +186,34 @@ class _InmobiliariaAppState extends State<InmobiliariaApp> {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xfff3f6f8),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xfff3f6f8),
+          surfaceTintColor: Colors.transparent,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xffe2e8ed)),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
         inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          filled: true,
+          fillColor: Colors.white,
         ),
       ),
       routerConfig: router,

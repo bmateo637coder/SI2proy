@@ -89,9 +89,11 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 20),
           ListTile(
             leading: const Icon(Icons.dashboard_customize),
-            title: const Text('Servicios, favoritos y gestión'),
-            subtitle: const Text('Búsqueda, IA, alertas, notificaciones y mantenimiento'),
-            onTap: () => context.push('/servicios'),
+            title: const Text('Todas las funciones'),
+            subtitle: const Text(
+              'Inmuebles, operaciones, reportes, IA y administración',
+            ),
+            onTap: () => context.push('/inicio'),
           ),
           ListTile(
             leading: const Icon(Icons.auto_awesome),

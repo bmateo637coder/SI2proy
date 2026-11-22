@@ -13,8 +13,6 @@ import '../presentation/screens/registrar_cliente_screen.dart';
 import '../presentation/screens/contratos_screen.dart';
 import '../presentation/screens/nuevo_contrato_screen.dart';
 import '../presentation/screens/reportes_dinamicos_screen.dart';
-import '../presentation/screens/admin/usuarios_screen.dart';
-import '../presentation/screens/admin/roles_screen.dart';
 import '../presentation/screens/agendar_visita_screen.dart';
 import '../presentation/screens/forgot_password_screen.dart';
 import '../presentation/screens/map_screen.dart';
@@ -24,6 +22,8 @@ import '../presentation/screens/ia_screen.dart';
 import '../presentation/widgets/company_scope.dart';
 import '../presentation/screens/sync_screen.dart';
 import '../presentation/screens/servicios_screen.dart';
+import '../presentation/screens/workspace_screen.dart';
+import '../presentation/screens/admin/management_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorCatKey = GlobalKey<NavigatorState>(debugLabel: 'catalogo');
@@ -65,9 +65,40 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
     return null;
   },
   routes: [
-    GoRoute(path: '/servicios', builder: (_, _) => ScopedScreen(builder: (_) => const ServiciosScreen())),
-    GoRoute(path:'/sincronizacion', builder:(_,_)=>const SyncScreen()),
-    GoRoute(path:'/validar-sesion', builder:(_,_)=>const LoginScreen()),
+    GoRoute(path: '/inicio', builder: (_, _) => const WorkspaceScreen()),
+    GoRoute(
+      path: '/gestion/:modulo',
+      builder: (context, state) {
+        final module = state.pathParameters['modulo']!;
+        final user = auth.user;
+        final superOnly = [
+          'empresas',
+          'global',
+          'bitacora',
+          'respaldos',
+        ].contains(module);
+        final allowed = ManagementScreenTitles.allowed(module, user);
+        if ((superOnly && !auth.isSuperAdmin) || !allowed) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Acceso')),
+            body: const Center(
+              child: Text('Tu cuenta no tiene acceso a esta función.'),
+            ),
+          );
+        }
+        return ScopedScreen(builder: (_) => ManagementScreen(module: module));
+      },
+    ),
+    GoRoute(
+      path: '/servicios',
+      builder: (_, state) => ScopedScreen(
+        builder: (_) => ServiciosScreen(
+          initialSection: state.uri.queryParameters['seccion'] ?? 'Inicio',
+        ),
+      ),
+    ),
+    GoRoute(path: '/sincronizacion', builder: (_, _) => const SyncScreen()),
+    GoRoute(path: '/validar-sesion', builder: (_, _) => const LoginScreen()),
     GoRoute(
       path: '/ia',
       builder: (_, _) => ScopedScreen(builder: (_) => const IaScreen()),
@@ -151,18 +182,8 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const NuevoContratoScreen(),
     ),
-    GoRoute(
-      path: '/usuarios',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) =>
-          ScopedScreen(builder: (_) => const UsuariosScreen()),
-    ),
-    GoRoute(
-      path: '/roles',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) =>
-          ScopedScreen(builder: (_) => const RolesScreen()),
-    ),
+    GoRoute(path: '/usuarios', redirect: (_, _) => '/gestion/usuarios'),
+    GoRoute(path: '/roles', redirect: (_, _) => '/gestion/roles'),
 
     GoRoute(
       path: '/forgot-password',
