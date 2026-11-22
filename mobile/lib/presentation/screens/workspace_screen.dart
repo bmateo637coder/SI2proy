@@ -26,63 +26,71 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         )
         .toList();
     final groups = modules.map((m) => m.group).toSet();
+    final search = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: TextField(
+        key: const ValueKey('workspace-search'),
+        onChanged: (value) => setState(() => query = value),
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+        decoration: const InputDecoration(
+          prefixIcon: Icon(Icons.search),
+          hintText: 'Buscar una función…',
+        ),
+      ),
+    );
     final content = ListView(
       padding: const EdgeInsets.all(16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xff123e4b), Color(0xff0e7490)],
+        if (query.trim().isEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xff123e4b), Color(0xff0e7490)],
+              ),
+              borderRadius: BorderRadius.circular(24),
             ),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'RAÍCES',
-                style: TextStyle(
-                  color: Colors.white70,
-                  letterSpacing: 3,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                widget.drawer
-                    ? 'Todas las funciones'
-                    : 'Tu inmobiliaria, a la mano',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                auth.scopeLabel,
-                style: const TextStyle(color: Colors.white),
-              ),
-              if (auth.allTenants)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Consulta todas las empresas. Para registrar cambios, elige una inmobiliaria.',
-                    style: TextStyle(color: Colors.white70),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'RAÍCES',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    letterSpacing: 3,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  widget.drawer
+                      ? 'Todas las funciones'
+                      : 'Tu inmobiliaria, a la mano',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  auth.scopeLabel,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                if (auth.allTenants)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Consulta todas las empresas. Para registrar cambios, elige una inmobiliaria.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          onChanged: (value) => setState(() => query = value),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search),
-            hintText: 'Buscar una función…',
-          ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 16),
+        ],
         if (modules.isEmpty)
           const Padding(
             padding: EdgeInsets.all(24),
@@ -142,12 +150,22 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ],
       ],
     );
-    if (widget.drawer) return SafeArea(child: content);
+    if (widget.drawer) {
+      return SafeArea(
+        child: Column(
+          children: [
+            search,
+            Expanded(child: content),
+          ],
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Centro de trabajo')),
       body: Column(
         children: [
           const CompanyScope(),
+          search,
           Expanded(child: content),
         ],
       ),

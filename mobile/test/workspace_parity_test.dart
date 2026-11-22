@@ -13,6 +13,7 @@ import 'package:inmobiliaria_mobile/data/services/replica_store.dart';
 import 'package:inmobiliaria_mobile/data/services/sprint4_service.dart';
 import 'package:inmobiliaria_mobile/presentation/providers/auth_provider.dart';
 import 'package:inmobiliaria_mobile/presentation/screens/admin/management_screen.dart';
+import 'package:inmobiliaria_mobile/presentation/screens/workspace_screen.dart';
 import 'package:inmobiliaria_mobile/presentation/widgets/workspace_modules.dart';
 
 class WorkspaceAuth extends AuthProvider {
@@ -93,6 +94,32 @@ class WorkspaceService extends Sprint4Service {
 }
 
 void main() {
+  testWidgets('Search results remain visible above the phone keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 720);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    final auth = WorkspaceAuth(Dio());
+    addTearDown(auth.dispose);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AuthProvider>.value(
+        value: auth,
+        child: const MaterialApp(home: WorkspaceScreen()),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('workspace-search')),
+      'bitacora',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Bitácora'), findsOneWidget);
+    expect(tester.getBottomRight(find.text('Bitácora')).dy, lessThan(440));
+    expect(find.text('Tu inmobiliaria, a la mano'), findsNothing);
+  });
   test('La búsqueda de funciones encuentra textos sin escribir tildes', () {
     expect(workspaceSearch('Bitácora y Búsqueda'), contains('bitacora'));
     expect(workspaceSearch('Bitácora y Búsqueda'), contains('busqueda'));

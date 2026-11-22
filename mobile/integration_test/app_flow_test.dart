@@ -95,10 +95,17 @@ void main() {
       await tester.tap(find.text('Todo'));
       await tester.pumpAndSettle();
       expect(find.text('Centro de trabajo'), findsOneWidget);
-      await tester.enterText(find.byType(TextField).last, 'bitacora');
+      await tester.enterText(
+        find.byKey(const ValueKey('workspace-search')),
+        'bitacora',
+      );
+      FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
       expect(find.text('Bitácora'), findsOneWidget);
-      await tester.enterText(find.byType(TextField).last, 'propiedades');
+      await tester.enterText(
+        find.byKey(const ValueKey('workspace-search')),
+        'propiedades',
+      );
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Gestionar propiedades'));
