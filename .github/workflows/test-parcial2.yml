@@ -47,6 +47,12 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Conservar capturas de presentación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-presentation-review
+          path: frontend/test-results/
   mobile:
     runs-on: ubuntu-latest
     defaults:

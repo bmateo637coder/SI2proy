@@ -32,6 +32,13 @@ class WorkspaceModule {
 
 List<WorkspaceModule> workspaceModules(UserModel? user) => [
   const WorkspaceModule(
+    'Mapa de propiedades',
+    'Ubicación y ficha de los inmuebles',
+    'Inmuebles',
+    '/mapa',
+    Icons.map_outlined,
+  ),
+  const WorkspaceModule(
     'Catálogo',
     'Explorar inmuebles y agendar visitas',
     'Inmuebles',

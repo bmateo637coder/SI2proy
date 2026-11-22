@@ -1,6 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { API, authHeaders, errorTexto } from '../../core/services/api';
 
 /** CU-33: dashboard gerencial con KPIs de cartera, ingresos por cuotas, comisiones y rendimiento comercial. */
@@ -9,12 +10,14 @@ import { API, authHeaders, errorTexto } from '../../core/services/api';
   imports: [CommonModule],
   selector: 'app-dashboard-gerencial',
   styles: [`
+    .dashboard-page {padding:2rem;min-width:0;} .grid2 > *, .kpis > * {min-width:0;}
+    @media(max-width:700px) {.dashboard-page {padding:1rem;} .kpis {grid-template-columns:minmax(0,1fr);} }
     .kpis { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:1rem; margin-bottom:1.5rem; }
     .kpi { background:white; border:1px solid var(--border-light); border-radius:12px; padding:1rem 1.25rem; }
     .kpi small { display:block; color:var(--text-muted); text-transform:uppercase; font-size:0.7rem; letter-spacing:1px; }
     .kpi b { font-size:1.6rem; color:var(--secondary-color); }
     .kpi span { font-size:0.8rem; color:var(--text-muted); }
-    .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:1.5rem; margin-bottom:1.5rem; }
+    .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:1.5rem; margin-bottom:1.5rem; }
     .barras { display:flex; align-items:flex-end; gap:6px; height:180px; padding-top:1rem; }
     .barra { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
     .barra div { width:100%; background:linear-gradient(180deg,#a855f7,#7e22ce); border-radius:4px 4px 0 0; min-height:2px; }
@@ -25,12 +28,13 @@ import { API, authHeaders, errorTexto } from '../../core/services/api';
     .fila { display:flex; justify-content:space-between; padding:0.35rem 0; border-bottom:1px dashed var(--border-light); }
   `],
   template: `
-<div class="animate-fade-in" style="padding:2rem;">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
+<div class="animate-fade-in dashboard-page">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;">
     <h2 style="color:var(--secondary-color);">Dashboard gerencial</h2>
-    <button class="btn-secondary" (click)="cargar()">Actualizar</button>
+    <button class="btn-secondary" (click)="cargar()" [disabled]="loading">Actualizar</button>
   </div>
-  <p *ngIf="error" style="color:#dc2626;font-weight:600;">{{ error }}</p>
+  <p *ngIf="loading" role="status">Cargando dashboard…</p>
+  <p *ngIf="error" role="alert" style="color:#dc2626;font-weight:600;">{{ error }}</p>
   <ng-container *ngIf="d">
     <div class="kpis">
       <div class="kpi"><small>Ocupación de cartera</small><b>{{ d.cartera.ocupacion_pct }}%</b><br><span>{{ d.cartera.total }} inmuebles</span></div>
@@ -77,7 +81,10 @@ import { API, authHeaders, errorTexto } from '../../core/services/api';
   </ng-container>
 </div>`,
 })
-export class DashboardGerencial implements OnInit {
+export class DashboardGerencial implements OnInit, OnDestroy {
+  loading = false;
+  private request?: Subscription;
+  ngOnDestroy() { this.request?.unsubscribe(); }
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
   d: any = null;
@@ -87,9 +94,11 @@ export class DashboardGerencial implements OnInit {
   ngOnInit() { this.cargar(); }
 
   cargar() {
-    this.http.get<any>(API + '/api/gerencia/dashboard', { headers: authHeaders() }).subscribe({
-      next: d => { this.d = d; this.maxMes = Math.max(0, ...d.ingresos.por_mes.map((m: any) => +m.monto)); this.error = ''; this.cdr.detectChanges(); },
-      error: e => { this.error = errorTexto(e, 'No se pudo cargar el dashboard.'); this.cdr.detectChanges(); },
+    this.request?.unsubscribe();
+    this.loading = true;
+    this.request = this.http.get<any>(API + '/api/gerencia/dashboard', { headers: authHeaders() }).subscribe({
+      next: d => { this.loading = false; this.d = d; this.maxMes = Math.max(0, ...d.ingresos.por_mes.map((m: any) => +m.monto)); this.error = ''; this.cdr.detectChanges(); },
+      error: e => { this.loading = false; this.d = null; this.error = errorTexto(e, 'No se pudo cargar el dashboard.'); this.cdr.detectChanges(); },
     });
   }
 

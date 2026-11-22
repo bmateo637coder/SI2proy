@@ -28,7 +28,7 @@ class PropiedadesProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   Future<void> fetchPropiedades() async {
-    final generation = _generation;
+    final generation = ++_generation;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();

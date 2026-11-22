@@ -105,6 +105,18 @@ void main() {
         findsOneWidget,
         reason: auth.errorMessage ?? 'La cuenta debe llegar al catálogo después de preparar el acceso local.',
       );
+      await tester.tap(find.byTooltip('Mapa de propiedades'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 de 2 inmuebles ubicados'), findsOneWidget);
+      expect(find.byTooltip('Ver todas las ubicaciones'), findsOneWidget);
+      await tester.tap(find.byTooltip('Casa 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ver ficha del inmueble'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Todo'));
       await tester.pumpAndSettle();
       expect(find.text('Centro de trabajo'), findsOneWidget);

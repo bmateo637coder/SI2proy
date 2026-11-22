@@ -12,7 +12,7 @@ label{display:flex;flex-direction:column;gap:.4rem}
 small{display:block;font-size:.75rem;overflow-wrap:anywhere;color:#595959}
 .notice{padding:1rem;background:#faf6ec;border:1px solid #ddcda8;border-radius:.5rem;color:#4d422b}
 .badge{display:inline-block;background:#f3eddf;color:#73551b;border-radius:1rem;padding:.3rem .7rem;white-space:nowrap}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1rem}
 .cards article{padding:1.2rem;background:#fff;border:1px solid #e4dfd3;border-radius:.7rem}
 .table-scroll{overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:.9rem}

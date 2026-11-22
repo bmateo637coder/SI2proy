@@ -66,6 +66,8 @@ class MobileServer implements HttpClientAdapter {
     'titulo': 'Casa $tenant',
     'direccion': 'Centro',
     'precio': 1000,
+    'latitud': -17.78 - tenant * .01,
+    'longitud': -63.18 - tenant * .01,
     'estado': 'Disponible',
     'version': 1,
     'tipo_operacion': 'Venta',

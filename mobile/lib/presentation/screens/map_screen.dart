@@ -1,227 +1,160 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:geolocator/geolocator.dart';
 
-import '../providers/propiedades_provider.dart';
 import '../../core/config/api_constants.dart';
+import '../../data/models/propiedad_model.dart';
+import '../providers/propiedades_provider.dart';
+import '../widgets/company_scope.dart';
+import '../widgets/property_image.dart';
+import '../widgets/raices_map.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
-
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
 class _MapScreenState extends State<MapScreen> {
-  // Centro por defecto (Santa Cruz)
-  final LatLng _defaultCenter = const LatLng(-17.7833, -63.1821);
-  LatLng? _userLocation;
-  final MapController _mapController = MapController();
-
+  String operation = 'Todas';
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.read<PropiedadesProvider>().propiedades.isEmpty) {
-        context.read<PropiedadesProvider>().fetchPropiedades();
-      }
-      _getUserLocation(moveMap: true);
+      if (mounted) context.read<PropiedadesProvider>().fetchPropiedades();
     });
   }
 
-  Future<void> _getUserLocation({bool moveMap = false}) async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
-
-    if (permission == LocationPermission.deniedForever) return;
-
-    final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _userLocation = LatLng(position.latitude, position.longitude);
-    });
-
-    if (moveMap && _userLocation != null) {
-      _mapController.move(_userLocation!, 15.0);
-    }
-  }
-
-  void _showPropiedadDetalle(BuildContext context, dynamic prop) {
-    showModalBottomSheet(
+  void details(PropiedadModel p) {
+    showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        final imageUrl = prop.imagenes.isNotEmpty
-            ? '${ApiConstants.baseUrl}${prop.imagenes.first.url}'
-            : null;
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (imageUrl != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    imageUrl,
-                    height: 150,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      height: 150,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.home_work,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.home_work,
-                    size: 50,
-                    color: Colors.grey,
-                  ),
-                ),
-              const SizedBox(height: 16),
-              Text(
-                prop.titulo,
-                style: Theme.of(context).textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      prop.direccion,
-                      style: const TextStyle(color: Colors.grey),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '\$${prop.precio.toStringAsFixed(2)} - ${prop.tipoOperacion}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(context); // Cerrar el bottom sheet
-                  context.push('/propiedad-detalle', extra: prop);
-                },
-                child: const Text('Ver más detalles'),
-              ),
-            ],
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheet) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheet).height * .8,
           ),
-        );
-      },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (p.imagenes.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: PropertyImage(
+                      Uri.parse('${ApiConstants.baseUrl}/')
+                          .resolve(p.imagenes.first.url)
+                          .toString(),
+                      height: 170,
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                Text(p.titulo, style: Theme.of(sheet).textTheme.titleLarge),
+                if (p.inmobiliaria.isNotEmpty) Text(p.inmobiliaria),
+                Text(p.direccion),
+                const SizedBox(height: 8),
+                Text(
+                  'USD ${p.precio.toStringAsFixed(0)} · ${p.tipoOperacion} · ${p.estado}',
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  icon: const Icon(Icons.home_work_outlined),
+                  label: const Text('Ver ficha del inmueble'),
+                  onPressed: () {
+                    Navigator.pop(sheet);
+                    context.push('/propiedad-detalle', extra: p);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<PropiedadesProvider>();
-
-    // Generar marcadores
-    final List<Marker> markers = provider.propiedades.map((prop) {
-      final double lat =
-          prop.latitud ??
-          (_defaultCenter.latitude + (prop.idPropiedad * 0.005));
-      final double lng =
-          prop.longitud ??
-          (_defaultCenter.longitude + (prop.idPropiedad * 0.005));
-
-      return Marker(
-        point: LatLng(lat, lng),
-        width: 40,
-        height: 40,
-        child: GestureDetector(
-          onTap: () => _showPropiedadDetalle(context, prop),
-          child: const Icon(
-            Icons.location_pin,
-            size: 40,
-            color: Colors.redAccent,
-          ),
-        ),
-      );
-    }).toList();
-
-    // Añadir marcador del usuario si está disponible
-    if (_userLocation != null) {
-      markers.add(
-        Marker(
-          point: _userLocation!,
-          width: 50,
-          height: 50,
-          child: const Icon(
-            Icons.person_pin_circle,
-            size: 50,
-            color: Colors.blueAccent,
-          ),
-        ),
-      );
-    }
-
+    final properties = provider.propiedades
+        .where((p) => operation == 'Todas' || p.tipoOperacion == operation)
+        .toList();
+    final located = properties
+        .where((p) => mapCoordinate(p.latitud, p.longitud) != null)
+        .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Mapa Premium',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.surface,
-      ),
-      body: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          initialCenter:
-              _userLocation ??
-              _defaultCenter, // Centrar en el usuario si existe
-          initialZoom: 13.5,
-        ),
-        children: [
-          TileLayer(
-            // Capa de OpenStreetMap que no requiere API Key
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.example.inmobiliaria_mobile',
+        title: const Text('Mapa de propiedades'),
+        actions: [
+          IconButton(
+            tooltip: 'Actualizar',
+            onPressed: provider.isLoading ? null : provider.fetchPropiedades,
+            icon: const Icon(Icons.refresh),
           ),
-          MarkerLayer(markers: markers),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _getUserLocation(moveMap: true),
-        child: const Icon(Icons.my_location),
+      body: Column(
+        children: [
+          const CompanyScope(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${located.length} de ${properties.length} inmuebles ubicados',
+                  ),
+                ),
+                DropdownButton<String>(
+                  value: operation,
+                  items: ['Todas', 'Venta', 'Alquiler', 'Anticretico']
+                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => operation = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+          if (provider.isLoading) const LinearProgressIndicator(),
+          if (provider.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(provider.errorMessage!),
+            ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: RaicesMap(
+                points: [
+                  for (final p in located)
+                    MapPoint(
+                      id: '${p.idPropiedad}',
+                      label: p.titulo,
+                      point: mapCoordinate(p.latitud, p.longitud)!,
+                    ),
+                ],
+                onSelected: (point) => details(
+                  located.firstWhere((p) => '${p.idPropiedad}' == point.id),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Text(
+                '${properties.length - located.length} sin coordenadas. Toca un marcador para abrir su ficha. El mapa base necesita conexión.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

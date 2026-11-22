@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
+import { Subscription } from 'rxjs';
+import { errorTexto } from '../../core/services/api';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -19,6 +21,10 @@ export class Catalogo implements OnInit, OnDestroy {
       error: () => { this.mensajeFavorito = 'No se pudo guardar el favorito. Revisa la sincronización.'; this.cdr.markForCheck(); }
     });
   }
+  loading = false;
+  error = '';
+  private catalogRequest?: Subscription;
+  private recommendationsRequest?: Subscription;
   propiedades: any[] = [];
   recomendados: any[] = [];
   private apiBase = environment.apiUrl;
@@ -50,7 +56,7 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   abrirDetalles(prop: any) {
-    this.propiedadSeleccionada = prop;
+    this.propiedadSeleccionada = this.propiedades.find(p => p.id_propiedad === prop.id_propiedad) || prop;
     this.mostrarModalDetalle = true;
   }
 
@@ -62,7 +68,7 @@ export class Catalogo implements OnInit, OnDestroy {
   imageUrl(url: string | null | undefined): string {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return this.apiBase + url;
+    return new URL(url, this.apiBase + '/').href;
   }
 
   constructor(private http: HttpClient, public authService: AuthService, private cdr: ChangeDetectorRef) {}
@@ -79,14 +85,14 @@ export class Catalogo implements OnInit, OnDestroy {
     if (user && user.id_tenant) {
         headers = headers.set('X-Tenant-ID', user.id_tenant.toString());
     }
-    this.http.post<any>(`${environment.apiUrl}/api/ia/recomendar`, { limite: 4 }, { headers })
+    this.recommendationsRequest = this.http.post<any>(`${environment.apiUrl}/api/ia/recomendar`, { limite: 4 }, { headers })
       .subscribe({
         next: (res: any) => {
           const recs = res?.recomendaciones || res?.data || [];
           this.recomendados = recs.map((r: any) => ({
             ...r,
             imagenes: r.imagen ? [{ url: r.imagen }] : [],
-            caracteristicas: [],
+            caracteristicas: r.caracteristicas || [],
           }));
           this.cdr.detectChanges();
         },
@@ -125,6 +131,8 @@ export class Catalogo implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.destroyed = true;
+    this.catalogRequest?.unsubscribe();
+    this.recommendationsRequest?.unsubscribe();
     clearTimeout(this.reconnectTimer);
     if (this.ws) {
       this.ws.onclose = null; // Prevent auto-reconnect
@@ -133,17 +141,28 @@ export class Catalogo implements OnInit, OnDestroy {
   }
 
   aplicarFiltros() {
+    this.catalogRequest?.unsubscribe();
+    this.loading = false;
+    this.error = '';
+    for (const [min, max, label] of [[this.filtroPrecioMin, this.filtroPrecioMax, 'precio'], [this.filtroMetrosMin, this.filtroMetrosMax, 'superficie']] as const) {
+      if ((min != null && (!Number.isFinite(min) || min < 0)) || (max != null && (!Number.isFinite(max) || max < 0)) || (min != null && max != null && min > max)) {
+        this.error = `Revisa el rango de ${label}: usa valores positivos y un mínimo menor o igual al máximo.`;
+        this.propiedades = [];
+        return;
+      }
+    }
+    this.loading = true;
     let params: any = {};
     if (this.filtroOperacion) params.tipo_operacion = this.filtroOperacion;
-    if (this.filtroPrecioMin) params.precio_min = this.filtroPrecioMin;
-    if (this.filtroPrecioMax) params.precio_max = this.filtroPrecioMax;
+    if (this.filtroPrecioMin != null) params.precio_min = this.filtroPrecioMin;
+    if (this.filtroPrecioMax != null) params.precio_max = this.filtroPrecioMax;
 
     // Advanced filters
     if (this.filtroCuartos) params.cuartos = this.filtroCuartos;
     if (this.filtroBanos) params.banos = this.filtroBanos;
     if (this.filtroSalas) params.salas = this.filtroSalas;
-    if (this.filtroMetrosMin) params.metros_min = this.filtroMetrosMin;
-    if (this.filtroMetrosMax) params.metros_max = this.filtroMetrosMax;
+    if (this.filtroMetrosMin != null) params.metros_min = this.filtroMetrosMin;
+    if (this.filtroMetrosMax != null) params.metros_max = this.filtroMetrosMax;
     if (this.filtroZona) params.zona = this.filtroZona;
     if (this.filtroAmueblado) params.amueblado = this.filtroAmueblado;
     if (this.filtroServicios) params.servicios_basicos = this.filtroServicios;
@@ -154,15 +173,17 @@ export class Catalogo implements OnInit, OnDestroy {
         headers = headers.set('X-Tenant-ID', user.id_tenant.toString());
     }
 
-    this.http.get<any[]>(`${environment.apiUrl}/modulo_inmuebles/propiedades/catalogo`, { params, headers })
+    this.catalogRequest = this.http.get<any[]>(`${environment.apiUrl}/modulo_inmuebles/propiedades/catalogo`, { params, headers })
       .subscribe({
         next: (res: any[]) => {
           this.propiedades = [...res];
-          console.log('Propiedades cargadas:', this.propiedades.length);
+          this.loading = false;
           this.cdr.detectChanges();
         },
         error: (err) => {
-          console.error('Error cargando propiedades:', err);
+          this.loading = false;
+          this.propiedades = [];
+          this.error = errorTexto(err, 'No se pudo cargar el catálogo. Vuelve a aplicar los filtros para reintentar.');
           this.cdr.detectChanges();
         }
       });

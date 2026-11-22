@@ -194,7 +194,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Grids and Layouts */
 .grid-catalogo {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 2.5rem;
   padding: 2rem 0;
 }

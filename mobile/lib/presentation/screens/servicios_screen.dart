@@ -3,9 +3,10 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+
+import '../widgets/raices_map.dart';
+
 import 'package:image_picker/image_picker.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -54,6 +55,8 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
       answer = '',
       mode = '';
   bool loading = false;
+  bool _actionInProgress = false;
+  int _loadGeneration = 0;
   dynamic data;
   List<dynamic> properties = [];
   int? propertyId;
@@ -63,6 +66,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
   bool get staff => service.staff;
   Future<void> act(Future<void> Function() work) async {
     if (loading) return;
+    _actionInProgress = true;
     setState(() {
       loading = true;
       message = '';
@@ -81,17 +85,24 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
             : 'No se pudo completar la operación. Revisa la conexión y vuelve a intentar.';
       }
     } finally {
+      _actionInProgress = false;
       if (mounted) setState(() => loading = false);
     }
   }
 
   Future<void> open(String name) async {
+    if (_actionInProgress || !mounted) return;
+    final generation = ++_loadGeneration;
     setState(() {
       section = name;
+      loading = true;
+      message = '';
       data = null;
       answer = '';
     });
-    await act(() async {
+    try {
+      dynamic result;
+      List<dynamic>? nextProperties;
       final paths = <String, String>{
         'Favoritos': '/api/favoritos',
         'Alertas': '/api/alertas',
@@ -109,7 +120,7 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
         'Reporte ejecutivo': '/api/reportes/ejecutivo',
       };
       if (paths.containsKey(name))
-        data = await service.get(
+        result = await service.get(
           paths[name]!,
           params: name == 'Mapa de ventas' ? {'metrica': metric} : null,
         );
@@ -119,18 +130,34 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
         'Promociones',
         'Mantenimiento',
       ].contains(name)) {
-        properties = List.from(
+        nextProperties = List.from(
           await service.get(
             name == 'Mantenimiento'
                 ? '/api/mantenimiento/mis-inmuebles'
                 : '/modulo_inmuebles/propiedades/catalogo',
           ),
         );
-        if (!properties.any((p) => p['id_propiedad'] == propertyId))
-          propertyId = null;
       }
-      if (name == 'Sincronización de servicios') data = await service.changes();
-    });
+      if (name == 'Sincronización de servicios')
+        result = await service.changes();
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        data = result;
+        if (nextProperties != null) {
+          properties = nextProperties;
+          if (!properties.any((p) => p['id_propiedad'] == propertyId))
+            propertyId = null;
+        }
+      });
+    } catch (_) {
+      if (mounted && generation == _loadGeneration)
+        setState(
+          () => message = 'No se pudo cargar esta sección. Revisa la conexión y vuelve a intentar.',
+        );
+    } finally {
+      if (mounted && generation == _loadGeneration)
+        setState(() => loading = false);
+    }
   }
 
   Future<Map<String, String>?> form(
@@ -1276,10 +1303,14 @@ class _ServiciosScreenState extends State<ServiciosScreen> {
           if (section != 'Inicio')
             IconButton(
               tooltip: 'Volver a servicios',
-              onPressed: () => setState(() {
-                section = 'Inicio';
-                data = null;
-              }),
+              onPressed: _actionInProgress
+                  ? null
+                  : () => setState(() {
+                      _loadGeneration++;
+                      loading = false;
+                      section = 'Inicio';
+                      data = null;
+                    }),
               icon: const Icon(Icons.grid_view),
             ),
           if (section != 'Inicio')
@@ -1313,50 +1344,80 @@ class SalesMap extends StatelessWidget {
   final List<dynamic> zones;
   @override
   Widget build(BuildContext context) {
-    final points = zones
-        .where((z) => z['latitud'] != null && z['longitud'] != null)
-        .toList();
-    return SizedBox(
-      height: 330,
-      child: FlutterMap(
-        options: MapOptions(
-          initialCenter: points.isEmpty
-              ? const LatLng(-17.7833, -63.1821)
-              : LatLng(
-                  (points.first['latitud'] as num).toDouble(),
-                  (points.first['longitud'] as num).toDouble(),
+    final points = <MapPoint>[
+      for (var i = 0; i < zones.length; i++)
+        if (mapCoordinate(zones[i]['latitud'], zones[i]['longitud']) != null)
+          MapPoint(
+            id: '$i',
+            label: '${zones[i]['zona']} · ${zones[i]['cierres']} cierres',
+            point: mapCoordinate(zones[i]['latitud'], zones[i]['longitud'])!,
+            intensity:
+                double.tryParse('${zones[i]['intensidad']}')?.clamp(0, 1) ?? 0,
+          ),
+    ];
+    void select(MapPoint point) {
+      final zone = zones[int.parse(point.id)];
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (_) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${zone['zona']}',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-          initialZoom: 11,
+                Text('${zone['inmobiliaria'] ?? ''}'),
+                Text(
+                  '${zone['inmuebles']} inmuebles · ${zone['cierres']} cierres',
+                ),
+                Text('Monto cerrado: USD ${zone['monto']}'),
+                Text('Precio por m²: ${zone['precio_m2'] ?? 'Sin datos'}'),
+              ],
+            ),
+          ),
         ),
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.inmobiliaria.inmobiliaria_mobile',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RaicesMap(points: points, heat: true, height: 330, onSelected: select),
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'Amarillo: menor valor · Rojo: mayor valor. Toca una zona para consultar sus datos.',
           ),
-          CircleLayer(
-            circles: [
-              for (final p in points)
-                CircleMarker(
-                  point: LatLng(
-                    (p['latitud'] as num).toDouble(),
-                    (p['longitud'] as num).toDouble(),
+        ),
+        if (points.length < zones.length)
+          Text(
+            '${zones.length - points.length} zonas sin coordenadas válidas.',
+          ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.fullscreen),
+          label: const Text('Ampliar mapa'),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: const Text('Mapa de ventas')),
+                body: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: RaicesMap(
+                    points: points,
+                    heat: true,
+                    onSelected: select,
                   ),
-                  radius: 18 + 35 * (p['intensidad'] as num).toDouble(),
-                  color: Color.lerp(
-                    Colors.amber,
-                    Colors.red,
-                    (p['intensidad'] as num).toDouble(),
-                  )!.withValues(alpha: 0.5),
-                  borderStrokeWidth: 1,
-                  borderColor: Colors.red,
                 ),
-            ],
+              ),
+            ),
           ),
-          const RichAttributionWidget(
-            attributions: [TextSourceAttribution('OpenStreetMap contributors')],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

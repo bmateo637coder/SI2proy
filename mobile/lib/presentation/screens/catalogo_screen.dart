@@ -49,6 +49,11 @@ class _CatalogoState extends State<CatalogoScreen> {
               icon: const Icon(Icons.edit_note),
             ),
           IconButton(
+            tooltip: 'Mapa de propiedades',
+            onPressed: () => context.push('/mapa'),
+            icon: const Icon(Icons.map_outlined),
+          ),
+          IconButton(
             tooltip: 'IA y analítica',
             onPressed: () => context.push('/ia'),
             icon: const Icon(Icons.auto_awesome),
@@ -75,7 +80,7 @@ class _CatalogoState extends State<CatalogoScreen> {
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
-              children: ['Todas', 'Venta', 'Alquiler']
+              children: ['Todas', 'Venta', 'Alquiler', 'Anticretico']
                   .map(
                     (v) => ChoiceChip(
                       label: Text(v),

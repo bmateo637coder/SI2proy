@@ -208,7 +208,8 @@ GoRouter createRouter(AuthProvider auth) => GoRouter(
     GoRoute(
       path: '/mapa',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const MapScreen(),
+      builder: (context, state) =>
+          ScopedScreen(builder: (_) => const MapScreen()),
     ),
   ],
 );

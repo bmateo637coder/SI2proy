@@ -9,7 +9,7 @@
   </header>
 
   <div class="text-center mb-12" style="text-align: center; margin-bottom: 4rem;">
-    <h2 style="font-size: 3.5rem; font-weight: 700; margin-bottom: 1rem; color: var(--secondary-color); letter-spacing: -1px;">
+    <h2 style="font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 700; margin-bottom: 1rem; color: var(--secondary-color); letter-spacing: -1px;">
       Descubre tu Próximo Hogar
     </h2>
     <p style="font-size: 1.15rem; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
@@ -30,7 +30,7 @@
         IA
       </span>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1.25rem;">
       <div *ngFor="let r of recomendados"
            style="border: 1px solid var(--border-light); border-radius: 14px; overflow: hidden; cursor: pointer; background: var(--surface-light); transition: transform 0.2s;"
            (click)="abrirDetalles(r)" (mouseenter)="$any($event.target).style.transform = 'translateY(-3px)'" (mouseleave)="$any($event.target).style.transform = 'translateY(0)'">
@@ -130,6 +130,8 @@
     </div>
   </div>
 
+  <p *ngIf="loading" role="status">Cargando propiedades…</p>
+  <p *ngIf="error" role="alert" style="color:#b91c1c;">{{ error }}</p>
   <!-- Resultados -->
   <div class="grid-catalogo">
     <div *ngFor="let prop of propiedades" class="luxury-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
