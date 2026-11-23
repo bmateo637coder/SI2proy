@@ -57,6 +57,6 @@ test('workflow generates local offline tasks and records completion',async({page
  await expect(page.getByText(/Reglas locales; pendiente de sincronizar/)).toBeVisible();
  await page.getByRole('link',{name:/Sincronizar servicios/}).click();
  await expect(page.locator('article')).toHaveCount(2);
- await page.getByRole('button',{name:'Descartar propuesta y sus dependencias'}).first().click();
+ await page.locator('article').filter({hasText:'POST /api/workflow-ia'}).getByRole('button',{name:'Descartar propuesta y sus dependencias'}).click();
  await expect(page.getByText('No hay cambios pendientes.')).toBeVisible();
 });
