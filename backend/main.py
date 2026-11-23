@@ -39,6 +39,7 @@ import property_media
 import market_tools
 import commercial
 from record_integrity import protect_history
+from auth import require_record_scope
 
 from contextlib import asynccontextmanager
 
@@ -879,6 +880,7 @@ def update_propiedad(
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     if current_user.id_rol != 1 and propiedad.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede modificar propiedades de otra empresa")
+    require_record_scope(current_user, propiedad.id_tenant)
     validar_relaciones_propiedad(db, data, propiedad.id_tenant)
     if data.id_sucursal is not None:
         saas.branch_scope(db, current_user, data.id_sucursal)
@@ -918,6 +920,7 @@ def delete_propiedad(
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     if current_user.id_rol != 1 and propiedad.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar propiedades de otra empresa")
+    require_record_scope(current_user, propiedad.id_tenant)
     from sprint4_mantenimiento import Solicitud as SolicitudMantenimiento
     if (db.query(models.Contrato).filter_by(id_propiedad=id_propiedad).first()
             or db.query(models.Visita).filter_by(id_propiedad=id_propiedad).first()
@@ -1006,6 +1009,7 @@ def update_propietario(
         raise HTTPException(status_code=404, detail="Propietario no encontrado")
     if current_user.id_rol != 1 and propietario.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede modificar propietarios de otra empresa")
+    require_record_scope(current_user, propietario.id_tenant)
     # Verificar que el nuevo CI existe
     nuevo_usuario = db.query(models.Usuario).filter(models.Usuario.ci == data.ci_usuario).first()
     if not nuevo_usuario:
@@ -1045,6 +1049,7 @@ def delete_propietario(
         raise HTTPException(status_code=404, detail="Propietario no encontrado")
     if current_user.id_rol != 1 and propietario.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar propietarios de otra empresa")
+    require_record_scope(current_user, propietario.id_tenant)
     saas.tenant_scope(current_user, propietario.id_tenant)
     if db.query(models.Propiedad).filter_by(id_propietario=id_propietario).first():
         raise HTTPException(409, 'El propietario tiene inmuebles asociados. Reasígnelos antes de eliminarlo.')
@@ -1131,6 +1136,7 @@ def update_cliente(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     if current_user.id_rol != 1 and cliente.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede modificar clientes de otra empresa")
+    require_record_scope(current_user, cliente.id_tenant)
     # Verificar que el nuevo CI existe
     nuevo_usuario = db.query(models.Usuario).filter(models.Usuario.ci == data.ci_usuario).first()
     if not nuevo_usuario:
@@ -1170,6 +1176,7 @@ def delete_cliente(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     if current_user.id_rol != 1 and cliente.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar clientes de otra empresa")
+    require_record_scope(current_user, cliente.id_tenant)
     saas.tenant_scope(current_user, cliente.id_tenant)
     if db.query(models.Contrato).filter_by(id_cliente=id_cliente).first() or db.query(models.Visita).filter_by(id_cliente=id_cliente).first():
         raise HTTPException(409, 'El cliente tiene contratos o visitas asociados. Conserve su historial.')

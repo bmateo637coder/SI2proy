@@ -105,3 +105,15 @@ def test_promotion_reference_blocks_delete_but_owned_characteristics_do_not(api)
         db.commit()
     assert client.delete('/modulo_inmuebles/propiedades/2',headers=headers()).status_code==409
     assert client.delete('/modulo_inmuebles/propiedades/1',headers=headers()).status_code==200
+
+
+def test_saas_cannot_delete_ids_from_another_selected_company(api):
+    client,factory=api
+    selected={**headers('super',None),'X-Tenant-ID':'1'}
+    for path in ['/modulo_inmuebles/propiedades/3','/modulo_inmuebles/clientes/2','/modulo_inmuebles/propietarios/2']:
+        assert client.delete(path,headers=selected).status_code==404
+    for entity,ci in [('clientes','client2'),('propietarios','owner2')]:
+        assert client.put(f'/modulo_inmuebles/{entity}/2',headers=selected,json={'ci_usuario':ci}).status_code==404
+    assert client.delete('/modulo_inmuebles/propiedades/1',headers=headers('super',None)).status_code==403
+    from database import models as m
+    with factory() as db: assert db.query(m.Propiedad).count()==3

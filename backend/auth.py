@@ -123,6 +123,14 @@ def require_admin(user=Depends(get_current_user)):
     return user
 
 
+def require_record_scope(user, tenant_id):
+    """A selected company also bounds legacy SaaS writes by record ID."""
+    if not user.id_tenant:
+        raise HTTPException(403, 'Seleccione una inmobiliaria concreta para modificar registros.')
+    if user.id_tenant != tenant_id:
+        raise HTTPException(404, 'Registro no encontrado en la inmobiliaria seleccionada.')
+
+
 def is_all_tenants(user):
     return user.id_rol == 1 and bool(getattr(user, 'all_tenants', False))
 
