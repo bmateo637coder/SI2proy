@@ -1,11 +1,14 @@
 """Actualizar el servicio existente desde Actions sin imprimir credenciales."""
 import argparse
+import ast
+import ipaddress
+from pathlib import Path
 import json
 import os
 import re
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit, unquote
 from urllib.request import Request, urlopen
 
 
@@ -66,6 +69,44 @@ def discover(url):
     return service
 
 
+def diagnose_database(rows):
+    values = {r['envVar']['key']:r['envVar']['value'] for r in rows}
+    dsn = values.get('DATABASE_URL','')
+    if not dsn: return
+    try:
+        import psycopg2
+        with psycopg2.connect(dsn, connect_timeout=8, options='-c statement_timeout=5000') as connection:
+            with connection.cursor() as cursor: cursor.execute('SELECT 1'); cursor.fetchone()
+        print('Diagnóstico BD: conexión y consulta de lectura correctas.', flush=True)
+    except ImportError:
+        print('Diagnóstico BD: controlador no disponible en este ejecutor.',flush=True)
+    except Exception as error:
+        parsed = urlsplit(dsn)
+        message = str(error)
+        hidden = [dsn, parsed.hostname, parsed.username, parsed.password, parsed.path.lstrip('/')]
+        for value in sorted((unquote(v) for v in hidden if v),key=len,reverse=True): message=message.replace(value,'[oculto]')
+        for value in values.values():
+            if len(value)>8: message=message.replace(value,'[oculto]')
+        print('Diagnóstico BD: ' + type(error).__name__ + ': ' + safe(message)[:1000],flush=True)
+        host = parsed.hostname or ''
+        print('Diagnóstico DNS: ' + json.dumps({'dominio_neon':host.endswith('.neon.tech'), 'espacios':any(c.isspace() for c in host), 'longitud':len(host)}),flush=True)
+        if 'could not translate host name' in str(error) and host.endswith('.neon.tech'):
+            for resolver in ['https://dns.google/resolve?', 'https://cloudflare-dns.com/dns-query?']:
+                try:
+                    req = Request(resolver + urlencode({'name':host,'type':'A'}),headers={'Accept':'application/dns-json'})
+                    with urlopen(req,timeout=8) as response: dns=json.load(response)
+                    addresses = [r['data'] for r in dns.get('Answer',[]) if r.get('type') == 1 and ipaddress.ip_address(r['data']).version == 4]
+                    print('DNS HTTPS: ' + json.dumps({'resolutor':urlsplit(resolver).hostname,'estado':dns.get('Status'),'direcciones':len(addresses)}),flush=True)
+                    if addresses:
+                        with psycopg2.connect(dsn,hostaddr=addresses[0],connect_timeout=8,options='-c statement_timeout=5000') as connection:
+                            with connection.cursor() as cursor: cursor.execute('SELECT 1'); cursor.fetchone()
+                        print('Diagnóstico BD: consulta correcta usando resolución DNS HTTPS.',flush=True)
+                        break
+                except Exception as retry:
+                    print('DNS HTTPS: intento no completado ('+type(retry).__name__+').',flush=True)
+
+
+
 def inspect_service(service):
     details = service.get("serviceDetails", {})
     specific = details.get("envSpecificDetails", {})
@@ -76,6 +117,14 @@ def inspect_service(service):
         "buildCommand": specific.get("buildCommand"), "startCommand": specific.get("startCommand"),
         "detailKeys": sorted(details), "runtimeKeys": sorted(specific)}
     rows = api(f"services/{service['id']}/env-vars?limit=100")
+    values = {r['envVar']['key']:r['envVar']['value'] for r in rows}
+    host = urlsplit(values.get('DATABASE_URL','')).hostname or ''
+    if host.startswith('dpg-'):
+        databases = api('postgres?' + urlencode({'ownerId':service['ownerId'],'limit':100}))
+        summary['databases'] = [{k:p.get(k) for k in ('id','name','status','plan','region','createdAt','expiresAt','suspended')} | {'coincide_con_backend':host.startswith(p.get('id','?'))} for r in databases for p in [r.get('postgres',r)]]
+        print('La URL de la base es interna de Render; no es resoluble desde Actions.',flush=True)
+    else:
+        diagnose_database(rows)
     summary["environmentKeys"] = sorted(row["envVar"]["key"] for row in rows)
     for row in rows:
         if row["envVar"]["key"] == "PYTHON_VERSION":
@@ -86,6 +135,17 @@ def inspect_service(service):
         summary["latestDeploy"] = {key: latest.get(key) for key in ("id", "status", "createdAt", "finishedAt")}
         summary["latestDeploy"]["commit"] = latest.get("commit", {}).get("id")
     print(safe(json.dumps(summary, ensure_ascii=False, indent=2)), flush=True)
+    try:
+        logs = api('logs?' + urlencode({'ownerId':service['ownerId'], 'resource':service['id'], 'limit':100}))
+        messages = [r.get('message','') for r in logs.get('logs',[])]
+        # Los logs de Actions son públicos: publicar solo señales operativas, sin datos de solicitudes.
+        patterns = {'memoria':r'out of memory|OOM|memory limit', 'base_de_datos':r'OperationalError|connection.*(failed|timed out|refused)|UndefinedColumn|UndefinedTable',
+                    'inicio':r'Application startup complete|Uvicorn running|Your service is live',
+                    'dependencia':r'ModuleNotFoundError|ImportError', 'health':r'health check.*(fail|timed out)', 'tarea_diaria':r'backup diario|registrando vencimientos'}
+        print('Diagnóstico de logs: ' + json.dumps({'cantidad':len(messages), 'señales':{k:sum(bool(re.search(v,m,re.I)) for m in messages) for k,v in patterns.items()},
+            'excepciones':sorted(set(t for msg in messages for t in re.findall(r'\b([A-Za-z_]+(?:Error|Exception)):',msg)))}), flush=True)
+    except (SystemExit, KeyError, TypeError):
+        print('Los logs no están disponibles con este acceso; se conserva el estado del servicio.',flush=True)
 
 
 def verify_health(url, commit=None, attempts=12):
@@ -98,7 +158,7 @@ def verify_health(url, commit=None, attempts=12):
             if valid and (not commit or (deployed and commit.startswith(deployed))):
                 with urlopen(url + "/openapi.json", timeout=45) as response:
                     paths = json.load(response)["paths"]
-                if {"/api/offline/sincronizar", "/api/saas/suscripcion", "/admin/vista-global/resumen"}.issubset(paths):
+                if {"/api/offline/sincronizar", "/api/saas/suscripcion", "/admin/vista-global/resumen", "/api/gerencia/dashboard", "/api/servicios/sync", "/api/visitas"}.issubset(paths):
                     print("API verificada: " + json.dumps(health), flush=True)
                     return
         except (HTTPError, URLError, TimeoutError, ValueError):
@@ -108,12 +168,59 @@ def verify_health(url, commit=None, attempts=12):
     raise SystemExit("La API publica aun no confirma la version y rutas requeridas.")
 
 
+def audit_session(service, url):
+    env = {r['envVar']['key']: r['envVar']['value'] for r in api(f"services/{service['id']}/env-vars?limit=100")}
+    key = env.get('BITACORA_FERNET_KEY')
+    if not key: raise SystemExit('No se encontro la clave para conservar la auditoria.')
+    source = ast.parse(Path('backend/init_db.py').read_text(encoding='utf-8'))
+    credentials = next(ast.literal_eval(n.value) for n in ast.walk(source) if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'usuarios' for t in n.targets))
+    admin = next(row for row in credentials if row[2] == 1)
+    payload = {'correo': admin[4], 'password': admin[6]}
+    def call(path, body=None, token=None):
+        headers = {'Content-Type':'application/json'}
+        if token: headers['Authorization'] = 'Bearer ' + token
+        request = Request(url+path, data=json.dumps(body).encode() if body is not None else None, headers=headers)
+        for attempt in range(4):
+            try:
+                with urlopen(request, timeout=90) as response: return json.load(response)
+            except (HTTPError, URLError, TimeoutError):
+                if attempt == 3: raise SystemExit('No se pudo preservar o recuperar la auditoria. Se detiene la operacion sin imprimir credenciales.') from None
+                time.sleep(10)
+    token = call('/login', payload)['access_token']
+    return key, lambda path, body=None: call(path, body, token)
+
+
+def backup_audit(service, url):
+    from cryptography.fernet import Fernet
+    key, call = audit_session(service, url)
+    rows = call('/admin/bitacora?' + urlencode({'dev_key':key}))
+    if not isinstance(rows, list): raise SystemExit('Respuesta de bitacora inesperada.')
+    encrypted = Fernet(key.encode()).encrypt(json.dumps(rows, ensure_ascii=False).encode())
+    Path('audit-pre-deploy.fernet').write_bytes(encrypted)
+    print(f'Bitacora respaldada y cifrada: {len(rows)} registros.', flush=True)
+    return [{k:r[k] for k in ('ip','usuario','accion','fecha_hora')} for r in rows if all(k in r for k in ('ip','usuario','accion','fecha_hora'))]
+
+
 def deploy(service, url):
     branch = os.environ["GITHUB_REF_NAME"]
     commit = os.environ["GITHUB_SHA"]
-    if branch not in {"feat/parcial2-saas-offline-analitica", "main"}:
+    if branch not in {"feat/parcial2-saas-offline-analitica", "feat/sprint4-integracion-web-movil", "main"}:
         raise SystemExit("Seleccionar la rama del parcial 2 o main para actualizar produccion.")
     service_id = service["id"]
+    variables = api(f"services/{service_id}/env-vars?limit=100")
+    recovering = any(r['envVar']['key'] == 'DATABASE_RECOVERY_SNAPSHOT' for r in variables)
+    persistent_audit = False
+    try:
+        with urlopen(url + '/api/health', timeout=10) as response:
+            persistent_audit = 'sprint4' in json.load(response).get('features', [])
+    except (HTTPError, URLError, TimeoutError, ValueError):
+        pass
+    if recovering or persistent_audit:
+        # Recuperación explícitamente autorizada cuando la base anterior ya no existe.
+        audit = []
+        print('La auditoría se conserva en PostgreSQL; no se vuelve a importar una copia de los mismos registros.', flush=True)
+    else:
+        audit = backup_audit(service, url)
     # Solo se actualiza Python: las credenciales y DATABASE_URL se conservan.
     api(f"services/{service_id}/env-vars/PYTHON_VERSION", "PUT", {"value": "3.12.10"})
     api(f"services/{service_id}", "PATCH", {
@@ -133,6 +240,10 @@ def deploy(service, url):
             previous = status
         if status == "live":
             verify_health(url, commit)
+            if audit:
+                key, call = audit_session(service, url)
+                result = call('/admin/bitacora/importar', {'dev_key':key, 'registros':audit})
+                print('Auditoria recuperada: ' + str(result['importados']) + ' registros.', flush=True)
             summary = os.environ.get("GITHUB_STEP_SUMMARY")
             if summary:
                 with open(summary, "a", encoding="utf8") as file:

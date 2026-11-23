@@ -87,6 +87,11 @@ class PropiedadModel {
     'precio': precio,
     'tipo_operacion': tipoOperacion,
     'estado': estado,
+    'descripcion': descripcion,
+    'inmobiliaria': inmobiliaria,
+    'caracteristicas': caracteristicas,
+    'latitud': latitud,
+    'longitud': longitud,
     'imagenes': imagenes.map((e) => e.toJson()).toList(),
   };
 }

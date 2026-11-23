@@ -140,6 +140,13 @@ def crear_contrato(
 
     if body.monto_total <= 0:
         raise HTTPException(status_code=400, detail="El monto total debe ser mayor a 0.")
+    if body.aplicar_promocion:
+        from sprint4_api import promo_price
+        from decimal import Decimal
+        promo = promo_price(db, propiedad)
+        if not promo:
+            raise HTTPException(409, 'La promoción ya no está vigente. Revise el monto antes de confirmar el contrato.')
+        body.monto_total = float((Decimal(str(body.monto_total)) * (100 - promo['descuento_pct']) / 100).quantize(Decimal('.01')))
 
     if body.num_cuotas and body.num_cuotas > 0:
         num_cuotas = body.num_cuotas
@@ -180,6 +187,8 @@ def crear_contrato(
         propiedad.estado = "Reservada"
         propiedad.version += 1
 
+    from sprint4_api import create_commission
+    create_commission(db, contrato)
     db.commit()
     db.refresh(contrato)
     return _serializar_contrato(contrato, detalle=True)
@@ -411,6 +420,10 @@ def eliminar_contrato(
     if contrato.pagos:
         raise HTTPException(status_code=400, detail="No se puede eliminar un contrato con pagos registrados.")
 
+    from sprint4_api import Comision
+    if db.query(Comision).filter_by(id_contrato=contrato.id_contrato, estado='Liquidada').first():
+        raise HTTPException(409, 'No se puede eliminar un contrato con comisiones liquidadas.')
+    db.query(Comision).filter_by(id_contrato=contrato.id_contrato).delete()
     db.delete(contrato)
     db.commit()
     return {"mensaje": "Contrato eliminado exitosamente."}

@@ -80,6 +80,18 @@ export class AuthService {
   }
 
   logout(reason?: string) {
+    const registration=localStorage.getItem('push_registration');
+    const token=localStorage.getItem('token');
+    if(registration&&token) {
+      void fetch(this.apiUrl+'/api/notificaciones/tokens/'+encodeURIComponent(registration), {method:'DELETE',headers:{Authorization:'Bearer '+token},keepalive:true}).catch(()=>{});
+      localStorage.removeItem('push_registration');
+    }
+    const device=localStorage.getItem('push_device');
+    if(device&&token&&localStorage.getItem('webpush_enabled')) {
+      void fetch(this.apiUrl+'/api/notificaciones/webpush/'+encodeURIComponent(device),{method:'DELETE',headers:{Authorization:'Bearer '+token},keepalive:true}).catch(()=>{});
+      void navigator.serviceWorker?.getRegistration(new URL('avisos/',document.baseURI).href).then(r=>r?.pushManager.getSubscription()).then(s=>s?.unsubscribe()).catch(()=>{});
+      localStorage.removeItem('webpush_enabled');
+    }
     this.clearSession();
     this.router.navigate(['/login'], { queryParams: reason ? { reason } : {} });
   }

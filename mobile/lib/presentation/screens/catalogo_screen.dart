@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/config/api_constants.dart';
 import '../providers/propiedades_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/property_image.dart';
 
 class CatalogoScreen extends StatefulWidget {
@@ -41,6 +42,17 @@ class _CatalogoState extends State<CatalogoScreen> {
       appBar: AppBar(
         title: const Text('Catálogo'),
         actions: [
+          if (context.watch<AuthProvider>().user?.canSeePropiedades == true)
+            IconButton(
+              tooltip: 'Gestionar propiedades',
+              onPressed: () => context.push('/gestion/propiedades'),
+              icon: const Icon(Icons.edit_note),
+            ),
+          IconButton(
+            tooltip: 'Mapa de propiedades',
+            onPressed: () => context.push('/mapa'),
+            icon: const Icon(Icons.map_outlined),
+          ),
           IconButton(
             tooltip: 'IA y analítica',
             onPressed: () => context.push('/ia'),
@@ -68,7 +80,7 @@ class _CatalogoState extends State<CatalogoScreen> {
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
-              children: ['Todas', 'Venta', 'Alquiler']
+              children: ['Todas', 'Venta', 'Alquiler', 'Anticretico']
                   .map(
                     (v) => ChoiceChip(
                       label: Text(v),

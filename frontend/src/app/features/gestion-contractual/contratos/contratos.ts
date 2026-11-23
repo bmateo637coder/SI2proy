@@ -48,6 +48,7 @@ export class Contratos implements OnInit {
       id_cliente: ['', Validators.required],
       id_propiedad: ['', Validators.required],
       tipo_contrato: ['Venta', Validators.required],
+      aplicar_promocion: [false],
       monto_total: ['', [Validators.required, Validators.min(1)]],
       fecha_inicio: ['', Validators.required],
       fecha_fin: [''],

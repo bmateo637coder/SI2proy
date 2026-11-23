@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../data/models/cliente_model.dart';
 import '../../data/models/propiedad_model.dart';
 import '../providers/clientes_provider.dart';
@@ -18,6 +19,7 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
   ClienteModel? _cliente;
   PropiedadModel? _propiedad;
   String _tipoContrato = 'Venta';
+  bool _aplicarPromocion = false;
   final _montoController = TextEditingController();
   DateTime _fechaInicio = DateTime.now();
   DateTime? _fechaFin;
@@ -26,7 +28,7 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
   List<PropiedadModel> get _propiedadesElegibles => context
       .watch<PropiedadesProvider>()
       .propiedades
-      .where((p) => p.estado == 'Disponible' || p.estado == 'Reservada')
+      .where((p) => p.estado == 'Disponible')
       .toList();
 
   @override
@@ -82,19 +84,23 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
     }
     final numCuotas = int.tryParse(_numCuotasController.text.trim());
     final creado = await context.read<ContratosProvider>().createContrato(
-          idCliente: _cliente!.idCliente,
-          idPropiedad: _propiedad!.idPropiedad,
-          tipoContrato: _tipoContrato,
-          montoTotal: monto,
-          fechaInicio: _fmt(_fechaInicio),
-          fechaFin: _fechaFin == null ? null : _fmt(_fechaFin!),
-          numCuotas: numCuotas,
-        );
+      idCliente: _cliente!.idCliente,
+      idPropiedad: _propiedad!.idPropiedad,
+      tipoContrato: _tipoContrato,
+      montoTotal: monto,
+      aplicarPromocion: _aplicarPromocion,
+      fechaInicio: _fmt(_fechaInicio),
+      fechaFin: _fechaFin == null ? null : _fmt(_fechaFin!),
+      numCuotas: numCuotas,
+    );
     if (!mounted) return;
     if (creado) {
       context.pop(true);
     } else {
-      _snack(context.read<ContratosProvider>().errorMessage ?? 'Error al crear el contrato.');
+      _snack(
+        context.read<ContratosProvider>().errorMessage ??
+            'Error al crear el contrato.',
+      );
     }
   }
 
@@ -109,10 +115,7 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
     final propiedades = _propiedadesElegibles;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nuevo Contrato'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Nuevo Contrato'), centerTitle: true),
       body: provider.isSubmitting
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -126,10 +129,14 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: clientes.clientes
-                      .map((c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c.nombre.isEmpty ? 'CI ${c.ciUsuario}' : c.nombre),
-                          ))
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(
+                            c.nombre.isEmpty ? 'CI ${c.ciUsuario}' : c.nombre,
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) => setState(() => _cliente = value),
                 ),
@@ -142,10 +149,14 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: propiedades
-                      .map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Text('#${p.idPropiedad} — ${p.titulo} (${p.tipoOperacion})'),
-                          ))
+                      .map(
+                        (p) => DropdownMenuItem(
+                          value: p,
+                          child: Text(
+                            '#${p.idPropiedad} — ${p.titulo} (${p.tipoOperacion})',
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -165,19 +176,38 @@ class _NuevoContratoScreenState extends State<NuevoContratoScreen> {
                   ),
                   items: const [
                     DropdownMenuItem(value: 'Venta', child: Text('Venta')),
-                    DropdownMenuItem(value: 'Alquiler', child: Text('Alquiler')),
-                    DropdownMenuItem(value: 'Anticretico', child: Text('Anticrético')),
+                    DropdownMenuItem(
+                      value: 'Alquiler',
+                      child: Text('Alquiler'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Anticretico',
+                      child: Text('Anticrético'),
+                    ),
                   ],
-                  onChanged: (value) => setState(() => _tipoContrato = value ?? 'Venta'),
+                  onChanged: (value) =>
+                      setState(() => _tipoContrato = value ?? 'Venta'),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _montoController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Monto total (\$us) *',
                     border: OutlineInputBorder(),
                   ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Aplicar promoción vigente'),
+                  subtitle: const Text(
+                    'El servidor valida la vigencia y calcula el descuento sobre el monto ingresado. Sin promoción activa, pide revisar el contrato.',
+                  ),
+                  value: _aplicarPromocion,
+                  onChanged: (v) => setState(() => _aplicarPromocion = v),
                 ),
                 const SizedBox(height: 16),
                 TextField(

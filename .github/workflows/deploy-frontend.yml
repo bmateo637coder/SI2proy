@@ -6,7 +6,7 @@ on:
       operation:
         description: 'inspect: revisar Render; deploy: actualizar backend y web; frontend: solo web'
         type: choice
-        options: [inspect, deploy, frontend]
+        options: [inspect, deploy, frontend, validate-recovery, recover]
         default: deploy
   push:
     branches: [main]
@@ -20,8 +20,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  recover:
+    if: inputs.operation == 'validate-recovery' || inputs.operation == 'recover'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: restauracion_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install 'psycopg2-binary>=2.9,<3' 'cryptography>=43,<51'
+      - name: Validar respaldo y recuperar únicamente en base nueva gratuita
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RENDER_API_KEY: ${{ inputs.operation == 'recover' && secrets.RENDER_API_KEY || '' }}
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+          VALIDATE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/restauracion_test
+          RECOVERY_OPERATION: ${{ inputs.operation == 'recover' && 'restore' || 'validate' }}
+        run: python backend/scripts/recover_database.py "$RECOVERY_OPERATION"
+      - uses: actions/upload-artifact@v4
+        if: always() && inputs.operation == 'recover'
+        with:
+          name: configuracion-anterior-cifrada
+          path: database-before-recovery.fernet
+          if-no-files-found: ignore
+          retention-days: 7
   render:
-    if: github.event_name == 'workflow_dispatch' && inputs.operation != 'frontend'
+    if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'inspect' || inputs.operation == 'deploy')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -31,6 +66,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Preparar respaldo cifrado de auditoria
+        run: pip install 'cryptography>=43,<51' 'psycopg2-binary>=2.9,<3'
       - name: Comprobar o actualizar el servicio existente de Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
@@ -38,10 +75,19 @@ jobs:
           DEPLOY_OPERATION: ${{ inputs.operation }}
         run: python backend/scripts/deploy_render.py "$DEPLOY_OPERATION"
 
+      - name: Conservar respaldo cifrado de auditoria
+        if: always() && inputs.operation == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: auditoria-cifrada-pre-deploy
+          path: audit-pre-deploy.fernet
+          if-no-files-found: ignore
+          retention-days: 7
+
   build-deploy:
     needs: render
     if: >-
-      always() && !cancelled() && inputs.operation != 'inspect' &&
+      always() && !cancelled() && inputs.operation != 'inspect' && inputs.operation != 'recover' && inputs.operation != 'validate-recovery' &&
       (needs.render.result == 'success' || needs.render.result == 'skipped')
     runs-on: ubuntu-latest
     defaults:

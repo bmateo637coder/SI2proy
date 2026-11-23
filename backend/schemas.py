@@ -107,6 +107,9 @@ class CaracteristicaResponse(BaseModel):
         from_attributes = True
 
 class PropiedadCatalogoResponse(BaseModel):
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+    promocion: Optional[dict] = None
     inmobiliaria: Optional[str] = None
     id_propiedad: int
     id_tenant: int
@@ -152,6 +155,7 @@ class PropiedadAdminResponse(BaseModel):
     id_tenant: int
     id_propietario: int
     id_agente: int
+    id_sucursal: Optional[int] = None
     titulo: str
     descripcion: Optional[str] = None
     direccion: str
@@ -249,6 +253,7 @@ class ReporteGuardadoResponse(BaseModel):
 # ============================================================
 
 class ContratoCreate(BaseModel):
+    aplicar_promocion: bool = False
     id_cliente: int
     id_propiedad: int
     tipo_contrato: str  # 'Venta', 'Alquiler', 'Anticretico'

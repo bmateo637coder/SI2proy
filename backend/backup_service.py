@@ -66,6 +66,7 @@ def generar_backup_sql(dest_dir: str = None) -> str:
         "--clean",
         "--if-exists",
         "--no-owner",
+        "--no-privileges",
     ]
     resultado = subprocess.run(
         comando, env=_pg_env(), check=True, capture_output=True, text=True, timeout=180

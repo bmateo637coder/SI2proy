@@ -8,6 +8,7 @@
 /* Sidebar Estilo Lujo */
 .luxury-sidebar {
     width: 280px;
+    flex-shrink: 0;
     background: var(--surface-color);
     border-right: 1px solid var(--border-light);
     display: flex;
@@ -125,6 +126,7 @@
 /* Contenido Principal */
 .luxury-main {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -279,3 +281,21 @@
 :host .api-error { background: #fff1f0; color: #86291f; border-color: #e5b8b4; }
 :host .api-error button { margin-left: 1rem; background: transparent; color: inherit; border: 1px solid; border-radius: 4px; padding: .25rem .5rem; }
 :host select { max-width: 260px; padding: .4rem; border: 1px solid #cdb77c; border-radius: 6px; }
+.menu-toggle,.menu-backdrop { display:none; }
+.help-sidebar { visibility:hidden; }
+.help-sidebar.open { visibility:visible; }
+@media(max-width:900px) {
+    .luxury-dashboard { height:100dvh; }
+    .luxury-sidebar { position:fixed; inset:0 auto 0 0; width:min(300px,85vw); transform:translateX(-100%); visibility:hidden; transition:transform .2s; z-index:1100; }
+    .luxury-sidebar.menu-open { transform:translateX(0); visibility:visible; }
+    .menu-backdrop { display:block; position:fixed; inset:0; background:#0008; border:0; z-index:1099; }
+    .menu-toggle { display:block; padding:.6rem .8rem; border:1px solid #cdb77c; border-radius:8px; background:white; font:inherit; }
+    .luxury-topbar { padding:1rem; flex-wrap:wrap; gap:.8rem; }
+    .topbar-title { font-size:1rem; }
+    .topbar-right { width:100%; min-width:0; display:flex; gap:.5rem; flex-wrap:wrap; }
+    .tenant-badge { min-width:0; max-width:100%; flex-wrap:wrap; border-radius:12px; }
+    :host select { max-width:100%; min-width:0; }
+    .luxury-content-area { padding:1rem; min-width:0; }
+    .help-fab { width:44px; height:44px; bottom:14px; right:14px; font-size:22px; }
+    .help-sidebar { width:min(350px,100vw); }
+}

@@ -55,6 +55,7 @@ class AuthProvider extends ChangeNotifier {
   String? companyError;
   bool localSession = false;
   VoidCallback? onScopeChanged;
+  Future<void> Function()? onSignOut;
   bool get isSuperAdmin => _user?.idRol == 1;
   bool get allTenants => isSuperAdmin && selectedTenant == 0;
   String get scopeKey =>
@@ -287,6 +288,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut({bool notify = true}) async {
+    try { await onSignOut?.call(); } catch (_) {}
     await _storage.clear();
     _user = null;
     selectedTenant = null;

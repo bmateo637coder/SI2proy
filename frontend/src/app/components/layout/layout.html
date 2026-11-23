@@ -1,12 +1,13 @@
 <div class="luxury-dashboard">
     <!-- Menú Lateral -->
-    <aside class="luxury-sidebar">
+    <button *ngIf="menuOpen" class="menu-backdrop" aria-label="Cerrar menú" (click)="menuOpen = false"></button>
+    <aside class="luxury-sidebar" id="main-navigation" [class.menu-open]="menuOpen" (keydown.escape)="menuOpen = false">
         <div class="sidebar-brand">
             <h2 class="brand-text">Raíces</h2>
             <p class="brand-subtext">{{ rolNombre }}</p>
         </div>
 
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" aria-label="Navegación principal" (click)="$any($event.target).closest('a') && (menuOpen = false)">
             <a *ngIf="authService.allTenants()" routerLink="/dashboard/vista-global" class="luxury-nav-link text-gold" routerLinkActive="active">Vista global por inmobiliaria</a>
             <ng-container *ngIf="canOperate">
             <a routerLink="/dashboard/offline" class="luxury-nav-link" routerLinkActive="active">Operaciones sin conexión</a>
@@ -14,10 +15,14 @@
             <a routerLink="/dashboard/plan" class="luxury-nav-link" routerLinkActive="active">Plan y sucursales</a>
             </ng-container>
             <p class="nav-section-title">Principal</p>
+            <a *ngIf="canOperate" routerLink="/dashboard/oportunidades" class="luxury-nav-link" routerLinkActive="active">Embudo comercial · Kanban</a>
+            <a *ngIf="canOperate" routerLink="/dashboard/workflow-ia" class="luxury-nav-link" routerLinkActive="active">Workflow inteligente con IA</a>
             <a routerLink="/dashboard/profile" class="luxury-nav-link" routerLinkActive="active">
                 Mi Perfil
             </a>
 
+            <a routerLink="/dashboard/moneda" class="luxury-nav-link" routerLinkActive="active">Conversión multimoneda</a>
+            <a *ngIf="canOperate" routerLink="/dashboard/predicciones" class="luxury-nav-link" routerLinkActive="active">Predicción de ventas y demanda</a>
             <a routerLink="/dashboard/catalogo" class="luxury-nav-link text-gold" routerLinkActive="active">
                 Catálogo
             </a>
@@ -70,6 +75,16 @@
             </a>
         </div>
 
+            <a routerLink="/dashboard/servicios" class="luxury-nav-link" routerLinkActive="active">Servicios, búsqueda e IA</a>
+            <a routerLink="/dashboard/favoritos" class="luxury-nav-link" routerLinkActive="active">Favoritos y alertas</a>
+            <a routerLink="/dashboard/visitas" class="luxury-nav-link" routerLinkActive="active">Agenda de visitas</a>
+            <a routerLink="/dashboard/notificaciones" class="luxury-nav-link" routerLinkActive="active">Notificaciones</a>
+            <a routerLink="/dashboard/sincronizacion-servicios" class="luxury-nav-link" routerLinkActive="active">Sincronizar servicios ({{servicios.pending()}} / {{servicios.conflicts()}} conflictos)</a>
+            <a routerLink="/dashboard/mantenimiento" class="luxury-nav-link" routerLinkActive="active">Mantenimiento</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/gerencia" class="luxury-nav-link" routerLinkActive="active">Dashboard gerencial</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/mapa-calor" class="luxury-nav-link" routerLinkActive="active">Mapa de ventas</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/comisiones" class="luxury-nav-link" routerLinkActive="active">Comisiones</a>
+            <a *appHasPermission="'UI:MENU_PROPIEDADES'" routerLink="/dashboard/promociones" class="luxury-nav-link" routerLinkActive="active">Promociones</a>
             <div class="spacer"></div>
 
             <button class="btn-logout-luxury" (click)="logout()">
@@ -80,7 +95,9 @@
 
     <!-- Contenido Principal -->
     <main class="luxury-main">
+        <p *ngIf="servicios.message()" role="status" style="padding:1rem;background:#fff7ed;">{{servicios.message()}}</p>
         <header class="luxury-topbar">
+            <button class="menu-toggle" (click)="menuOpen = !menuOpen" aria-label="Abrir menú de navegación" aria-controls="main-navigation" [attr.aria-expanded]="menuOpen">☰ Menú</button>
             <div class="topbar-left">
                 <h3 class="topbar-title">Bienvenido al Panel de Control</h3>
             </div>

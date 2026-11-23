@@ -66,6 +66,8 @@ class MobileServer implements HttpClientAdapter {
     'titulo': 'Casa $tenant',
     'direccion': 'Centro',
     'precio': 1000,
+    'latitud': -17.78 - tenant * .01,
+    'longitud': -63.18 - tenant * .01,
     'estado': 'Disponible',
     'version': 1,
     'tipo_operacion': 'Venta',
@@ -107,6 +109,44 @@ class MobileServer implements HttpClientAdapter {
         'motivo': 'Reserva cancelada.',
       });
     switch (options.path) {
+      case '/api/oportunidades/opciones':
+        return json({'agentes': [], 'clientes': [], 'propiedades': []});
+      case '/api/oportunidades':
+        return json([
+          {
+            'id': 1,
+            'titulo': 'Casa familiar',
+            'contacto': 'Cliente de prueba',
+            'etapa': 'Nuevo',
+            'importe': 1000,
+            'probabilidad': 30,
+            'version': 1,
+            'inmobiliaria': 'Raíces',
+            'historial': [],
+          },
+        ]);
+      case '/api/workflow-ia':
+        return json([
+          {
+            'id': 1,
+            'texto': 'Visitar una casa hoy',
+            'categoria': 'Visita',
+            'urgencia': 'Alta',
+            'modo': 'local',
+            'justificacion': 'Palabras clave',
+            'estado': 'Pendiente',
+            'version': 1,
+            'inmobiliaria': 'Raíces',
+            'historial': [],
+            'tareas': [
+              {
+                'titulo': 'Confirmar visita',
+                'vence': '2026-11-22',
+                'completada': false,
+              },
+            ],
+          },
+        ]);
       case '/api/health':
         return json({'status': 'ok'});
       case '/api/analitica/dashboard':
@@ -171,7 +211,44 @@ class MobileServer implements HttpClientAdapter {
         return json(profile);
       case '/admin/empresas':
         return json(companies);
+      case '/api/moneda':
+        return json({
+          'tasas': {
+            'USD': '1',
+            'BOB': '6.96',
+            'EUR': '0.9',
+            'BRL': '5',
+            'CLP': '900',
+            'PEN': '3.7',
+          },
+          'actualizado_en': '2026-11-22T00:00:00Z',
+          'proxima_actualizacion_unix': 9999999999,
+          'vencidas': false,
+          'fuente': 'Proveedor de pruebas',
+          'fuente_url': 'https://example.test',
+          'aviso': 'Tasa ficticia para pruebas',
+        });
+      case '/api/predicciones':
+        return json({
+          'modo': 'real',
+          'generado_en': '2026-11-22',
+          'hasta': '2026-10',
+          'advertencia': 'Historial insuficiente',
+          'definiciones': {
+            'ventas': 'Contratos de venta',
+            'demanda': 'Visitas no canceladas',
+          },
+          for (final key in ['ventas', 'demanda'])
+            key: {
+              'estado': 'historial_insuficiente',
+              'eventos': 0,
+              'meses_entrenamiento': 0,
+              'historial': [],
+              'proyeccion': [],
+            },
+        });
       case '/modulo_inmuebles/propiedades/catalogo':
+      case '/modulo_inmuebles/propiedades':
         return json([
           if (all || tenant == 1) property(1),
           if (all || tenant == 2) property(2),

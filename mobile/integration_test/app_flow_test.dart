@@ -37,6 +37,19 @@ void main() {
         (widget) =>
             widget is Scrollable && widget.axisDirection == AxisDirection.down,
       );
+      Future<void> searchWorkspace(String value) async {
+        final field = find.byKey(const ValueKey('workspace-search'));
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+        // El IME real responde después del foco; esperar evita que su estado
+        // anterior sobrescriba el texto inyectado por el ejecutor del test.
+        await tester.pump(const Duration(seconds: 1));
+        await tester.enterText(field, value);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(field).controller!.text, value);
+      }
+
       late AuthProvider auth;
       late OfflineService offline;
       Future<InmobiliariaApp> app({bool restore = false}) async {
@@ -92,6 +105,95 @@ void main() {
         findsOneWidget,
         reason: auth.errorMessage ?? 'La cuenta debe llegar al catálogo después de preparar el acceso local.',
       );
+      await tester.tap(find.byTooltip('Mapa de propiedades'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 de 2 inmuebles ubicados'), findsOneWidget);
+      expect(find.byTooltip('Ver todas las ubicaciones'), findsOneWidget);
+      await tester.tap(find.byTooltip('Casa 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ver ficha del inmueble'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Todo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Centro de trabajo'), findsOneWidget);
+      await searchWorkspace('multimoneda');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Conversión multimoneda'));
+      await tester.pumpAndSettle();
+      expect(find.text('696.00 BOB'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await searchWorkspace('prediccion');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Predicción de ventas y demanda'));
+      await tester.pumpAndSettle();
+      expect(find.text('Historial del alcance seleccionado'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await searchWorkspace('kanban');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Embudo comercial · Kanban'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Casa familiar'),
+        150,
+        scrollable: vertical.first,
+      );
+      expect(find.text('Casa familiar'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await searchWorkspace('workflow');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Workflow inteligente con IA'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Confirmar visita'),
+        150,
+        scrollable: vertical.first,
+      );
+      expect(find.text('Confirmar visita'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await searchWorkspace('bitacora');
+      expect(find.text('Bitácora'), findsOneWidget);
+      await tester.tap(find.byTooltip('Limpiar búsqueda'));
+      await tester.pumpAndSettle();
+      await searchWorkspace('propiedades');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('workspace-search')))
+            .controller!
+            .text,
+        'propiedades',
+      );
+      expect(
+        find.text('Gestionar propiedades'),
+        findsOneWidget,
+        reason:
+            'Rol ${auth.user?.idRol}; textos: ${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(" | ")}',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Gestionar propiedades'),
+        100,
+        scrollable: vertical.last,
+      );
+      await tester.tap(find.text('Gestionar propiedades'));
+      await tester.pumpAndSettle();
+      expect(find.text('Gestión de propiedades'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Reportes').last);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(

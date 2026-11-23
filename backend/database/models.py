@@ -130,8 +130,8 @@ class Propiedad(Base):
     tenant = relationship("Tenant", back_populates="propiedades")
     propietario = relationship("Propietario", back_populates="propiedades")
     agente = relationship("Agente", back_populates="propiedades")
-    imagenes = relationship("Imagen", back_populates="propiedad")
-    caracteristicas = relationship("Caracteristica", back_populates="propiedad")
+    imagenes = relationship("Imagen", back_populates="propiedad", cascade="all, delete-orphan")
+    caracteristicas = relationship("Caracteristica", back_populates="propiedad", cascade="all, delete-orphan")
     visitas = relationship("Visita", back_populates="propiedad")
     contratos = relationship("Contrato", back_populates="propiedad")
 

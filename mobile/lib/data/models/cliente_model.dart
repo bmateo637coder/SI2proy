@@ -37,5 +37,6 @@ class ClienteModel {
     'nombre': nombre,
     'correo': correo,
     'telefono': telefono,
+    'inmobiliaria': inmobiliaria,
   };
 }

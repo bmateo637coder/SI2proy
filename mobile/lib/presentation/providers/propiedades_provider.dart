@@ -9,6 +9,12 @@ class PropiedadesProvider extends ChangeNotifier {
 
   final PropiedadesRepository _repository;
   int _generation = 0;
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
   void reset() {
     _generation++;
     _propiedades = [];
@@ -28,7 +34,7 @@ class PropiedadesProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   Future<void> fetchPropiedades() async {
-    final generation = _generation;
+    final generation = ++_generation;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();

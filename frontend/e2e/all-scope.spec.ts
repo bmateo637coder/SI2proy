@@ -29,7 +29,7 @@ test('Todas filtra cada pantalla y conserva la ruta al cambiar entre empresas', 
   await page.goto('/dashboard/catalogo');
   await page.getByRole('combobox', { name: 'Inmobiliaria activa' }).selectOption({ label: 'Todas las inmobiliarias' });
   await expect(page).toHaveURL(/dashboard\/catalogo/);
-  await expect(page.locator('.grid-catalogo button')).toHaveCount(3);
+  await expect(page.locator('.grid-catalogo > .luxury-card')).toHaveCount(3);
   await expect(page.locator('.grid-catalogo')).toContainText('Casa de Horizonte');
   await expect(page.locator('.grid-catalogo')).toContainText('Casa de Cúspide');
   await page.getByRole('link', { name: /Reportes Dinámicos/ }).click();

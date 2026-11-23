@@ -14,6 +14,7 @@ from jose import jwt, JWTError
 import schemas
 from logger import log_accion_segura, leer_bitacora_segura
 from fastapi import Request
+from starlette.concurrency import run_in_threadpool
 from ws_manager import manager
 
 
@@ -34,6 +35,11 @@ import offline
 import reportes_generativos
 import analitica_ml
 import vista_global
+import property_media
+import market_tools
+import commercial
+from record_integrity import protect_history
+from auth import require_record_scope
 
 from contextlib import asynccontextmanager
 
@@ -45,6 +51,9 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Raíces - Inmobiliaria API", version="2.0.0", lifespan=lifespan)
+app.include_router(property_media.router)
+app.include_router(market_tools.router)
+app.include_router(commercial.router)
 
 app.include_router(ia_router.router)
 app.include_router(contratos_router.router)
@@ -55,6 +64,16 @@ app.include_router(analitica_ml.router)
 app.include_router(vista_global.router)
 import replica
 app.include_router(replica.router)
+import sprint4_api
+import sprint4_fidelizacion
+import sprint4_mantenimiento
+import sprint4_notificaciones
+for sprint4_router in (sprint4_api.router, sprint4_fidelizacion.router, sprint4_mantenimiento.router, sprint4_notificaciones.router):
+    app.include_router(sprint4_router)
+import sprint4_avisos
+app.include_router(sprint4_avisos.router)
+import sprint4_sync
+app.include_router(sprint4_sync.router)
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
@@ -97,7 +116,7 @@ async def log_requests(request: Request, call_next):
 
     # Registrar de forma asíncrona pero sin bloquear si falla
     try:
-        log_accion_segura(ip, usuario, accion)
+        await run_in_threadpool(log_accion_segura, ip, usuario, accion)
     except Exception as e:
         print(f"Error guardando bitacora: {e}")
 
@@ -111,7 +130,7 @@ def read_root():
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "version": app.version, "commit": os.getenv("RENDER_GIT_COMMIT", "local")[:12],
-            "features": ["saas", "offline", "analitica", "tenant_scope_all"]}
+            "features": ["saas", "offline", "analitica", "tenant_scope_all", "sprint4"]}
 
 # ==========================================
 # ENDPOINTS DE AUTENTICACIÓN (SPRINT 0)
@@ -282,6 +301,30 @@ def get_bitacora_segura(dev_key: str, current_user: models.Usuario = Depends(get
         return registros
     except ValueError:
         raise HTTPException(status_code=403, detail="Llave de desarrollador inválida")
+
+
+from pydantic import BaseModel, Field
+
+
+class RegistroAuditoriaImportado(BaseModel):
+    ip: str = Field(max_length=150)
+    usuario: str = Field(max_length=150)
+    accion: str = Field(max_length=1000)
+    fecha_hora: str = Field(pattern=r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$')
+
+
+class ImportarAuditoria(BaseModel):
+    dev_key: str = Field(max_length=100)
+    registros: list[RegistroAuditoriaImportado] = Field(max_length=10000)
+
+
+@app.post('/admin/bitacora/importar')
+def importar_auditoria(body: ImportarAuditoria, user=Depends(get_current_user)):
+    if user.id_rol != 1: raise HTTPException(403, 'Solo el administrador SaaS puede recuperar la auditoría.')
+    from logger import importar_bitacora
+    try:
+        return {'importados': importar_bitacora(body.dev_key, [r.model_dump() for r in body.registros])}
+    except ValueError: raise HTTPException(403, 'Llave de desarrollador inválida') from None
 
 # ==========================================
 # ENDPOINTS DE PERMISOS (RBAC/CBAC)
@@ -614,26 +657,30 @@ async def restaurar_backup(
     if current_user.id_rol != 1:
         raise HTTPException(status_code=403, detail="Solo Super Admin puede restaurar backups")
 
-    if not file.filename.endswith(".sql"):
+    if not (file.filename or '').lower().endswith(".sql"):
         raise HTTPException(status_code=400, detail="Solo se aceptan archivos .sql")
 
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".sql", prefix="restore_")
     try:
-        content = await file.read()
+        content = await file.read(50 * 1024 * 1024 + 1)
+        if len(content) > 50 * 1024 * 1024:
+            raise HTTPException(413, 'El respaldo debe pesar como máximo 50 MB.')
+        # pg_dump 18 añade un SET no admitido por PostgreSQL 16 de Render.
+        content = content.replace(b'SET transaction_timeout = 0;\n', b'').replace(b'SET transaction_timeout = 0;\r\n', b'')
         tmp.write(content)
         tmp.close()
 
-        env = os.environ.copy()
-        env["PGPASSWORD"] = get_postgres_password()
+        from backup_service import _pg_env
+        env = _pg_env()
 
         psql_exe = pg_bin_tool("psql")
         result = subprocess.run(
-            [psql_exe, uri_conexion(), "-f", tmp.name, "--no-password"],
+            [psql_exe, uri_conexion(), "-f", tmp.name, "--no-password", "--single-transaction", "--set=ON_ERROR_STOP=1"],
             capture_output=True, text=True, env=env, timeout=120
         )
 
         if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"Error al restaurar: {result.stderr[:500]}")
+            raise HTTPException(status_code=500, detail='No se pudo restaurar el archivo. La transacción fue revertida; verifique la compatibilidad del respaldo.')
 
         return {"mensaje": "Base de datos restaurada exitosamente"}
     except subprocess.TimeoutExpired:
@@ -641,6 +688,7 @@ async def restaurar_backup(
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="psql no encontrado. Asegúrese de que PostgreSQL esté en el PATH del sistema.")
     finally:
+        tmp.close()
         if os.path.exists(tmp.name):
             os.unlink(tmp.name)
 
@@ -696,17 +744,8 @@ def guardar_caracteristicas(db, propiedad, characteristics):
             db.add(models.Caracteristica(id_propiedad=propiedad.id_propiedad, nombre=item.nombre.strip(), valor=item.valor.strip()))
 
 @app.post("/upload")
-async def upload_image(file: UploadFile = File(...), current_user=Depends(require_staff)):
-    try:
-        # Save file to uploads folder
-        ext = file.filename.split('.')[-1]
-        filename = f"{uuid.uuid4().hex}.{ext}"
-        filepath = os.path.join("uploads", filename)
-        with open(filepath, "wb") as f:
-            f.write(await file.read())
-        return {"url": f"/uploads/{filename}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def upload_image(file: UploadFile = File(...), current_user=Depends(require_staff), db: Session = Depends(get_db)):
+    return property_media.save_photo(file, db)
 
 @app.post("/modulo_inmuebles/propiedades", response_model=schemas.PropiedadAdminResponse, status_code=201)
 def create_propiedad(
@@ -756,6 +795,8 @@ def create_propiedad(
                 db.add(new_img)
     db.commit()
     db.refresh(new_prop)
+    from sprint4_fidelizacion import procesar_alertas
+    procesar_alertas(db, new_prop)
     return new_prop
 
 @app.put("/modulo_inmuebles/propiedades/{id_propiedad}/estado")
@@ -780,6 +821,8 @@ def update_propiedad_estado(
     propiedad.version += 1
     db.commit()
     db.refresh(propiedad)
+    from sprint4_fidelizacion import procesar_alertas
+    procesar_alertas(db, propiedad)
 
     # Broadcast to all websocket clients
     background_tasks.add_task(
@@ -837,6 +880,7 @@ def update_propiedad(
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     if current_user.id_rol != 1 and propiedad.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede modificar propiedades de otra empresa")
+    require_record_scope(current_user, propiedad.id_tenant)
     validar_relaciones_propiedad(db, data, propiedad.id_tenant)
     if data.id_sucursal is not None:
         saas.branch_scope(db, current_user, data.id_sucursal)
@@ -858,6 +902,8 @@ def update_propiedad(
                 db.add(models.Imagen(id_propiedad=propiedad.id_propiedad, url=url.strip()))
     db.commit()
     db.refresh(propiedad)
+    from sprint4_fidelizacion import procesar_alertas
+    procesar_alertas(db, propiedad)
     return propiedad
 
 @app.delete("/modulo_inmuebles/propiedades/{id_propiedad}")
@@ -874,6 +920,13 @@ def delete_propiedad(
         raise HTTPException(status_code=404, detail="Propiedad no encontrada")
     if current_user.id_rol != 1 and propiedad.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar propiedades de otra empresa")
+    require_record_scope(current_user, propiedad.id_tenant)
+    from sprint4_mantenimiento import Solicitud as SolicitudMantenimiento
+    if (db.query(models.Contrato).filter_by(id_propiedad=id_propiedad).first()
+            or db.query(models.Visita).filter_by(id_propiedad=id_propiedad).first()
+            or db.query(SolicitudMantenimiento).filter_by(id_propiedad=id_propiedad).first()):
+        raise HTTPException(409, 'El inmueble tiene contratos, visitas o incidencias asociados. Conserve su historial.')
+    protect_history(db, models.Propiedad, id_propiedad, 'El inmueble')
     db.delete(propiedad)
     db.commit()
     return {"message": "Propiedad eliminada"}
@@ -956,6 +1009,7 @@ def update_propietario(
         raise HTTPException(status_code=404, detail="Propietario no encontrado")
     if current_user.id_rol != 1 and propietario.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede modificar propietarios de otra empresa")
+    require_record_scope(current_user, propietario.id_tenant)
     # Verificar que el nuevo CI existe
     nuevo_usuario = db.query(models.Usuario).filter(models.Usuario.ci == data.ci_usuario).first()
     if not nuevo_usuario:
@@ -995,6 +1049,11 @@ def delete_propietario(
         raise HTTPException(status_code=404, detail="Propietario no encontrado")
     if current_user.id_rol != 1 and propietario.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar propietarios de otra empresa")
+    require_record_scope(current_user, propietario.id_tenant)
+    saas.tenant_scope(current_user, propietario.id_tenant)
+    if db.query(models.Propiedad).filter_by(id_propietario=id_propietario).first():
+        raise HTTPException(409, 'El propietario tiene inmuebles asociados. Reasígnelos antes de eliminarlo.')
+    protect_history(db, models.Propietario, id_propietario, 'El propietario')
     db.delete(propietario)
     db.commit()
     return {"message": "Propietario eliminado"}
@@ -1077,6 +1136,7 @@ def update_cliente(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     if current_user.id_rol != 1 and cliente.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede modificar clientes de otra empresa")
+    require_record_scope(current_user, cliente.id_tenant)
     # Verificar que el nuevo CI existe
     nuevo_usuario = db.query(models.Usuario).filter(models.Usuario.ci == data.ci_usuario).first()
     if not nuevo_usuario:
@@ -1116,6 +1176,11 @@ def delete_cliente(
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     if current_user.id_rol != 1 and cliente.id_tenant != current_user.id_tenant:
         raise HTTPException(status_code=403, detail="No puede eliminar clientes de otra empresa")
+    require_record_scope(current_user, cliente.id_tenant)
+    saas.tenant_scope(current_user, cliente.id_tenant)
+    if db.query(models.Contrato).filter_by(id_cliente=id_cliente).first() or db.query(models.Visita).filter_by(id_cliente=id_cliente).first():
+        raise HTTPException(409, 'El cliente tiene contratos o visitas asociados. Conserve su historial.')
+    protect_history(db, models.Cliente, id_cliente, 'El cliente')
     db.delete(cliente)
     db.commit()
     return {"message": "Cliente eliminado"}
@@ -1152,6 +1217,7 @@ def delete_agente(id_agente: int, db: Session = Depends(get_db), user=Depends(re
     for model in (models.Propiedad, models.Contrato, models.Visita):
         if db.query(model).filter_by(id_agente=id_agente).first():
             raise HTTPException(409, "El agente tiene propiedades, contratos o visitas asociados. Conserve su historial o reasigne sus propiedades.")
+    protect_history(db, models.Agente, id_agente, 'El agente')
     db.delete(agent)
     db.commit()
     return {"message": "Agente eliminado. La cuenta del usuario se conserva."}

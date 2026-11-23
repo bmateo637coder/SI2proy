@@ -174,6 +174,7 @@ def save_branch(db, user, body, row=None):
         setattr(row, key, value)
     db.add(row)
     db.commit()
+    db.refresh(row)
     return row
 
 
