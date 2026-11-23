@@ -103,7 +103,7 @@ export class Sprint4Offline {
    else if(path==='/api/workflow-ia'&&c.ruta.startsWith(path+'/')&&c.metodo==='PUT'){const item=result.find((r:any)=>r.id===Number(c.ruta.split('/').pop()));if(item?.tareas?.[c.datos.tarea]){item.tareas[c.datos.tarea].completada=c.datos.completada;item.estado=item.tareas.every((t:any)=>t.completada)?'Completado':'Pendiente';item.version++;item.pendiente=true;}}
    else if(c.ruta===path&&c.metodo==='POST'&&['/api/alertas','/api/mantenimiento','/api/visitas'].includes(path)){result.push({...c.datos,id:row.local,id_visita:row.local,activa:true,resumen:c.datos.texto||'Criterios guardados',estado:'Pendiente de sincronizar',urgencia:'Pendiente',pendiente:true});}
    else if(c.ruta.startsWith(path+'/')&&!c.ruta.slice(path.length+1).includes('/')){const id=Number(c.ruta.split('/').pop()),i=result.findIndex((r:any)=>r.id===id);if(i>=0&&c.metodo==='DELETE')result.splice(i,1);else if(i>=0&&c.metodo==='PUT')result[i]={...result[i],...c.datos,version:(result[i].version||0)+1,pendiente:true};}
-  }return result;
+  }if(path==='/api/oportunidades')for(const r of result){if(r.etapa==='Ganado')r.probabilidad=100;if(r.etapa==='Perdido')r.probabilidad=0;}return result;
  }
  private async download(){if(this.downloading||!navigator.onLine)return;this.downloading=true;const account=this.account;
   try {await this.sync();const u=this.auth.currentUser();const staff=u?.id_rol===1||u?.id_rol===2||u?.es_agente;

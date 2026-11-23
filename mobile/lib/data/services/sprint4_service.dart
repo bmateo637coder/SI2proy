@@ -559,6 +559,12 @@ class Sprint4Service extends ChangeNotifier {
         }
       }
     }
+    if (path == '/api/oportunidades') {
+      for (final r in result) {
+        if (r['etapa'] == 'Ganado') r['probabilidad'] = 100;
+        if (r['etapa'] == 'Perdido') r['probabilidad'] = 0;
+      }
+    }
     return result;
   }
 

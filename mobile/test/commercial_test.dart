@@ -216,10 +216,12 @@ void main() {
     (tester) async {
       final service = await app(tester, workflow: true);
       await tester.scrollUntilVisible(
-        find.text('Confirmar visita'),
+        find.byType(Checkbox).first,
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.ensureVisible(find.byType(Checkbox).first);
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(Checkbox).first);
       await tester.pumpAndSettle();
       expect(service.writes.last['completada'], true);
