@@ -69,7 +69,7 @@ ng build       # producción → dist/
 
 ## Mobile (`mobile/`)
 
-[Descargar APK Android 3.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.2.0-33/Raices-3.2.0.apk) · [Guía de uso móvil](mobile/README.md) · [Funciones web y móvil / validación 3.1](docs/PARIDAD_MOVIL_3_1.md) · [Validación y despliegue del sprint 4](docs/VALIDACION_SPRINT4.md).
+[Descargar APK Android 3.3.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.3.0-38/Raices-3.3.0.apk) · [Guía de uso móvil](mobile/README.md) · [Funciones web y móvil / validación 3.1](docs/PARIDAD_MOVIL_3_1.md) · [Validación y despliegue del sprint 4](docs/VALIDACION_SPRINT4.md).
 
 App Flutter con selección de una o todas las inmobiliarias, reportes/IA y operaciones offline. La URL de la API se define en `lib/core/config/api_constants.dart`
 y puede sobrescribirse en build/run:
@@ -86,3 +86,7 @@ flutter build apk --dart-define=API_BASE_URL=https://<backend-publico>/
 - **Mobile:** APK publicado como GitHub Release.
 
 La revisión para la presentación final, capturas y pruebas están en [REVISION_FINAL.md](docs/REVISION_FINAL.md). Las pantallas de [predicciones de ventas/demanda y conversión multimoneda](docs/PREDICCIONES_MONEDA.md) están disponibles en web y Android.
+
+## Embudo comercial y workflow inteligente
+
+Web: **Embudo comercial · Kanban** y **Workflow inteligente con IA** en el menú. Android: buscar «Kanban» o «workflow» en **Todo → Centro de trabajo**. Oportunidades con seguimiento, responsables, etapas e historial; planes de tareas clasificados con Gemini o reglas locales identificadas. Ambos módulos permiten consulta y cambios offline con sincronización y revisión de conflictos. [Guía y pruebas](docs/EMBUDO_WORKFLOW.md).

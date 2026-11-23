@@ -1,10 +1,10 @@
-# Raíces para Android · 3.2.0
+# Raíces para Android · 3.3.0
 
 Aplicación Flutter conectada a `https://raices-backend-n1yy.onrender.com`.
 
 ## Descargar
 
-El workflow **Build APK Release** genera `Raices-3.2.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.2.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.2.0-33/Raices-3.2.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.2.0-33)). Conserva la firma anterior: instalar encima de la versión existente, sin desinstalar ni borrar los datos. No requiere introducir una clave de Gemini en el teléfono.
+El workflow **Build APK Release** genera `Raices-3.3.0.apk` y su SHA-256 después del análisis de Dart, las pruebas Flutter, la integración en emulador Android y la verificación de firma. La descarga pública es [Raíces 3.3.0](https://github.com/bmateo637coder/SI2proy/releases/download/mobile-3.3.0-38/Raices-3.3.0.apk) ([versión y SHA-256](https://github.com/bmateo637coder/SI2proy/releases/tag/mobile-3.3.0-38)). Conserva la firma anterior: instalar encima de la versión existente, sin desinstalar ni borrar los datos. No requiere introducir una clave de Gemini en el teléfono.
 
 ## Superadministrador SaaS
 
@@ -63,3 +63,7 @@ Si la carga local es lenta, usar `--prepare-only` para obtener el ID del borrado
 ## Predicciones y moneda
 
 En **Todo → Centro de trabajo**, buscar **Predicción de ventas y demanda** o **Conversión multimoneda**. El primer módulo ofrece historial, validación temporal, escenario académico identificado y CSV; el segundo, seis monedas con fuente/fecha y tasa manual. La última descarga se puede consultar sin red. [Guía de ambas funciones](../docs/PREDICCIONES_MONEDA.md) · [Revisión final y pruebas](../docs/REVISION_FINAL.md).
+
+## Embudo comercial y workflow IA
+
+En **Todo → Centro de trabajo**, buscar **Kanban** o **workflow**. Se pueden crear, editar, mover y archivar oportunidades; también generar planes de seguimiento y completar/reabrir tareas. La información se descarga automáticamente. Los cambios sin conexión quedan identificados como pendientes y se sincronizan con revisión de conflictos. Se conservan las dependencias entre una oportunidad nueva y sus tareas. Selecciona una inmobiliaria concreta para escribir; «Todas» ofrece lectura consolidada. [Guía y pruebas](../docs/EMBUDO_WORKFLOW.md).

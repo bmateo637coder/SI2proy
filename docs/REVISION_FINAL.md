@@ -1,5 +1,7 @@
 # Revisión para presentación final
 
+Actualización posterior: [embudo comercial Kanban, workflow inteligente y revisión adicional](EMBUDO_WORKFLOW.md), con datos ficticios por inmobiliaria, dependencias offline, eliminación segura de referencias e inmobiliaria seleccionada en los cambios SaaS.
+
 Revisión del 22 de noviembre de 2026 sobre la rama `feat/sprint4-integracion-web-movil`. Complementa la [matriz de funciones nativas](PARIDAD_MOVIL_3_1.md) y la [configuración de servicios externos](CONFIGURAR_FIREBASE_GMAIL.md).
 
 ## Correcciones
@@ -71,3 +73,7 @@ Se guardó fuera de Git un respaldo posterior a la carga de los seis inmuebles: 
 - Certificado de firma SHA-256: `bf728aa48472f871efb796107ebeb25e3c4484a843232952bb915bf12953ecd2`, igual a la versión anterior. Se verificó también con `apksigner` local.
 
 Instalar encima de la versión anterior, sin borrar los datos. Abrir con Internet para descargar las funciones y datos nuevos antes de probar el modo offline. El archivo publicado procede del artefacto firmado de la misma ejecución que aprobó las pruebas nativas; no se recompila para cargarlo a la versión pública.
+
+## Actualización Android 3.3.0
+
+La descarga vigente, certificado, checksum, pruebas y revisión adicional están en [Embudo comercial y workflow](EMBUDO_WORKFLOW.md). Incluye ambos módulos nativos y la corrección del descarte de propuestas dependientes. La sección 3.2.0 anterior conserva la evidencia histórica.
