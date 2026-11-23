@@ -136,6 +136,32 @@ void main() {
       expect(find.text('Historial del alcance seleccionado'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
+      await searchWorkspace('kanban');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Embudo comercial · Kanban'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Casa familiar'),
+        150,
+        scrollable: vertical.first,
+      );
+      expect(find.text('Casa familiar'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await searchWorkspace('workflow');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Workflow inteligente con IA'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Confirmar visita'),
+        150,
+        scrollable: vertical.first,
+      );
+      expect(find.text('Confirmar visita'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await searchWorkspace('bitacora');
       expect(find.text('Bitácora'), findsOneWidget);
       await tester.tap(find.byTooltip('Limpiar búsqueda'));

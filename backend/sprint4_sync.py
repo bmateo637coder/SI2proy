@@ -18,6 +18,7 @@ import sprint4_api as api
 import sprint4_fidelizacion as f
 import sprint4_mantenimiento as mant
 import sprint4_notificaciones as notify
+import commercial as crm
 
 router = APIRouter(prefix='/api/servicios', tags=['Sincronización Sprint 4'])
 
@@ -57,7 +58,22 @@ def sync(body: Comando, db: Session = Depends(get_db), user=Depends(get_current_
     s = WorkSession(db)
     path, method, data = body.ruta, body.metodo, body.datos
     match = re.fullmatch(r'/api/(favoritos|alertas|promociones|comisiones|mantenimiento|bandeja|visitas)(?:/(\d+))?(?:/(costos|fotos|liquidar|leida|leer-todas))?(?:/(\d+))?', path)
-    if path == '/api/recomendaciones/feedback' and method == 'POST':
+    commercial = re.fullmatch(r'/api/(oportunidades|workflow-ia)(?:/(\d+))?', path)
+    if commercial:
+        entity, ident = commercial.groups()
+        if method == 'POST' and ident is None:
+            result = (crm.create_opportunity(checked(crm.OpportunityIn, data), s, user) if entity == 'oportunidades'
+                      else crm.create_workflow(checked(crm.WorkflowIn, data), s, user))
+        elif method == 'PUT' and ident:
+            payload = {**data, **({'version': body.version} if body.version else {})}
+            result = (crm.update_opportunity(int(ident), checked(crm.OpportunityEdit, payload), s, user) if entity == 'oportunidades'
+                      else crm.update_task(int(ident), checked(crm.TaskEdit, payload), s, user))
+        elif method == 'DELETE' and ident and entity == 'oportunidades':
+            version = body.version or data.get('version')
+            if not isinstance(version, int) or version < 1: raise HTTPException(422, 'Se requiere versión.')
+            result = crm.archive_opportunity(int(ident), version, s, user)
+        else: raise HTTPException(422, 'Comando comercial inválido.')
+    elif path == '/api/recomendaciones/feedback' and method == 'POST':
         result = api.feedback(checked(api.FeedbackIn, data), s, user)
     elif match:
         entity, ident, action, child = match.groups(); ident = int(ident) if ident else None

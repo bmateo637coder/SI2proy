@@ -15,6 +15,8 @@
             <a routerLink="/dashboard/plan" class="luxury-nav-link" routerLinkActive="active">Plan y sucursales</a>
             </ng-container>
             <p class="nav-section-title">Principal</p>
+            <a *ngIf="canOperate" routerLink="/dashboard/oportunidades" class="luxury-nav-link" routerLinkActive="active">Embudo comercial · Kanban</a>
+            <a *ngIf="canOperate" routerLink="/dashboard/workflow-ia" class="luxury-nav-link" routerLinkActive="active">Workflow inteligente con IA</a>
             <a routerLink="/dashboard/profile" class="luxury-nav-link" routerLinkActive="active">
                 Mi Perfil
             </a>

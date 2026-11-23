@@ -109,6 +109,44 @@ class MobileServer implements HttpClientAdapter {
         'motivo': 'Reserva cancelada.',
       });
     switch (options.path) {
+      case '/api/oportunidades/opciones':
+        return json({'agentes': [], 'clientes': [], 'propiedades': []});
+      case '/api/oportunidades':
+        return json([
+          {
+            'id': 1,
+            'titulo': 'Casa familiar',
+            'contacto': 'Cliente de prueba',
+            'etapa': 'Nuevo',
+            'importe': 1000,
+            'probabilidad': 30,
+            'version': 1,
+            'inmobiliaria': 'Raíces',
+            'historial': [],
+          },
+        ]);
+      case '/api/workflow-ia':
+        return json([
+          {
+            'id': 1,
+            'texto': 'Visitar una casa hoy',
+            'categoria': 'Visita',
+            'urgencia': 'Alta',
+            'modo': 'local',
+            'justificacion': 'Palabras clave',
+            'estado': 'Pendiente',
+            'version': 1,
+            'inmobiliaria': 'Raíces',
+            'historial': [],
+            'tareas': [
+              {
+                'titulo': 'Confirmar visita',
+                'vence': '2026-11-22',
+                'completada': false,
+              },
+            ],
+          },
+        ]);
       case '/api/health':
         return json({'status': 'ok'});
       case '/api/analitica/dashboard':

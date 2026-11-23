@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/config/api_constants.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'replica_store.dart';
+import '../../core/utils/commercial_plan.dart';
 
 class Sprint4Service extends ChangeNotifier {
   Sprint4Service(this.dio, this.auth, this.store) {
@@ -219,6 +220,18 @@ class Sprint4Service extends ChangeNotifier {
           jsonDecode(row['command'] as String),
         );
         final match = RegExp(r'/-\d+').firstMatch(command['ruta'] as String);
+        final dependency = command['datos']?['id_oportunidad'];
+        if (dependency is int && dependency < 0) {
+          final parent = await db.query(
+            's4_queue',
+            where: 'identity=? AND account=? AND local_id=?',
+            whereArgs: [owner, row['account'], dependency],
+          );
+          if (parent.isEmpty || parent.first['state'] != 'confirmado') continue;
+          command['datos']['id_oportunidad'] = jsonDecode(
+            parent.first['result'] as String,
+          )['id'];
+        }
         if (match != null) {
           final local = int.parse(match.group(0)!.substring(1));
           final parent = await db.query(
@@ -383,6 +396,9 @@ class Sprint4Service extends ChangeNotifier {
       '/api/mantenimiento/costos/resumen',
       '/modulo_inmuebles/propiedades/catalogo',
       if (staff) ...[
+        '/api/oportunidades',
+        '/api/oportunidades/opciones',
+        '/api/workflow-ia',
         '/api/gerencia/dashboard',
         '/api/analitica/zonas',
         '/api/comisiones',
@@ -422,7 +438,8 @@ class Sprint4Service extends ChangeNotifier {
           }
         }
       } catch (_) {
-        return;
+        // An optional service must not interrupt the rest of the download.
+        continue;
       }
     }
     downloaded = DateTime.now();
@@ -445,6 +462,8 @@ class Sprint4Service extends ChangeNotifier {
           '/api/alertas',
           '/api/mantenimiento',
           '/api/visitas',
+          '/api/oportunidades',
+          '/api/workflow-ia',
         ].contains(path))
       return source;
     final rows = await (await store.database).query(
@@ -453,7 +472,7 @@ class Sprint4Service extends ChangeNotifier {
       whereArgs: [key, 'pendiente'],
       orderBy: 'local_id DESC',
     );
-    final result = List<dynamic>.from(source);
+    final result = List<dynamic>.from(jsonDecode(jsonEncode(source)));
     for (final row in rows) {
       final c = jsonDecode(row['command'] as String),
           route = c['ruta'] as String;
@@ -481,6 +500,37 @@ class Sprint4Service extends ChangeNotifier {
               });
           }
         }
+      } else if (route == path &&
+          c['metodo'] == 'POST' &&
+          ['/api/oportunidades', '/api/workflow-ia'].contains(path)) {
+        result.add({
+          ...c['datos'] as Map,
+          'id': row['local_id'],
+          'version': 1,
+          'pendiente': true,
+          'inmobiliaria': 'Inmobiliaria seleccionada',
+          'historial': [],
+          if (path == '/api/workflow-ia')
+            ...localCommercialPlan(c['datos']['texto'] as String),
+        });
+      } else if (path == '/api/workflow-ia' &&
+          route.startsWith('$path/') &&
+          c['metodo'] == 'PUT') {
+        final id = int.tryParse(route.split('/').last);
+        final i = result.indexWhere((r) => r['id'] == id);
+        if (i >= 0) {
+          final item = result[i] as Map;
+          final tasks = item['tareas'] as List;
+          final task = c['datos']['tarea'] as int;
+          if (task < tasks.length) {
+            tasks[task]['completada'] = c['datos']['completada'];
+            item['estado'] = tasks.every((t) => t['completada'] == true)
+                ? 'Completado'
+                : 'Pendiente';
+            item['version'] = (item['version'] as int) + 1;
+            item['pendiente'] = true;
+          }
+        }
       } else if (route == path && c['metodo'] == 'POST') {
         result.add({
           ...c['datos'] as Map,
@@ -503,6 +553,7 @@ class Sprint4Service extends ChangeNotifier {
             result[i] = {
               ...result[i] as Map,
               ...c['datos'] as Map,
+              'version': ((result[i]['version'] as int?) ?? 0) + 1,
               'pendiente': true,
             };
         }

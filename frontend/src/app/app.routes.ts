@@ -27,6 +27,8 @@ export const routes: Routes = [
     component: Layout,
     canActivate: [sessionGuard],
     children: [
+      { path: 'oportunidades', canActivate: [staffGuard], loadComponent: () => import('./features/analitica/commercial').then(m => m.CommercialPage) },
+      { path: 'workflow-ia', canActivate: [staffGuard], loadComponent: () => import('./features/analitica/commercial').then(m => m.WorkflowPage) },
       { path: 'predicciones', canActivate: [staffGuard], loadComponent: () => import('./features/analitica/market-tools').then(m => m.PredictionsPage) },
       { path: 'moneda', loadComponent: () => import('./features/analitica/market-tools').then(m => m.CurrencyPage) },
       { path: 'servicios', loadComponent: () => import('./features/servicios/servicios').then(m => m.Servicios) },

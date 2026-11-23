@@ -3,6 +3,7 @@ import { HttpBackend, HttpClient, HttpHeaders, HttpInterceptorFn, HttpRequest, H
 import { from, firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { API } from './api';
+import { localCommercialPlan } from './commercial-offline';
 
 type Pending = { uuid: string; identity: string; account: string; scope: string; command: any; local: number; state: string; result?: any; error?: any };
 @Injectable({providedIn:'root'})
@@ -31,6 +32,8 @@ export class Sprint4Offline {
  }
  private async send(row:Pending){
   const command=structuredClone(row.command), match=command.ruta.match(/\/-\d+/);
+  const dependency=command.datos?.id_oportunidad;
+  if(Number(dependency)<0){const all:Pending[]=await this.operation('queue','readonly',s=>s.getAll());const parent=all.find(r=>r.account===row.account&&r.local===dependency);if(!parent||parent.state!=='confirmado')return;command.datos.id_oportunidad=parent.result.id;}
   if(match){const all:Pending[]=await this.operation('queue','readonly',s=>s.getAll());const parent=all.find(r=>r.account===row.account&&r.local===Number(match[0].slice(1)));
    if(!parent||parent.state!=='confirmado')return;command.ruta=command.ruta.replace(match[0],`/${parent.result.id}`);}
   try {const result=await firstValueFrom(this.http.post(API+'/api/servicios/sync',command,{headers:this.headers(row.scope)}));
@@ -81,6 +84,7 @@ export class Sprint4Offline {
   if(owner!==this.identity||account!==this.account)throw new Error('La cuenta o inmobiliaria cambió.');
   const uuid=crypto.randomUUID(), local=-Date.now()*1000-Math.floor(Math.random()*999);
   const path=req.url.slice(API.length);const command:any={uuid,metodo:req.method,ruta:path,datos:body};
+  if(body.version)command.version=body.version;
   if(/^\/api\/mantenimiento\/\d+$/.test(path)&&req.method==='PUT'){const base=await this.getCache(account+'|'+req.url);if(base?.version)command.version=base.version;}
   const row:Pending={uuid,identity:owner,account,scope,command,local,state:'pendiente'};
   await this.operation('queue','readwrite',s=>s.put(row));await this.send(row);await this.counts();
@@ -95,14 +99,16 @@ export class Sprint4Offline {
   for(const row of all.filter(r=>r.account===account&&r.state==='pendiente').sort((a,b)=>b.local-a.local)){
    const c=row.command;if(path==='/api/favoritos'&&c.ruta.startsWith(path+'/')){const id=Number(c.ruta.split('/').pop());const index=result.findIndex((f:any)=>f.id_propiedad===id);if(index>=0)result.splice(index,1);
     if(c.metodo==='POST'){const catalog=await this.getCache(account+'|'+API+'/modulo_inmuebles/propiedades/catalogo');const p=catalog?.find((p:any)=>p.id_propiedad===id);if(p)result.push({id_propiedad:id,propiedad:p,disponible:p.estado==='Disponible',pendiente:true});}
-   }else if(c.ruta===path&&c.metodo==='POST'&&['/api/alertas','/api/mantenimiento','/api/visitas'].includes(path)){result.push({...c.datos,id:row.local,id_visita:row.local,activa:true,resumen:c.datos.texto||'Criterios guardados',estado:'Pendiente de sincronizar',urgencia:'Pendiente',pendiente:true});}
-   else if(c.ruta.startsWith(path+'/')&&!c.ruta.slice(path.length+1).includes('/')){const id=Number(c.ruta.split('/').pop()),i=result.findIndex((r:any)=>r.id===id);if(i>=0&&c.metodo==='DELETE')result.splice(i,1);else if(i>=0&&c.metodo==='PUT')result[i]={...result[i],...c.datos,pendiente:true};}
+   }else if(c.ruta===path&&c.metodo==='POST'&&['/api/oportunidades','/api/workflow-ia'].includes(path)){const data={...c.datos,id:row.local,version:1,pendiente:true,inmobiliaria:'Inmobiliaria seleccionada',historial:[]};result.push(path.endsWith('workflow-ia')?{...data,...localCommercialPlan(c.datos.texto)}:data);}
+   else if(path==='/api/workflow-ia'&&c.ruta.startsWith(path+'/')&&c.metodo==='PUT'){const item=result.find((r:any)=>r.id===Number(c.ruta.split('/').pop()));if(item?.tareas?.[c.datos.tarea]){item.tareas[c.datos.tarea].completada=c.datos.completada;item.estado=item.tareas.every((t:any)=>t.completada)?'Completado':'Pendiente';item.version++;item.pendiente=true;}}
+   else if(c.ruta===path&&c.metodo==='POST'&&['/api/alertas','/api/mantenimiento','/api/visitas'].includes(path)){result.push({...c.datos,id:row.local,id_visita:row.local,activa:true,resumen:c.datos.texto||'Criterios guardados',estado:'Pendiente de sincronizar',urgencia:'Pendiente',pendiente:true});}
+   else if(c.ruta.startsWith(path+'/')&&!c.ruta.slice(path.length+1).includes('/')){const id=Number(c.ruta.split('/').pop()),i=result.findIndex((r:any)=>r.id===id);if(i>=0&&c.metodo==='DELETE')result.splice(i,1);else if(i>=0&&c.metodo==='PUT')result[i]={...result[i],...c.datos,version:(result[i].version||0)+1,pendiente:true};}
   }return result;
  }
  private async download(){if(this.downloading||!navigator.onLine)return;this.downloading=true;const account=this.account;
   try {await this.sync();const u=this.auth.currentUser();const staff=u?.id_rol===1||u?.id_rol===2||u?.es_agente;
    const paths=['/api/moneda','/modulo_inmuebles/propiedades/catalogo','/api/favoritos','/api/alertas','/api/recomendaciones','/api/bandeja','/api/mi-cuenta','/api/mantenimiento','/api/mantenimiento/mis-inmuebles','/api/visitas',
-    ...(staff?['/api/predicciones','/api/gerencia/dashboard','/api/analitica/zonas','/api/comisiones','/api/promociones','/api/reportes/ejecutivo']:[])];
+    ...(staff?['/api/oportunidades','/api/oportunidades/opciones','/api/workflow-ia','/api/predicciones','/api/gerencia/dashboard','/api/analitica/zonas','/api/comisiones','/api/promociones','/api/reportes/ejecutivo']:[])];
    for(const path of paths){if(account!==this.account)return;try{const r=await firstValueFrom(this.http.get<any>(API+path,{headers:this.headers()}));await this.putCache(account+'|'+API+path,r);
     if(path==='/api/mantenimiento')for(const item of r){const url=API+path+'/'+item.id;const detail=await firstValueFrom(this.http.get(url,{headers:this.headers()}));await this.putCache(account+'|'+url,detail);}}catch{ /* Optional services must not stop the rest of the offline download. */ }}
   }catch{}finally{this.downloading=false;}
@@ -111,8 +117,9 @@ export class Sprint4Offline {
 
 export const sprint4Interceptor:HttpInterceptorFn=(req,next)=>{
  const path=req.url.startsWith(API)?req.url.slice(API.length):'';
- const reads=req.method==='GET'&&/^\/(api\/(moneda|predicciones|visitas|favoritos|alertas|recomendaciones|bandeja|mantenimiento|gerencia|analitica\/zonas|comisiones|promociones|mi-cuenta|reportes\/ejecutivo)|modulo_inmuebles\/propiedades\/catalogo)/.test(path);
+ const commercial=/^\/api\/(oportunidades|workflow-ia)(?:\/-?\d+)?$/.test(path);
+ const reads=req.method==='GET'&&(/^\/(api\/(moneda|predicciones|visitas|favoritos|alertas|recomendaciones|bandeja|mantenimiento|gerencia|analitica\/zonas|comisiones|promociones|mi-cuenta|reportes\/ejecutivo)|modulo_inmuebles\/propiedades\/catalogo)/.test(path)||commercial||path==='/api/oportunidades/opciones');
  const writes=['POST','PUT','DELETE'].includes(req.method)&&/^\/api\/(visitas(?:\/-?\d+)?|favoritos(?:\/-?\d+)|alertas(?:\/-?\d+)?|recomendaciones\/feedback|mantenimiento(?:\/-?\d+)?(?:\/(costos|fotos)(?:\/\d+)?)?|promociones(?:\/-?\d+)?|comisiones\/\d+\/liquidar|bandeja\/(?:\d+\/leida|leer-todas))$/.test(path);
  const queries=req.method==='POST'&&/^\/api\/(busqueda-semantica|servicios\/ia\/(chat|cotizar|descripcion))$/.test(path);
- return reads||writes||queries?from(inject(Sprint4Offline).request(req)):next(req);
+ return reads||writes||queries||(commercial&&['POST','PUT','DELETE'].includes(req.method))?from(inject(Sprint4Offline).request(req)):next(req);
 };

@@ -31,6 +31,22 @@ class WorkspaceModule {
 }
 
 List<WorkspaceModule> workspaceModules(UserModel? user) => [
+  if (user?.isAdministrator == true || user?.canOperateOffline == true) ...[
+    const WorkspaceModule(
+      'Embudo comercial · Kanban',
+      'Oportunidades, etapas, responsables y seguimiento',
+      'Clientes e IA',
+      '/oportunidades',
+      Icons.view_kanban_outlined,
+    ),
+    const WorkspaceModule(
+      'Workflow inteligente con IA',
+      'Clasificar consultas, priorizar y completar tareas',
+      'Clientes e IA',
+      '/workflow-ia',
+      Icons.account_tree_outlined,
+    ),
+  ],
   const WorkspaceModule(
     'Conversión multimoneda',
     'USD, BOB, EUR, BRL, CLP y PEN; tasas con fecha',
