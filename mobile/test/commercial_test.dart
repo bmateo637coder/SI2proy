@@ -166,6 +166,39 @@ void main() {
         (await service.changes()).where((r) => r['state'] == 'pendiente'),
         isEmpty,
       );
+      auth.localSession = true;
+      final discarded = await service.mutate('POST', '/api/oportunidades', {
+        'titulo': 'Descartar prospecto',
+        'contacto': 'Cliente',
+        'etapa': 'Nuevo',
+      });
+      final child = await service.mutate('POST', '/api/workflow-ia', {
+        'texto': 'Visitar casa hoy',
+        'id_oportunidad': discarded['id'],
+      });
+      await service.mutate('PUT', '/api/workflow-ia/${child['id']}', {
+        'tarea': 0,
+        'completada': true,
+        'version': 1,
+      }, 1);
+      await service.mutate('POST', '/api/alertas', {
+        'texto': 'Casa centro',
+        'nombre': 'Conservar alerta',
+      });
+      final queue = await service.changes();
+      final parent = queue.firstWhere(
+        (r) =>
+            jsonDecode(r['command'] as String)['datos']['titulo'] ==
+            'Descartar prospecto',
+      );
+      await service.discard(parent['uuid'] as String);
+      final remaining = await service.changes();
+      expect(remaining, hasLength(1));
+      expect(
+        jsonDecode(remaining.single['command'] as String)['ruta'],
+        '/api/alertas',
+      );
+      expect(service.pending, 1);
     } finally {
       service.dispose();
       auth.dispose();

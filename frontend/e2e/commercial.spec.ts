@@ -43,6 +43,10 @@ test('workflow generates local offline tasks and records completion',async({page
  });
  await page.goto('/dashboard/workflow-ia');
  await expect(page.getByRole('button',{name:'Generar plan de seguimiento'})).toBeEnabled();
+ await page.getByRole('link',{name:/Sincronizar servicios/}).click();
+ await expect(page.getByRole('heading',{name:'Sincronización de servicios'})).toBeVisible();
+ await page.getByRole('link',{name:'Workflow inteligente con IA'}).click();
+ await expect(page.getByRole('button',{name:'Generar plan de seguimiento'})).toBeEnabled();
  available=false;await context.setOffline(true);
  await page.getByLabel('Consulta comercial').fill('Quiero visitar la casa hoy urgente');
  await page.getByRole('button',{name:'Generar plan de seguimiento'}).click();
@@ -51,4 +55,8 @@ test('workflow generates local offline tasks and records completion',async({page
  await page.getByRole('checkbox').first().check();
  await expect(page.getByRole('checkbox').first()).toBeChecked();
  await expect(page.getByText(/Reglas locales; pendiente de sincronizar/)).toBeVisible();
+ await page.getByRole('link',{name:/Sincronizar servicios/}).click();
+ await expect(page.locator('article')).toHaveCount(2);
+ await page.getByRole('button',{name:'Descartar propuesta y sus dependencias'}).first().click();
+ await expect(page.getByText('No hay cambios pendientes.')).toBeVisible();
 });

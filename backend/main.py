@@ -38,6 +38,7 @@ import vista_global
 import property_media
 import market_tools
 import commercial
+from record_integrity import protect_history
 
 from contextlib import asynccontextmanager
 
@@ -922,6 +923,7 @@ def delete_propiedad(
             or db.query(models.Visita).filter_by(id_propiedad=id_propiedad).first()
             or db.query(SolicitudMantenimiento).filter_by(id_propiedad=id_propiedad).first()):
         raise HTTPException(409, 'El inmueble tiene contratos, visitas o incidencias asociados. Conserve su historial.')
+    protect_history(db, models.Propiedad, id_propiedad, 'El inmueble')
     db.delete(propiedad)
     db.commit()
     return {"message": "Propiedad eliminada"}
@@ -1046,6 +1048,7 @@ def delete_propietario(
     saas.tenant_scope(current_user, propietario.id_tenant)
     if db.query(models.Propiedad).filter_by(id_propietario=id_propietario).first():
         raise HTTPException(409, 'El propietario tiene inmuebles asociados. Reasígnelos antes de eliminarlo.')
+    protect_history(db, models.Propietario, id_propietario, 'El propietario')
     db.delete(propietario)
     db.commit()
     return {"message": "Propietario eliminado"}
@@ -1170,6 +1173,7 @@ def delete_cliente(
     saas.tenant_scope(current_user, cliente.id_tenant)
     if db.query(models.Contrato).filter_by(id_cliente=id_cliente).first() or db.query(models.Visita).filter_by(id_cliente=id_cliente).first():
         raise HTTPException(409, 'El cliente tiene contratos o visitas asociados. Conserve su historial.')
+    protect_history(db, models.Cliente, id_cliente, 'El cliente')
     db.delete(cliente)
     db.commit()
     return {"message": "Cliente eliminado"}
@@ -1206,6 +1210,7 @@ def delete_agente(id_agente: int, db: Session = Depends(get_db), user=Depends(re
     for model in (models.Propiedad, models.Contrato, models.Visita):
         if db.query(model).filter_by(id_agente=id_agente).first():
             raise HTTPException(409, "El agente tiene propiedades, contratos o visitas asociados. Conserve su historial o reasigne sus propiedades.")
+    protect_history(db, models.Agente, id_agente, 'El agente')
     db.delete(agent)
     db.commit()
     return {"message": "Agente eliminado. La cuenta del usuario se conserva."}

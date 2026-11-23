@@ -10,7 +10,7 @@ type Pending = { uuid: string; identity: string; account: string; scope: string;
 export class Sprint4Offline {
  private auth=inject(AuthService); private http=new HttpClient(inject(HttpBackend));
  readonly message=signal(''); readonly pending=signal(0); readonly conflicts=signal(0);
- private db?: Promise<IDBDatabase>; private working=false; private downloading=false; private last='';
+ private db?: Promise<IDBDatabase>; private working=false; private sending=0; private downloading=false; private last='';
  constructor() {
   effect(()=>{const user=this.auth.currentUser(); const scope=this.auth.selectedTenant(); if(user){const key=this.account; if(key!==this.last){this.last=key;void this.download();}}});
   if(typeof window!=='undefined') { window.addEventListener('online',()=>void this.sync()); setInterval(()=>{if(navigator.onLine)void this.sync();},30000); }
@@ -31,6 +31,7 @@ export class Sprint4Offline {
   catch{} finally{this.working=false;}
  }
  private async send(row:Pending){
+  this.sending++;try{
   const command=structuredClone(row.command), match=command.ruta.match(/\/-\d+/);
   const dependency=command.datos?.id_oportunidad;
   if(Number(dependency)<0){const all:Pending[]=await this.operation('queue','readonly',s=>s.getAll());const parent=all.find(r=>r.account===row.account&&r.local===dependency);if(!parent||parent.state!=='confirmado')return;command.datos.id_oportunidad=parent.result.id;}
@@ -40,10 +41,13 @@ export class Sprint4Offline {
    row.state='confirmado';row.result=result;row.error=null;
   }catch(e:any){if(this.offline(e)||e.status===401)return;row.state='conflicto';row.error=e.error?.detail||'No se pudo confirmar el cambio.';}
   await this.operation('queue','readwrite',s=>s.put(row));
+  }finally{this.sending--;}
  }
- async discard(uuid:string){const all:Pending[]=await this.operation('queue','readonly',s=>s.getAll());const row=all.find(r=>r.uuid===uuid&&r.identity===this.identity);if(!row)return;
-  for(const item of all.filter(r=>r.identity===this.identity&&(r.uuid===uuid||r.command.ruta.includes(`/${row.local}`))))await this.operation('queue','readwrite',s=>s.delete(item.uuid));await this.counts();}
- async rebase(uuid:string){const row=(await this.rows()).find(r=>r.uuid===uuid);if(!row?.error?.servidor?.version)return;
+ async discard(uuid:string){if(this.working||this.sending){this.message.set('Hay una sincronización en curso. Espera su resultado antes de descartar.');return;}this.message.set('');const all:Pending[]=await this.operation('queue','readonly',s=>s.getAll());const row=all.find(r=>r.uuid===uuid&&r.identity===this.identity&&r.state!=='confirmado');if(!row)return;
+  const candidates=all.filter(r=>r.identity===row.identity&&r.account===row.account&&r.state!=='confirmado'),removed=new Set([uuid]);
+  let expanded=true;while(expanded){expanded=false;const parents=candidates.filter(r=>removed.has(r.uuid));for(const item of candidates){if(!removed.has(item.uuid)&&parents.some(p=>item.command.ruta.split('/').includes(String(p.local))||item.command.datos?.id_oportunidad===p.local)){removed.add(item.uuid);expanded=true;}}}
+  await this.operation('queue','readwrite',s=>{for(const id of removed)s.delete(id);return s.count();});await this.counts();}
+ async rebase(uuid:string){if(this.working||this.sending){this.message.set('Hay una sincronización en curso. Espera su resultado antes de volver a proponer.');return;}const row=(await this.rows()).find(r=>r.uuid===uuid);if(!row?.error?.servidor?.version)return;
   const id=crypto.randomUUID();const updated={...row,uuid:id,state:'pendiente',error:null,command:{...row.command,uuid:id,version:row.error.servidor.version}};
   await this.operation('queue','readwrite',s=>{s.delete(uuid);return s.put(updated);});await this.sync();}
  async request(req:HttpRequest<any>):Promise<HttpResponse<any>>{

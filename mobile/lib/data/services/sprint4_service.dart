@@ -301,6 +301,10 @@ class Sprint4Service extends ChangeNotifier {
   }
 
   Future<void> discard(String uuid) async {
+    if (busy)
+      throw StateError(
+        'Hay una sincronización en curso. Espera su resultado antes de descartar.',
+      );
     final db = await store.database;
     final rows = await db.query(
       's4_queue',
@@ -308,26 +312,55 @@ class Sprint4Service extends ChangeNotifier {
       whereArgs: [identity, uuid],
     );
     if (rows.isEmpty) return;
-    final local = '/${rows.first['local_id']}';
+    if (rows.first['state'] == 'confirmado') return;
     final children = await db.query(
       's4_queue',
-      where: 'identity=? AND state!=?',
-      whereArgs: [identity, 'confirmado'],
+      where: 'identity=? AND account=? AND state!=?',
+      whereArgs: [identity, rows.first['account'], 'confirmado'],
     );
-    for (final r in children) {
-      final path = jsonDecode(r['command'] as String)['ruta'] as String;
-      if (r['uuid'] == uuid || path.contains(local))
-        await db.delete(
+    final removed = <String>{uuid};
+    var expanded = true;
+    while (expanded) {
+      expanded = false;
+      final parents = children
+          .where((r) => removed.contains(r['uuid']))
+          .toList();
+      for (final r in children) {
+        final command = jsonDecode(r['command'] as String) as Map;
+        if (!removed.contains(r['uuid']) &&
+            parents.any(
+              (p) =>
+                  (command['ruta'] as String)
+                      .split('/')
+                      .contains('${p['local_id']}') ||
+                  command['datos']?['id_oportunidad'] == p['local_id'],
+            )) {
+          removed.add(r['uuid'] as String);
+          expanded = true;
+        }
+      }
+    }
+    await db.transaction((tx) async {
+      for (final id in removed) {
+        await tx.delete(
           's4_queue',
           where: 'uuid=? AND identity=?',
-          whereArgs: [r['uuid'], identity],
+          whereArgs: [id, identity],
         );
-    }
+      }
+    });
     await flush();
+    final active = await changes();
+    pending = active.where((r) => r['state'] == 'pendiente').length;
+    conflicts = active.where((r) => r['state'] == 'conflicto').length;
     emit();
   }
 
   Future<void> rebase(String uuid) async {
+    if (busy)
+      throw StateError(
+        'Hay una sincronización en curso. Espera su resultado antes de volver a proponer.',
+      );
     final db = await store.database;
     final rows = await db.query(
       's4_queue',

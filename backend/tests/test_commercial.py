@@ -75,3 +75,33 @@ def test_sync_commercial_is_atomic_idempotent_and_rebaseable(api):
     assert client.post('/api/servicios/sync',headers=headers(),json=task).json()['tareas'][0]['completada']
     from database import models as m
     with factory() as db: assert db.query(m.Contrato).count()==0
+
+
+def test_deleting_crm_references_is_a_conflict_and_never_loses_history(api):
+    client,factory=api
+    r=client.post('/api/oportunidades',headers=headers(),json=opportunity())
+    assert r.status_code==200,r.text
+    for path in ['/modulo_inmuebles/propiedades/1','/modulo_inmuebles/clientes/1']:
+        response=client.delete(path,headers=headers())
+        assert response.status_code==409,response.text
+    # Archived opportunities also retain their links and audit trail.
+    client.delete(f"/api/oportunidades/{r.json()['id']}?version=1",headers=headers())
+    assert client.delete('/modulo_inmuebles/clientes/1',headers=headers()).status_code==409
+    from database import models as m
+    from commercial import Opportunity
+    with factory() as db:
+        assert db.get(m.Propiedad,1) and db.get(m.Cliente,1)
+        assert db.query(Opportunity).one().archivada
+
+
+def test_promotion_reference_blocks_delete_but_owned_characteristics_do_not(api):
+    client,factory=api
+    from database import models as m
+    from sprint4_api import Promocion
+    from saas import today
+    with factory() as db:
+        db.add(Promocion(id_tenant=1,id_propiedad=2,titulo='Campaña',descuento_pct=5,inicio=today(),fin=today()))
+        db.add(m.Caracteristica(id_propiedad=1,nombre='Zona',valor='Centro'))
+        db.commit()
+    assert client.delete('/modulo_inmuebles/propiedades/2',headers=headers()).status_code==409
+    assert client.delete('/modulo_inmuebles/propiedades/1',headers=headers()).status_code==200
